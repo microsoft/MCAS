@@ -1314,6 +1314,8 @@ function Send-CASDiscoveryLog
         {
             # Finalize the upload           
             $FinalizeUploadResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/discovery/done_upload/" -Headers @{Authorization = "Token $Token"} -Body @{'uploadUrl'=$UploadUrl;'inputStreamName'=$DiscoveryDataSource} -Method Post -ErrorAction Stop                
+            $a = (Get-Item $LogFile).Length/1024; $b = "{0:N0}" -f $a
+            Write-Verbose "Finished uploading $FileName with file size $b KB."
         }
         Catch 
         { 
