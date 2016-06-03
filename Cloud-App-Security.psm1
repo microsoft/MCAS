@@ -1184,7 +1184,7 @@ function Send-CASDiscoveryLog
     Param
     (
         # The full path of the Log File to be uploaded, such as 'C:\mylogfile.log'.
-        [Parameter(Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
+        [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
         [Validatescript({Test-Path $_})]
         [string]$LogFile,
         
