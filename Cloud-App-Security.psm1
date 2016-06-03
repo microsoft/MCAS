@@ -145,8 +145,8 @@ function Get-CASAccount
         {        
             Try 
             {
-                # Fetch the alert by its id          
-                $FetchResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/accounts/$Identity/" -Headers @{Authorization = "Token $Token"} -ErrorAction Stop             
+                # Fetch the item by its id          
+                $FetchResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/accounts/$Identity/" -Headers @{Authorization = "Token $Token"} -Method Get -ErrorAction Stop             
             }
             Catch 
             { 
@@ -233,7 +233,7 @@ function Get-CASAccount
             # Get the matching alerts and handle errors
             Try 
             {
-                $ListResponse = (Invoke-RestMethod -Uri "https://$TenantUri/api/v1/accounts/" -Body $Body -Headers @{Authorization = "Token $Token"} -ErrorAction Stop).data              
+                $ListResponse = (Invoke-RestMethod -Uri "https://$TenantUri/api/v1/accounts/" -Body $Body -Headers @{Authorization = "Token $Token"} -Method Post -ErrorAction Stop).data              
             }
             Catch 
             { 
@@ -390,7 +390,7 @@ function Get-CASActivity
             Try 
             {
                 # Fetch the activity by its id          
-                $FetchResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/activities/$Identity/" -Headers @{Authorization = "Token $Token"} -ErrorAction Stop             
+                $FetchResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/activities/$Identity/" -Headers @{Authorization = "Token $Token"} -Method Get -ErrorAction Stop             
             }
             Catch 
             { 
@@ -481,7 +481,7 @@ function Get-CASActivity
             # Get the matching alerts and handle errors
             Try 
             {
-                $ListResponse = (Invoke-RestMethod -Uri "https://$TenantUri/api/v1/activities/" -Body $Body -Headers @{Authorization = "Token $Token"} -ErrorAction Stop).data              
+                $ListResponse = (Invoke-RestMethod -Uri "https://$TenantUri/api/v1/activities/" -Body $Body -Headers @{Authorization = "Token $Token"} -Method Post -ErrorAction Stop).data              
             }
             Catch 
             { 
@@ -631,8 +631,8 @@ function Get-CASAlert
         {        
             Try 
             {
-                # Fetch the alert by its id          
-                $FetchResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/alerts/$Identity/" -Headers @{Authorization = "Token $Token"} -ErrorAction Stop             
+                # Fetch the item by its id          
+                $FetchResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/alerts/$Identity/" -Headers @{Authorization = "Token $Token"} -Method Get -ErrorAction Stop             
             }
             Catch 
             { 
@@ -733,7 +733,7 @@ function Get-CASAlert
             # Get the matching alerts and handle errors
             Try 
             {
-                $ListResponse = (Invoke-RestMethod -Uri "https://$TenantUri/api/v1/alerts/" -Body $Body -Headers @{Authorization = "Token $Token"} -ErrorAction Stop).data              
+                $ListResponse = (Invoke-RestMethod -Uri "https://$TenantUri/api/v1/alerts/" -Body $Body -Headers @{Authorization = "Token $Token"} -Method Post -ErrorAction Stop).data              
             }
             Catch 
             { 
@@ -1016,8 +1016,8 @@ function Get-CASFile
         {        
             Try 
             {
-                # Fetch the alert by its id          
-                $FetchResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/files/$Identity/" -Headers @{Authorization = "Token $Token"} -ErrorAction Stop             
+                # Fetch the item by its id          
+                $FetchResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/files/$Identity/" -Headers @{Authorization = "Token $Token"} -Method Get -ErrorAction Stop             
             }
             Catch 
             { 
@@ -1135,7 +1135,7 @@ function Get-CASFile
             # Get the matching alerts and handle errors
             Try 
             {
-                $ListResponse = (Invoke-RestMethod -Uri "https://$TenantUri/api/v1/files/" -Body $Body -Headers @{Authorization = "Token $Token"} -ErrorAction Stop).data              
+                $ListResponse = (Invoke-RestMethod -Uri "https://$TenantUri/api/v1/files/" -Body $Body -Headers @{Authorization = "Token $Token"} -Method Post -ErrorAction Stop).data              
             }
             Catch 
             { 
