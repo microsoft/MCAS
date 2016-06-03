@@ -116,9 +116,9 @@ function Get-CASAccount
         [ValidateSet('Ascending','Descending')]
         [string]$SortDirection,
 
-        # Specifies the maximum number of results (up to 10000) to retrieve when listing items matching the specified filter criteria.
+        # Specifies the maximum number of results (up to 5000) to retrieve when listing items matching the specified filter criteria.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateRange(1,10000)]
+        [ValidateRange(1,5000)]
         [int]$ResultSetSize = 100,
 
         # Specifies the number of records, from the beginning of the result set, to skip.
@@ -987,9 +987,9 @@ function Get-CASFile
         [ValidateSet('Ascending','Descending')]
         [string]$SortDirection,
 
-        # Specifies the maximum number of results (up to 10000) to retrieve when listing items matching the specified filter criteria.  
+        # Specifies the maximum number of results (up to 5000) to retrieve when listing items matching the specified filter criteria.  
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateRange(1,10000)]
+        [ValidateRange(1,5000)]
         [int]$ResultSetSize = 100,
 
         # Specifies the number of records, from the beginning of the result set, to skip.  
