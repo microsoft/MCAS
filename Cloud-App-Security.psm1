@@ -819,7 +819,12 @@ function Get-CASCredential
 
         # Specifies that the credential should be returned into the pipeline for further processing.
         [Parameter(Mandatory=$false)]
-        [switch]$PassThru
+        [switch]$PassThru,
+
+        # Specifies a CliXML-formatted Credential file and loads it for the session.
+        [Parameter(Mandatory=$false)]
+        [ValidateScript({(($_.EndsWith('.credential') -eq $true))})]
+        [string]$Credential
     )
     Begin
     {
@@ -829,11 +834,15 @@ function Get-CASCredential
         # If tenant URI is specified, prompt for OAuth token and get it all into a global variable
         If ($TenantUri) {[System.Management.Automation.PSCredential]$Global:CloudAppSecurityDefaultPSCredential = Get-Credential -UserName $TenantUri -Message "Enter the OAuth token for $TenantUri"}
         
+        # If Credential is specified, set it to the global variable instead.
+        ElseIf ($Credential) {[System.Management.Automation.PSCredential]$Global:CloudAppSecurityDefaultPSCredential = Import-Clixml $Credential}
+        
         # Else, prompt for both the tenant and OAuth token and get it all into a global variable
         Else {[System.Management.Automation.PSCredential]$Global:CloudAppSecurityDefaultPSCredential = Get-Credential -Message "Enter the CAS tenant and OAuth token"}
 
         # Return the credential object (the variable will also be exported to the calling session with Export-ModuleMember)
         If ($PassThru) {Write-Output $CloudAppSecurityDefaultPSCredential}
+
     }
     End
     {
