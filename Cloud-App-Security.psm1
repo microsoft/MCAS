@@ -129,12 +129,12 @@ function Get-CASAccount
     {
         If (!$TenantUri) # If -TenantUri specified, use it and skip these
         {
-            If ($CloudAppSecurityDefaultPSCredential) {$TenantUri = $CloudAppSecurityDefaultPSCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
+            If ($CASCredential) {$TenantUri = $CASCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
             If ($Credential)                          {$TenantUri = $Credential.GetNetworkCredential().username} # If -Credential specfied, use it over the well-known cred session var
         }
         If (!$TenantUri) {Write-Error 'No tenant URI available. Please check the -TenantUri parameter or username of the supplied credential' -ErrorAction Stop}
       
-        If ($CloudAppSecurityDefaultPSCredential) {$Token = $CloudAppSecurityDefaultPSCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
+        If ($CASCredential) {$Token = $CASCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
         If ($Credential)                          {$Token = $Credential.GetNetworkCredential().Password.ToLower()} # If -Credential specfied, use it over the well-known cred session var
         If (!$Token) {Write-Error 'No token available. Please check the OAuth token (password) of the supplied credential' -ErrorAction Stop}
     }
@@ -373,12 +373,12 @@ function Get-CASActivity
         #$ErrorActionPreference = 'Stop'
         If (!$TenantUri) # If -TenantUri specified, use it and skip these
         {
-            If ($CloudAppSecurityDefaultPSCredential) {$TenantUri = $CloudAppSecurityDefaultPSCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
+            If ($CASCredential) {$TenantUri = $CASCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
             If ($Credential)                          {$TenantUri = $Credential.GetNetworkCredential().username} # If -Credential specfied, use it over the well-known cred session var
         }
         If (!$TenantUri) {Write-Error 'No tenant URI available. Please check the -TenantUri parameter or username of the supplied credential' -ErrorAction Stop}
       
-        If ($CloudAppSecurityDefaultPSCredential) {$Token = $CloudAppSecurityDefaultPSCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
+        If ($CASCredential) {$Token = $CASCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
         If ($Credential)                          {$Token = $Credential.GetNetworkCredential().Password.ToLower()} # If -Credential specfied, use it over the well-known cred session var
         If (!$Token) {Write-Error 'No token available. Please check the OAuth token (password) of the supplied credential' -ErrorAction Stop}
     }
@@ -615,12 +615,12 @@ function Get-CASAlert
     {
         If (!$TenantUri) # If -TenantUri specified, use it and skip these
         {
-            If ($CloudAppSecurityDefaultPSCredential) {$TenantUri = $CloudAppSecurityDefaultPSCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
+            If ($CASCredential) {$TenantUri = $CASCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
             If ($Credential)                          {$TenantUri = $Credential.GetNetworkCredential().username} # If -Credential specfied, use it over the well-known cred session var
         }
         If (!$TenantUri) {Write-Error 'No tenant URI available. Please check the -TenantUri parameter or username of the supplied credential' -ErrorAction Stop}
       
-        If ($CloudAppSecurityDefaultPSCredential) {$Token = $CloudAppSecurityDefaultPSCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
+        If ($CASCredential) {$Token = $CASCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
         If ($Credential)                          {$Token = $Credential.GetNetworkCredential().Password.ToLower()} # If -Credential specfied, use it over the well-known cred session var
         If (!$Token) {Write-Error 'No token available. Please check the OAuth token (password) of the supplied credential' -ErrorAction Stop}
     }
@@ -767,7 +767,7 @@ function Get-CASAlert
 
    When using Get-CASCredential you will be prompted to provide your Cloud App Security tenant URL as well as an OAuth Token that must be created manually in the console.
 
-   Get-CASCredential takes the tenant URL and OAuth token and stores them in a special global session variable called $CloudAppSecurityDefaultPSCredential and converts the OAuth token to a 64bit secure string while in memory.
+   Get-CASCredential takes the tenant URL and OAuth token and stores them in a special global session variable called $CASCredential and converts the OAuth token to a 64bit secure string while in memory.
 
    All CAS Module cmdlets reference that special global variable to pass requests to your Cloud App Security tenant.
 
@@ -781,7 +781,7 @@ function Get-CASAlert
     Username = Tenant URL without https:// (Example: contoso.portal.cloudappsecurity.com)
     Password = Tenant OAuth Token (Example: 432c1750f80d66a1cf2849afb6b10a7fcdf6738f5f554e32c9915fb006bd799a)
 
-    C:\>$CloudAppSecurityDefaultPSCredential
+    C:\>$CASCredential
 
     To verify your credentials are set in the current session, run the above command.
 
@@ -792,7 +792,7 @@ function Get-CASAlert
 .EXAMPLE
    Get-CASCredential -PassThru | Export-CliXml C:\Users\Alice\MyCASCred.credential -Force
 
-    By specifying the -PassThru switch parameter, this will put the $CloudAppSecurityDefaultPSCredential into the pipeline which can be exported to a .credential file that will store the tenant URL and encrypted version of the token in a file.
+    By specifying the -PassThru switch parameter, this will put the $CASCredential into the pipeline which can be exported to a .credential file that will store the tenant URL and encrypted version of the token in a file.
 
     We can use this newly created .credential file to automate setting our CAS credentials in the session by adding an import command to our profile.
 
@@ -800,9 +800,9 @@ function Get-CASAlert
 
     The above command will open our PowerShell profile, which is a set of commands that will run when we start a new session. By default it is empty.
 
-    $CloudAppSecurityDefaultPSCredential = Import-Clixml "C:\Users\Alice\MyCASCred.credential"
+    $CASCredential = Import-Clixml "C:\Users\Alice\MyCASCred.credential"
 
-    By adding the above line to our profile and save, the next time we open a new PowerShell session, the credential file will automatically be imported into the $CloudAppSecurityDefaultPSCredential which allows us to use other CAS cmdlets without running Get-CASCredential at the start of the session.
+    By adding the above line to our profile and save, the next time we open a new PowerShell session, the credential file will automatically be imported into the $CASCredential which allows us to use other CAS cmdlets without running Get-CASCredential at the start of the session.
 
 .FUNCTIONALITY
    Get-CASCredential is intended to import the CAS tenant URL and OAuth Token into a global session variable to allow other CAS cmdlets to authenticate when passing requests.
@@ -819,12 +819,7 @@ function Get-CASCredential
 
         # Specifies that the credential should be returned into the pipeline for further processing.
         [Parameter(Mandatory=$false)]
-        [switch]$PassThru,
-
-        # Specifies a CliXML-formatted Credential file and loads it for the session.
-        [Parameter(Mandatory=$false)]
-        [ValidateScript({(($_.EndsWith('.credential') -eq $true))})]
-        [string]$Credential
+        [switch]$PassThru
     )
     Begin
     {
@@ -832,17 +827,13 @@ function Get-CASCredential
     Process
     {
         # If tenant URI is specified, prompt for OAuth token and get it all into a global variable
-        If ($TenantUri) {[System.Management.Automation.PSCredential]$Global:CloudAppSecurityDefaultPSCredential = Get-Credential -UserName $TenantUri -Message "Enter the OAuth token for $TenantUri"}
-        
-        # If Credential is specified, set it to the global variable instead.
-        ElseIf ($Credential) {[System.Management.Automation.PSCredential]$Global:CloudAppSecurityDefaultPSCredential = Import-Clixml $Credential}
-        
+        If ($TenantUri) {[System.Management.Automation.PSCredential]$Global:CASCredential = Get-Credential -UserName $TenantUri -Message "Enter the OAuth token for $TenantUri"}
+   
         # Else, prompt for both the tenant and OAuth token and get it all into a global variable
-        Else {[System.Management.Automation.PSCredential]$Global:CloudAppSecurityDefaultPSCredential = Get-Credential -Message "Enter the CAS tenant and OAuth token"}
+        Else {[System.Management.Automation.PSCredential]$Global:CASCredential = Get-Credential -Message "Enter the CAS tenant and OAuth token"}
 
-        # Return the credential object (the variable will also be exported to the calling session with Export-ModuleMember)
-        If ($PassThru) {Write-Output $CloudAppSecurityDefaultPSCredential}
-
+        # If -PassThru is specified, write the credential object to the pipeline (the global variable will also be exported to the calling session with Export-ModuleMember)
+        If ($PassThru) {Write-Output $CASCredential}
     }
     End
     {
@@ -1009,12 +1000,12 @@ function Get-CASFile
     {
         If (!$TenantUri) # If -TenantUri specified, use it and skip these
         {
-            If ($CloudAppSecurityDefaultPSCredential) {$TenantUri = $CloudAppSecurityDefaultPSCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
+            If ($CASCredential) {$TenantUri = $CASCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
             If ($Credential)                          {$TenantUri = $Credential.GetNetworkCredential().username} # If -Credential specfied, use it over the well-known cred session var
         }
         If (!$TenantUri) {Write-Error 'No tenant URI available. Please check the -TenantUri parameter or username of the supplied credential' -ErrorAction Stop}
       
-        If ($CloudAppSecurityDefaultPSCredential) {$Token = $CloudAppSecurityDefaultPSCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
+        If ($CASCredential) {$Token = $CASCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
         If ($Credential)                          {$Token = $Credential.GetNetworkCredential().Password.ToLower()} # If -Credential specfied, use it over the well-known cred session var
         If (!$Token) {Write-Error 'No token available. Please check the OAuth token (password) of the supplied credential' -ErrorAction Stop}
     }
@@ -1223,12 +1214,12 @@ function Send-CASDiscoveryLog
     {
         If (!$TenantUri) # If -TenantUri specified, use it and skip these
         {
-            If ($CloudAppSecurityDefaultPSCredential) {$TenantUri = $CloudAppSecurityDefaultPSCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
+            If ($CASCredential) {$TenantUri = $CASCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
             If ($Credential)                          {$TenantUri = $Credential.GetNetworkCredential().username} # If -Credential specfied, use it over the well-known cred session var
         }
         If (!$TenantUri) {Write-Error 'No tenant URI available. Please check the -TenantUri parameter or username of the supplied credential' -ErrorAction Stop}
       
-        If ($CloudAppSecurityDefaultPSCredential) {$Token = $CloudAppSecurityDefaultPSCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
+        If ($CASCredential) {$Token = $CASCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
         If ($Credential)                          {$Token = $Credential.GetNetworkCredential().Password.ToLower()} # If -Credential specfied, use it over the well-known cred session var
         If (!$Token) {Write-Error 'No token available. Please check the OAuth token (password) of the supplied credential' -ErrorAction Stop}
     }
@@ -1426,12 +1417,12 @@ function Set-CASAlert
     {
         If (!$TenantUri) # If -TenantUri specified, use it and skip these
         {
-            If ($CloudAppSecurityDefaultPSCredential) {$TenantUri = $CloudAppSecurityDefaultPSCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
+            If ($CASCredential) {$TenantUri = $CASCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
             If ($Credential)                          {$TenantUri = $Credential.GetNetworkCredential().username} # If -Credential specfied, use it over the well-known cred session var
         }
         If (!$TenantUri) {Write-Error 'No tenant URI available. Please check the -TenantUri parameter or username of the supplied credential' -ErrorAction Stop}
       
-        If ($CloudAppSecurityDefaultPSCredential) {$Token = $CloudAppSecurityDefaultPSCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
+        If ($CASCredential) {$Token = $CASCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
         If ($Credential)                          {$Token = $Credential.GetNetworkCredential().Password.ToLower()} # If -Credential specfied, use it over the well-known cred session var
         If (!$Token) {Write-Error 'No token available. Please check the OAuth token (password) of the supplied credential' -ErrorAction Stop}
     }
@@ -1472,7 +1463,7 @@ function Set-CASAlert
 
 
 # Vars to export
-Export-ModuleMember -Variable CloudAppSecurityDefaultPSCredential
+Export-ModuleMember -Variable CASCredential
 
 # Cmdlets to export
 Export-ModuleMember -Function Get-CASAccount
