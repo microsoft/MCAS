@@ -146,7 +146,7 @@ function Get-CASAccount
             Try 
             {
                 # Fetch the item by its id          
-                $FetchResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/accounts/$Identity/" -Headers @{Authorization = "Token $Token"} -Method Get -ErrorAction Stop             
+                $FetchResponse = (Invoke-WebRequest -Uri "https://$TenantUri/api/v1/accounts/$Identity/" -Headers @{Authorization = "Token $Token"} -Method Get -ErrorAction Stop) -replace '"Id":', '"Id_int":' | ConvertFrom-Json             
             }
             Catch 
             { 
@@ -233,7 +233,7 @@ function Get-CASAccount
             # Get the matching alerts and handle errors
             Try 
             {
-                $ListResponse = (Invoke-RestMethod -Uri "https://$TenantUri/api/v1/accounts/" -Body $Body -Headers @{Authorization = "Token $Token"} -Method Post -ErrorAction Stop).data              
+                $ListResponse = ((Invoke-WebRequest -Uri "https://$TenantUri/api/v1/accounts/" -Body $Body -Headers @{Authorization = "Token $Token"} -Method Post -ErrorAction Stop) -replace '"Id":', '"Id_int":' | ConvertFrom-Json).data              
             }
             Catch 
             { 
