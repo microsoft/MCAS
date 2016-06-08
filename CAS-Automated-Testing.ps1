@@ -60,8 +60,8 @@ $SuccessTests += {Get-CASAlert -ResultSetSize 10000}
 
 $SuccessTests += {Get-CASFile -ResultSetSize 1}
 $SuccessTests += {Get-CASFile -ResultSetSize 2}
-#$SuccessTests += {Get-CASFile -ResultSetSize 1 | Get-CASFile}
-#$SuccessTests += {Get-CASFile -ResultSetSize 2 | Get-CASFile}
+$SuccessTests += {Get-CASFile -ResultSetSize 1 | Get-CASFile}
+$SuccessTests += {Get-CASFile -ResultSetSize 2 | Get-CASFile}
 $SuccessTests += {Get-CASFile -ResultSetSize 4999}
 $SuccessTests += {Get-CASFile -ResultSetSize 5000}
 
