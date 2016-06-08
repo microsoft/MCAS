@@ -1039,7 +1039,6 @@ function Get-CASFile
                 }
             }
             If ($FetchResponse) {Write-Output $FetchResponse | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
-            Break
         }
     }
     End
