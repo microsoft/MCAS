@@ -5,7 +5,7 @@ Import-Module "$ScriptPath\Cloud-App-Security.psm1"
 
 $CASCredential = Import-Clixml C:\Users\jpoeppel\mod102677.credential
 
-Function Test-Block
+Function Test-ForErrors
 {
     [CmdletBinding()]
     Param
@@ -25,7 +25,7 @@ Function Test-Block
             Write-Output (New-Object -TypeName PSObject -Property @{TestItem=$Block;Result=$Error})
         }
     }
- }       
+ }    
 
 # Initialize
 $ErrorAction = 'SilentlyContinue'
@@ -89,7 +89,7 @@ $FailureTests += {Get-CASFile -ResultSetSize 5001}
 #endregion ---------- Failure Tests ----------
 
 
-$SuccessTestResults += $SuccessTests | ForEach {Test-Block $_ -Verbose}
+$SuccessTestResults += $SuccessTests | ForEach {Test-ForErrors $_ -Verbose}
 If ($SuccessTestResults.Count -ne 0)
 {
     Write-Warning ("Testing found "+$SuccessTestResults.Count+" unexpected errors in success tests:")
@@ -100,7 +100,7 @@ Else
     $OverallSuccess = $true
 }
 
-$FailureTestResults += $FailureTests | ForEach {Test-Block $_ -Verbose}
+$FailureTestResults += $FailureTests | ForEach {Test-ForErrors $_ -Verbose}
 If ($FailureTestResults.Count -ne $FailureTests.Count)
 {
     Write-Warning ("Testing found "+$FailureTestResults.Count+" errors when "+$FailureTests.Count+" errors were expected:")
