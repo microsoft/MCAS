@@ -45,14 +45,14 @@
     This pulls back a single user record using the GUID and is part of the 'Fetch' parameter set.
 
 .EXAMPLE
-   (Get-CASAccount -Domain contoso.com).count
+   (Get-CASAccount -UserDomain contoso.com).count
 
     2
 
     This pulls back all accounts from the specified domain and returns a count of the returned objects.
 
 .EXAMPLE
-   Get-CASAccount -Affiliation External | select @{N='Unique Domains'; E={$_.userDomain}} -Unique 
+   Get-CASAccount -External $true | select @{N='Unique Domains'; E={$_.userDomain}} -Unique 
 
     Unique Domains
     --------------
@@ -89,23 +89,33 @@ function Get-CASAccount
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [bool[]]$External,
         
-        # Limits the results to items related to the specified user/users, such as 'alice@contoso.com','bob@contoso.com'. 
+        # Limits the results to items related to the specified user names, such as 'alice@contoso.com','bob@contoso.com'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [string[]]$Username,
+        [string[]]$UserName,
 
-        # Limits the results to items related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
+        # Limits the results to items related to the specified service IDs, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [int[]]$Services,
+
+        # Limits the results to items related to the specified service names, such as 'Office 365' and 'Google Apps'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
+        [string[]]$ServiceNames,
 
         # Limits the results to items not related to the specified service ids, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [int[]]$ServicesNot,
 
-        # Limits the results to items found in the specified domains, such as 'contoso.com'.
+        # Limits the results to items not related to the specified service names, such as 'Office 365' and 'Google Apps'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
+        [string[]]$ServiceNamesNot,
+
+        # Limits the results to items found in the specified user domains, such as 'contoso.com'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [string[]]$UserDomain,
 
-        # Specifies the property by which to sort the results. Possible Values: 'Username','LastSeen'.
+        # Specifies the property by which to sort the results. Possible Values: 'UserName','LastSeen'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('Username','LastSeen')]
         [string]$SortBy,
@@ -203,13 +213,26 @@ function Get-CASAccount
             $FilterSet = @() # Filter set array
 
             # Value-mapped filters
+            If ($ServiceNames -and $Services) {Write-Error 'Cannot reconcile -ServiceNames and -Services parameters. Use zero or one of these, but not both.' -ErrorAction Stop}
+            If ($ServiceNames) 
+            {
+                $ValueMap = @{'Box'=10489;'Okta'=10980;'Salesforce'=11114;'Office 365'=11161;'Amazon Web Services'=11599;'Dropbox'=11627;'Google Apps'=11770;'ServiceNow'=14509;'Microsoft OneDrive for Business'=15600;'Microsoft Cloud App Security'=20595;'Microsoft Sharepoint Online'=20892;'Microsoft Exchange Online'=20893}
+                $FilterSet += New-Object -TypeName PSObject -Property @{'service'=(New-Object -TypeName PSObject -Property @{'eq'=($ServiceNames.GetEnumerator() | ForEach-Object {$ValueMap.Get_Item($_)})})}
+            }
+            
+            If ($ServiceNamesNot -and $ServicesNot) {Write-Error 'Cannot reconcile -ServiceNamesNot and -ServicesNot parameters. Use zero or one of these, but not both.' -ErrorAction Stop}
+            If ($ServiceNamesNot) 
+            {
+                $ValueMap = @{'Box'=10489;'Okta'=10980;'Salesforce'=11114;'Office 365'=11161;'Amazon Web Services'=11599;'Dropbox'=11627;'Google Apps'=11770;'ServiceNow'=14509;'Microsoft OneDrive for Business'=15600;'Microsoft Cloud App Security'=20595;'Microsoft Sharepoint Online'=20892;'Microsoft Exchange Online'=20893}
+                $FilterSet += New-Object -TypeName PSObject -Property @{'service'=(New-Object -TypeName PSObject -Property @{'neq'=($ServiceNames.GetEnumerator() | ForEach-Object {$ValueMap.Get_Item($_)})})}
+            }
 
             # Simple filters
-            If ($External)    {$FilterSet += @{'affiliation'=   @{'eq'=$External}}}
-            If ($Username)    {$FilterSet += @{'user.username'= @{'eq'=$Username}}}
-            If ($Services)    {$FilterSet += @{'service'=       @{'eq'=$Services}}}
-            If ($ServicesNot) {$FilterSet += @{'service'=       @{'neq'=$ServicesNot}}}
-            If ($UserDomain)  {$FilterSet += @{'domain'=        @{'eq'=$UserDomain}}}
+            If ($External)    {$FilterSet += New-Object -TypeName PSObject -Property @{'affiliation'=   (New-Object -TypeName PSObject -Property @{'eq'=$External})}}
+            If ($UserName)    {$FilterSet += New-Object -TypeName PSObject -Property @{'user.username'= (New-Object -TypeName PSObject -Property @{'eq'=$UserName})}}
+            If ($Services)    {$FilterSet += New-Object -TypeName PSObject -Property @{'service'=       (New-Object -TypeName PSObject -Property @{'eq'=$Services})}}
+            If ($ServicesNot) {$FilterSet += New-Object -TypeName PSObject -Property @{'service'=       (New-Object -TypeName PSObject -Property @{'neq'=$ServicesNot})}}
+            If ($UserDomain)  {$FilterSet += New-Object -TypeName PSObject -Property @{'domain'=        (New-Object -TypeName PSObject -Property @{'eq'=$UserDomain})}}
                         
             # Build filter set
             If ($FilterSet)
