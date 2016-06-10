@@ -85,26 +85,25 @@ function Get-CASAccount
         [Parameter(Mandatory=$false)]
         [System.Management.Automation.PSCredential]$Credential,
  
-        # Limits the results by access level. ('Internal','External')
+        # Limits the results to external, if true, or internal users, if false
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Internal','External')]
-        [string[]]$Affiliation,
+        [bool[]]$External,
         
         # Limits the results to items related to the specified user/users, such as 'alice@contoso.com','bob@contoso.com'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [string[]]$User,
+        [string[]]$Username,
 
         # Limits the results to items related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [int[]]$Service,
+        [int[]]$Services,
 
         # Limits the results to items not related to the specified service ids, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [int[]]$ServiceNot,
+        [int[]]$ServicesNot,
 
         # Limits the results to items found in the specified domains, such as 'contoso.com'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [string[]]$Domain,
+        [string[]]$UserDomain,
 
         # Specifies the property by which to sort the results. Possible Values: 'Username','LastSeen'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -204,17 +203,13 @@ function Get-CASAccount
             $FilterSet = @() # Filter set array
 
             # Value-mapped filters
-            If ($Affiliation) 
-            {
-                $ValueMap = @{'Internal'=$false;'External'=$true}
-                $FilterSet += New-Object -TypeName PSObject -Property @{'affiliation'=(New-Object -TypeName PSObject -Property @{'eq'=($Affiliation.GetEnumerator() | ForEach-Object {$ValueMap.Get_Item($_)})})}
-            }
 
             # Simple filters
-            If ($User)       {$FilterSet += New-Object -TypeName PSObject -Property @{'user.username'= (New-Object -TypeName PSObject -Property @{'eq'=$User})}}
-            If ($Service)    {$FilterSet += New-Object -TypeName PSObject -Property @{'service'=       (New-Object -TypeName PSObject -Property @{'eq'=$Service})}}
-            If ($ServiceNot) {$FilterSet += New-Object -TypeName PSObject -Property @{'service'=       (New-Object -TypeName PSObject -Property @{'neq'=$ServiceNot})}}
-            If ($Domain)     {$FilterSet += New-Object -TypeName PSObject -Property @{'domain'=        (New-Object -TypeName PSObject -Property @{'eq'=$Domain})}}
+            If ($External)    {$FilterSet += @{'affiliation'=   @{'eq'=$External}}}
+            If ($Username)    {$FilterSet += @{'user.username'= @{'eq'=$Username}}}
+            If ($Services)    {$FilterSet += @{'service'=       @{'eq'=$Services}}}
+            If ($ServicesNot) {$FilterSet += @{'service'=       @{'neq'=$ServicesNot}}}
+            If ($UserDomain)  {$FilterSet += @{'domain'=        @{'eq'=$UserDomain}}}
                         
             # Build filter set
             If ($FilterSet)
