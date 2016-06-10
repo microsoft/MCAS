@@ -2,10 +2,17 @@
 
 #region ----------------------------Value Maps----------------------------
 
-$AppValueMap = @{'Box'=10489;'Okta'=10980;'Salesforce'=11114;'Office 365'=11161;'Amazon Web Services'=11599;'Dropbox'=11627;'Google Apps'=11770;'ServiceNow'=14509;'Microsoft OneDrive for Business'=15600;'Microsoft Cloud App Security'=20595;'Microsoft Sharepoint Online'=20892;'Microsoft Exchange Online'=20893}
-$IpCategoryValueMap = @{'None'=0;'Internal'=1;'Administrative'=2;'Risky'=3;'VPN'=4;'Cloud Provider'=5}
-$SeverityValueMap = @{'High'=2;'Medium'=1;'Low'=0}
+$AppValueMap =              @{'Box'=10489;'Okta'=10980;'Salesforce'=11114;'Office 365'=11161;'Amazon Web Services'=11599;'Dropbox'=11627;'Google Apps'=11770;'ServiceNow'=14509;'Microsoft OneDrive for Business'=15600;'Microsoft Cloud App Security'=20595;'Microsoft Sharepoint Online'=20892;'Microsoft Exchange Online'=20893}
+
+$IpCategoryValueMap =       @{'None'=0;'Internal'=1;'Administrative'=2;'Risky'=3;'VPN'=4;'Cloud Provider'=5}
+
+$SeverityValueMap =         @{'High'=2;'Medium'=1;'Low'=0}
+
 $ResolutionStatusValueMap = @{'Resolved'=2;'Dismissed'=1;'Open'=0}
+
+$FileTypeValueMap =         @{'Other'=0;'Document'=1;'Spreadsheet'=2; 'Presentation'=3; 'Text'=4; 'Image'=5; 'Folder'=6}
+
+$FileAccessLevelValueMap =  @{'Private'=0;'Internal'=1;'External'=2;'Public'=3;'PublicInternet'=4}
 
 #endregion ----------------------------Value Maps----------------------------
 
@@ -488,7 +495,7 @@ function Get-CASActivity
             If ($UserAgentNotContains) {$FilterSet += @{'userAgent.userAgent'= @{'ncontains'=$UserAgentNotContains}}}
             If ($IpStartsWith)         {$FilterSet += @{'ip.address'=          @{'startswith'=$IpStartsWith}}}
             If ($IpDoesNotStartWith)   {$FilterSet += @{'ip.address'=          @{'doesnotstartwith'=$IpStartsWith}}} 
-            If ($AdminEvents)          {$FilterSet += @{'activity.type'=       @{'eq'=$true}}}
+            If ($AdminEvents)          {$FilterSet += @{'activity.type'=       @{'eq'=$AdminEvents}}}
 
             # Add filter set to request body as the 'filter' property            
             If ($FilterSet) {$Body.Add('filters',(ConvertTo-CASJsonFilterString $FilterSet))}
@@ -732,7 +739,7 @@ function Get-CASAlert
             If ($Risk)       {$FilterSet += @{'risk'=           @{'eq'=$Risk}}}
             If ($AlertType)  {$FilterSet += @{'id'=             @{'eq'=$AlertType}}}
             If ($Source)     {$FilterSet += @{'source'=         @{'eq'=$Source}}}
-            If ($Read)       {$FilterSet += @{'read'=           @{'eq'=$true}}}
+            If ($Read)       {$FilterSet += @{'read'=           @{'eq'=$Read}}}
  
             # Add filter set to request body as the 'filter' property            
             If ($FilterSet) {$Body.Add('filters',(ConvertTo-CASJsonFilterString $FilterSet))}
@@ -972,29 +979,17 @@ function Get-CASFile
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [string]$ExtensionNot,
 
-        # Limits the results to items that CAS has marked as trashed.
+        # Limits the results to items that CAS has marked as trashed, if true, not trashed, if false.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$Trashed,
+        [bool]$Trashed,
 
-        # Limits the results to items that CAS has not marked as trashed. 
+        # Limits the results to items that CAS has marked as quarantined, if true, non-quarantined, if false.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$TrashedNot,
+        [bool]$Quarantined,
 
-        # Limits the results to items that CAS has marked as quarantined.
+        # Limits the results to items that CAS has marked as a folder, if true, non-folders, if false.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$Quarantined,
-
-        # Limits the results to items that CAS has marked as quarantined.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$QuarantinedNot,
-
-        # Limits the results to items that CAS has marked as a Folder.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$Folder,
-
-        # Limits the results to items that CAS has not marked as a Folder.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$FolderNot,
+        [bool]$Folder,
 
         # Specifies the property by which to sort the results. Possible Value: 'DateModified'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -1088,79 +1083,43 @@ function Get-CASFile
             #region ----------------------------FILTERING----------------------------
             $FilterSet = @() # Filter set array
 
-            # Value-mapped filters
-            If ($Filetype) #Error 500
-            {
-                $ValueMap = @{'Other'=0;'Document'=1;'Spreadsheet'=2; 'Presentation'=3; 'Text'=4; 'Image'=5; 'Folder'=6}
-                $FilterSet += New-Object -TypeName PSObject -Property @{'fileType'=(New-Object -TypeName PSObject -Property @{'eq'=($Filetype.GetEnumerator() | ForEach-Object {$ValueMap.Get_Item($_)})})}
-            }
-
-            If ($FiletypeNot) #Error 500
-            {
-                $ValueMap = @{'Other'=0;'Document'=1;'Spreadsheet'=2; 'Presentation'=3; 'Text'=4; 'Image'=5; 'Folder'=6}
-                $FilterSet += New-Object -TypeName PSObject -Property @{'fileType'=(New-Object -TypeName PSObject -Property @{'neq'=($FiletypeNot.GetEnumerator() | ForEach-Object {$ValueMap.Get_Item($_)})})}
-            }
-
-            If ($FileAccessLevel) #Working
-            {
-                $ValueMap = @{'Private'=0;'Internal'=1;'External'=2;'Public'=3;'PublicInternet'=4}
-                $FilterSet += New-Object -TypeName PSObject -Property @{'sharing'=(New-Object -TypeName PSObject -Property @{'eq'=($FileAccessLevel.GetEnumerator() | ForEach-Object {$ValueMap.Get_Item($_)})})}
-            }
-
-            If ($AppName -and $AppId) {Write-Error 'Cannot reconcile -AppName and -AppId switches. Use zero or one of these, but not both.' -ErrorAction Stop}
-            If ($AppName) 
-            {
-                $ValueMap = @{'Box'=10489;'Okta'=10980;'Salesforce'=11114;'Office 365'=11161;'Amazon Web Services'=11599;'Dropbox'=11627;'Google Apps'=11770;'ServiceNow'=14509;'Microsoft OneDrive for Business'=15600;'Microsoft Cloud App Security'=20595;'Microsoft Sharepoint Online'=20892;'Microsoft Exchange Online'=20893}
-                $FilterSet += @{'service'=@{'eq'=($AppName.GetEnumerator() | ForEach-Object {$ValueMap.Get_Item($_)})}}
-            }  
+            # Additional parameter validations and mutual exclusions
+            If ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($Folder -and $FolderNot) {Write-Error 'Cannot reconcile -Folder and -FolderNot switches. Use zero or one of these, but not both.' -ErrorAction Stop}
+            If ($Quarantined -and $QuarantinedNot) {Write-Error 'Cannot reconcile -Quarantined and -QuarantinedNot switches. Use zero or one of these, but not both.' -ErrorAction Stop}
+            If ($Trashed -and $TrashedNot) {Write-Error 'Cannot reconcile -Trashed and -TrashedNot switches. Use zero or one of these, but not both.' -ErrorAction Stop}
             
-            If ($AppNameNot -and $AppIdNot) {Write-Error 'Cannot reconcile -AppNameNot and -AppIdNot switches. Use zero or one of these, but not both.' -ErrorAction Stop}            
-            If ($AppNameNot) 
-            {
-                $ValueMap = @{'Box'=10489;'Okta'=10980;'Salesforce'=11114;'Office 365'=11161;'Amazon Web Services'=11599;'Dropbox'=11627;'Google Apps'=11770;'ServiceNow'=14509;'Microsoft OneDrive for Business'=15600;'Microsoft Cloud App Security'=20595;'Microsoft Sharepoint Online'=20892;'Microsoft Exchange Online'=20893}
-                $FilterSet += @{'service'=@{'neq'=($AppNameNot.GetEnumerator() | ForEach-Object {$ValueMap.Get_Item($_)})}}
-            }  
+            # Value-mapped filters
+            If ($Filetype)        {$FilterSet += @{'fileType'=@{'eq'= ($Filetype.GetEnumerator()        | ForEach-Object {$FileTypeValueMap.Get_Item($_)})}}}
+            If ($FiletypeNot)     {$FilterSet += @{'fileType'=@{'neq'=($FiletypeNot.GetEnumerator()     | ForEach-Object {$FileTypeValueMap.Get_Item($_)})}}}
+            If ($FileAccessLevel) {$FilterSet += @{'sharing'= @{'eq'= ($FileAccessLevel.GetEnumerator() | ForEach-Object {$FileAccessLevelValueMap.Get_Item($_)})}}}
+            If ($AppName)         {$FilterSet += @{'service'= @{'eq'= ($AppName.GetEnumerator()         | ForEach-Object {$AppValueMap.Get_Item($_)})}}}  
+            If ($AppNameNot)      {$FilterSet += @{'service'= @{'neq'=($AppNameNot.GetEnumerator()      | ForEach-Object {$AppValueMap.Get_Item($_)})}}}  
 
             # Simple filters
-            If ($AppId)                   {$FilterSet += New-Object -TypeName PSObject -Property @{'service'=                  (New-Object -TypeName PSObject -Property @{'eq'=$AppId})}}
-            If ($AppIdNot)                {$FilterSet += New-Object -TypeName PSObject -Property @{'service'=                  (New-Object -TypeName PSObject -Property @{'neq'=$AppIdNot})}}
-            If ($Extension)                 {$FilterSet += New-Object -TypeName PSObject -Property @{'extension'=                (New-Object -TypeName PSObject -Property @{'eq'=$Extension})}}
-            If ($ExtensionNot)              {$FilterSet += New-Object -TypeName PSObject -Property @{'extension'=                (New-Object -TypeName PSObject -Property @{'neq'=$ExtensionNot})}}
-            If ($Domains)    {$FilterSet += New-Object -TypeName PSObject -Property @{'collaborators.withDomain'= (New-Object -TypeName PSObject -Property @{'eq'=$Domains})}}
-            If ($DomainsNot) {$FilterSet += New-Object -TypeName PSObject -Property @{'collaborators.withDomain'= (New-Object -TypeName PSObject -Property @{'neq'=$DomainsNot})}}
-            If ($Collaborators)          {$FilterSet += New-Object -TypeName PSObject -Property @{'collaborators.users'=      (New-Object -TypeName PSObject -Property @{'eq'=$Collaborators})}}
-            If ($CollaboratorsNot)       {$FilterSet += New-Object -TypeName PSObject -Property @{'collaborators.users'=      (New-Object -TypeName PSObject -Property @{'neq'=$CollaboratorsNot})}}
-            If ($Owner)                     {$FilterSet += New-Object -TypeName PSObject -Property @{'owner.username'=           (New-Object -TypeName PSObject -Property @{'eq'=$Owner})}}
-            If ($OwnerNot)                  {$FilterSet += New-Object -TypeName PSObject -Property @{'owner.username'=           (New-Object -TypeName PSObject -Property @{'neq'=$OwnerNot})}}
-            If ($MIMEType)                  {$FilterSet += New-Object -TypeName PSObject -Property @{'mimeType'=                 (New-Object -TypeName PSObject -Property @{'eq'=$MIMEType})}}
-            If ($MIMETypeNot)               {$FilterSet += New-Object -TypeName PSObject -Property @{'mimeType'=                 (New-Object -TypeName PSObject -Property @{'neq'=$MIMETypeNot})}}
-            If ($Name)                  {$FilterSet += New-Object -TypeName PSObject -Property @{'filename'=                 (New-Object -TypeName PSObject -Property @{'eq'=$Name})}}
-            If ($NameWithoutExtension)  {$FilterSet += New-Object -TypeName PSObject -Property @{'filename'=                 (New-Object -TypeName PSObject -Property @{'text'=$NameWithoutExtension})}}
-
-            # Mutually exclusive filters
-            If ($Folder -and $FolderNot) {Write-Error 'Cannot reconcile -Folder and -FolderNot switches. Use zero or one of these, but not both.' -ErrorAction Stop}
-            If ($Folder)    {$FilterSet += New-Object -TypeName PSObject -Property @{'folder'= (New-Object -TypeName PSObject -Property @{'eq'=$true})}}  #Working
-            If ($FolderNot) {$FilterSet += New-Object -TypeName PSObject -Property @{'folder'= (New-Object -TypeName PSObject -Property @{'eq'=$false})}} #Working 
-
-            If ($Quarantined -and $QuarantinedNot) {Write-Error 'Cannot reconcile -Quarantined and -QuarantinedNot switches. Use zero or one of these, but not both.' -ErrorAction Stop}
-            If ($Quarantined)    {$FilterSet += New-Object -TypeName PSObject -Property @{'quarantined'= (New-Object -TypeName PSObject -Property @{'eq'=$true})}}   #Working
-            If ($QuarantinedNot) {$FilterSet += New-Object -TypeName PSObject -Property @{'quarantined'= (New-Object -TypeName PSObject -Property @{'eq'=$false})}}  #Working
-
-            If ($Trashed -and $TrashedNot) {Write-Error 'Cannot reconcile -Trashed and -TrashedNot switches. Use zero or one of these, but not both.' -ErrorAction Stop}
-            If ($Trashed)    {$FilterSet += New-Object -TypeName PSObject -Property @{'trashed'= (New-Object -TypeName PSObject -Property @{'eq'=$true})}}  #Working
-            If ($TrashedNot) {$FilterSet += New-Object -TypeName PSObject -Property @{'trashed'= (New-Object -TypeName PSObject -Property @{'eq'=$false})}} #Working
+            If ($AppId)                {$FilterSet += @{'service'=                  @{'eq'=$AppId}}}
+            If ($AppIdNot)             {$FilterSet += @{'service'=                  @{'neq'=$AppIdNot}}}
+            If ($Extension)            {$FilterSet += @{'extension'=                @{'eq'=$Extension}}}
+            If ($ExtensionNot)         {$FilterSet += @{'extension'=                @{'neq'=$ExtensionNot}}}
+            If ($Domains)              {$FilterSet += @{'collaborators.withDomain'= @{'eq'=$Domains}}}
+            If ($DomainsNot)           {$FilterSet += @{'collaborators.withDomain'= @{'neq'=$DomainsNot}}}
+            If ($Collaborators)        {$FilterSet += @{'collaborators.users'=      @{'eq'=$Collaborators}}}
+            If ($CollaboratorsNot)     {$FilterSet += @{'collaborators.users'=      @{'neq'=$CollaboratorsNot}}}
+            If ($Owner)                {$FilterSet += @{'owner.username'=           @{'eq'=$Owner}}}
+            If ($OwnerNot)             {$FilterSet += @{'owner.username'=           @{'neq'=$OwnerNot}}}
+            If ($MIMEType)             {$FilterSet += @{'mimeType'=                 @{'eq'=$MIMEType}}}
+            If ($MIMETypeNot)          {$FilterSet += @{'mimeType'=                 @{'neq'=$MIMETypeNot}}}
+            If ($Name)                 {$FilterSet += @{'filename'=                 @{'eq'=$Name}}}
+            If ($NameWithoutExtension) {$FilterSet += @{'filename'=                 @{'text'=$NameWithoutExtension}}}
+            If ($Folder)               {$FilterSet += @{'folder'=                   @{'eq'=$Folder}}}
+            If ($Quarantined)          {$FilterSet += @{'quarantined'=              @{'eq'=$Quarantined}}} 
+            If ($Trashed)              {$FilterSet += @{'trashed'=                  @{'eq'=$Trashed}}}
            
-            # Build filter set
-            If ($FilterSet)
-            {
-                # Convert filter set to JSON and touch it up
-                $JsonFilterSet = @()
-                ForEach ($Filter in $FilterSet) {$JsonFilterSet += ((($Filter | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{'))}
-                $JsonFilterSet = '{'+($JsonFilterSet -join '},')+'}}'
-
-                # Add the JSON filter string to the request body as the 'filter' property
-                $Body.Add('filters',$JsonFilterSet)
-            }
+            # Add filter set to request body as the 'filter' property            
+            If ($FilterSet) {$Body.Add('filters',(ConvertTo-CASJsonFilterString $FilterSet))}
 
             #endregion ----------------------------FILTERING----------------------------
 
