@@ -1,10 +1,9 @@
 
-
 If (Get-Module Cloud-App-Security) {Remove-Module Cloud-App-Security}
 $ScriptPath = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
 Import-Module "$ScriptPath\Cloud-App-Security.psm1"
 
-$CASCredential = Import-Clixml C:\Users\jpoeppel\mod102677.credential
+#$CASCredential = Import-Clixml C:\Users\jpoeppel\mod102677.credential
 
 Function Test-ForErrors
 {
