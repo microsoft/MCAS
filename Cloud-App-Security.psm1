@@ -1,5 +1,21 @@
 ﻿$ErrorActionPreference = 'Stop'
 
+#region ----------------------------Value Maps----------------------------
+
+$AppValueMap = @{'Box'=10489;'Okta'=10980;'Salesforce'=11114;'Office 365'=11161;'Amazon Web Services'=11599;'Dropbox'=11627;'Google Apps'=11770;'ServiceNow'=14509;'Microsoft OneDrive for Business'=15600;'Microsoft Cloud App Security'=20595;'Microsoft Sharepoint Online'=20892;'Microsoft Exchange Online'=20893}
+$IpCategoryValueMap = @{'None'=0;'Internal'=1;'Administrative'=2;'Risky'=3;'VPN'=4;'Cloud Provider'=5}
+$SeverityValueMap = @{'High'=2;'Medium'=1;'Low'=0}
+$ResolutionStatusValueMap = @{'Resolved'=2;'Dismissed'=1;'Open'=0}
+
+#endregion ----------------------------Value Maps----------------------------
+
+function ConvertTo-CASJsonFilterString ($colFilters) # Private function that should not be exported
+{
+    $colTemp = @()
+    ForEach ($f in $colFilters) {$colTemp += ((($f | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{'))} # Convert filter set to JSON and trim outer curly braces
+    Write-Output ('{'+($colTemp -join '},')+'}}') # Touch up the string just a little and return it
+}
+
 <#
 .Synopsis
    Gets user account information from your Cloud App Security tenant.
@@ -212,39 +228,25 @@ function Get-CASAccount
             #region ----------------------------FILTERING----------------------------
             $FilterSet = @() # Filter set array
 
-            # Value-mapped filters
-            If ($ServiceNames -and $Services) {Write-Error 'Cannot reconcile -ServiceNames and -Services parameters. Use zero or one of these, but not both.' -ErrorAction Stop}
-            If ($ServiceNames) 
-            {
-                $ValueMap = @{'Box'=10489;'Okta'=10980;'Salesforce'=11114;'Office 365'=11161;'Amazon Web Services'=11599;'Dropbox'=11627;'Google Apps'=11770;'ServiceNow'=14509;'Microsoft OneDrive for Business'=15600;'Microsoft Cloud App Security'=20595;'Microsoft Sharepoint Online'=20892;'Microsoft Exchange Online'=20893}
-                $FilterSet += New-Object -TypeName PSObject -Property @{'service'=(New-Object -TypeName PSObject -Property @{'eq'=($ServiceNames.GetEnumerator() | ForEach-Object {$ValueMap.Get_Item($_)})})}
-            }
+            # Additional parameter validations and mutual exclusions
+            If ($ServiceNames    -and ($Services     -or $ServiceNamesNot -or $ServicesNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($Services        -and ($ServiceNames -or $ServiceNamesNot -or $ServicesNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($ServiceNamesNot -and ($Services     -or $ServiceNames    -or $ServicesNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($ServicesNot     -and ($Services     -or $ServiceNamesNot -or $ServiceNames)) {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
             
-            If ($ServiceNamesNot -and $ServicesNot) {Write-Error 'Cannot reconcile -ServiceNamesNot and -ServicesNot parameters. Use zero or one of these, but not both.' -ErrorAction Stop}
-            If ($ServiceNamesNot) 
-            {
-                $ValueMap = @{'Box'=10489;'Okta'=10980;'Salesforce'=11114;'Office 365'=11161;'Amazon Web Services'=11599;'Dropbox'=11627;'Google Apps'=11770;'ServiceNow'=14509;'Microsoft OneDrive for Business'=15600;'Microsoft Cloud App Security'=20595;'Microsoft Sharepoint Online'=20892;'Microsoft Exchange Online'=20893}
-                $FilterSet += New-Object -TypeName PSObject -Property @{'service'=(New-Object -TypeName PSObject -Property @{'neq'=($ServiceNames.GetEnumerator() | ForEach-Object {$ValueMap.Get_Item($_)})})}
-            }
+            # Value-mapped filters
+            If ($ServiceNames)    {$FilterSet += @{'service'=@{'eq'=($ServiceNames.GetEnumerator() | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
+            If ($ServiceNamesNot) {$FilterSet += @{'service'=@{'neq'=($ServiceNamesNot.GetEnumerator() | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
 
             # Simple filters
-            If ($External)    {$FilterSet += New-Object -TypeName PSObject -Property @{'affiliation'=   (New-Object -TypeName PSObject -Property @{'eq'=$External})}}
-            If ($UserName)    {$FilterSet += New-Object -TypeName PSObject -Property @{'user.username'= (New-Object -TypeName PSObject -Property @{'eq'=$UserName})}}
-            If ($Services)    {$FilterSet += New-Object -TypeName PSObject -Property @{'service'=       (New-Object -TypeName PSObject -Property @{'eq'=$Services})}}
-            If ($ServicesNot) {$FilterSet += New-Object -TypeName PSObject -Property @{'service'=       (New-Object -TypeName PSObject -Property @{'neq'=$ServicesNot})}}
-            If ($UserDomain)  {$FilterSet += New-Object -TypeName PSObject -Property @{'domain'=        (New-Object -TypeName PSObject -Property @{'eq'=$UserDomain})}}
-                        
-            # Build filter set
-            If ($FilterSet)
-            {
-                # Convert filter set to JSON and touch it up
-                $JsonFilterSet = @()
-                ForEach ($Filter in $FilterSet) {$JsonFilterSet += ((($Filter | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{'))}
-                $JsonFilterSet = '{'+($JsonFilterSet -join '},')+'}}'
-
-                # Add the JSON filter string to the request body as the 'filter' property
-                $Body.Add('filters',$JsonFilterSet)
-            }
+            If ($External)    {$FilterSet += @{'affiliation'=   @{'eq'=$External}}}
+            If ($UserName)    {$FilterSet += @{'user.username'= @{'eq'=$UserName}}}
+            If ($Services)    {$FilterSet += @{'service'=       @{'eq'=$Services}}}
+            If ($ServicesNot) {$FilterSet += @{'service'=       @{'neq'=$ServicesNot}}}
+            If ($UserDomain)  {$FilterSet += @{'domain'=        @{'eq'=$UserDomain}}}
+            
+            # Add filter set to request body as the 'filter' property            
+            If ($FilterSet) {$Body.Add('filters',(ConvertTo-CASJsonFilterString $FilterSet))}
 
             #endregion ----------------------------FILTERING----------------------------
 
@@ -325,11 +327,21 @@ function Get-CASActivity
 
         # Limits the results to items related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [int[]]$Service,
+        [int[]]$AppId,
+
+        # Limits the results to items related to the specified app names, such as 'Office 365' and 'Google Apps'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
+        [string[]]$AppName,
 
         # Limits the results to items not related to the specified service ID's, for example 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [int[]]$ServiceNot,
+        [int[]]$AppIdNot,
+        
+        # Limits the results to items not related to the specified app names, such as 'Office 365' and 'Google Apps'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
+        [string[]]$AppNameNot,
 
         # Limits the results to items of specified event type name, such as EVENT_CATEGORY_LOGIN,EVENT_CATEGORY_DOWNLOAD_FILE.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -359,13 +371,9 @@ function Get-CASActivity
         [ValidateSet('Desktop','Mobile','Tablet','Other')]
         [string[]]$DeviceType,
 
-        # Limits the results to admin event items.
+        # Limits the results to admin events if true, non-admin events, if false.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$AdminEvents,
-
-        # Limits the results to non-admin event items.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$NonAdminEvents,
+        [bool]$AdminEvents,
 
         # Specifies the property by which to sort the results. Possible Values: 'Date','Created'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -458,41 +466,32 @@ function Get-CASActivity
             #region ----------------------------FILTERING----------------------------
             $FilterSet = @() # Filter set array
 
-            # Value-mapped filters
-            If ($IpCategory) 
-            {
-                $ValueMap = @{'None'=0;'Internal'=1;'Administrative'=2;'Risky'=3;'VPN'=4;'Cloud Provider'=5}
-                $FilterSet += New-Object -TypeName PSObject -Property @{'ip.category'=(New-Object -TypeName PSObject -Property @{'eq'=($IpCategory.GetEnumerator() | ForEach-Object {$ValueMap.Get_Item($_)})})}
-            }
-
-            # Simple filters
-            If ($User)                 {$FilterSet += New-Object -TypeName PSObject -Property @{'user.username'=       (New-Object -TypeName PSObject -Property @{'eq'=$User})}}
-            If ($Service)              {$FilterSet += New-Object -TypeName PSObject -Property @{'service'=             (New-Object -TypeName PSObject -Property @{'eq'=$Service})}}
-            If ($ServiceNot)           {$FilterSet += New-Object -TypeName PSObject -Property @{'service'=             (New-Object -TypeName PSObject -Property @{'neq'=$ServiceNot})}}
-            If ($EventTypeName)        {$FilterSet += New-Object -TypeName PSObject -Property @{'activity.actionType'= (New-Object -TypeName PSObject -Property @{'eq'=$EventTypeName})}}
-            If ($EventTypeNameNot)     {$FilterSet += New-Object -TypeName PSObject -Property @{'activity.actionType'= (New-Object -TypeName PSObject -Property @{'neq'=$EventTypeNameNot})}}
-            If ($DeviceType)           {$FilterSet += New-Object -TypeName PSObject -Property @{'device.type'=         (New-Object -TypeName PSObject -Property @{'eq'=$DeviceType.ToUpper()})}} # CAS API expects upper case here
-            If ($UserAgentContains)    {$FilterSet += New-Object -TypeName PSObject -Property @{'userAgent.userAgent'= (New-Object -TypeName PSObject -Property @{'contains'=$UserAgentContains})}}
-            If ($UserAgentNotContains) {$FilterSet += New-Object -TypeName PSObject -Property @{'userAgent.userAgent'= (New-Object -TypeName PSObject -Property @{'ncontains'=$UserAgentNotContains})}}
-            If ($IpStartsWith)         {$FilterSet += New-Object -TypeName PSObject -Property @{'ip.address'=          (New-Object -TypeName PSObject -Property @{'startswith'=$IpStartsWith})}}
-            If ($IpDoesNotStartWith)   {$FilterSet += New-Object -TypeName PSObject -Property @{'ip.address'=          (New-Object -TypeName PSObject -Property @{'doesnotstartwith'=$IpStartsWith})}}
+            # Additional parameter validations and mutual exclusions
+            If ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
             
-            # Mutually exclusive filters
-            If ($AdminEvents -and $NonAdminEvents) {Write-Error 'Cannot reconcile -AdminEvents and -NonAdminEvents switches. Use zero or one of these, but not both.' -ErrorAction Stop}
-            If ($AdminEvents)    {$FilterSet += New-Object -TypeName PSObject -Property @{'activity.type'=  (New-Object -TypeName PSObject -Property @{'eq'=$true})}}
-            If ($NonAdminEvents) {$FilterSet += New-Object -TypeName PSObject -Property @{'activity.type'=  (New-Object -TypeName PSObject -Property @{'eq'=$false})}}
+            # Value-mapped filters
+            If ($IpCategory) {$FilterSet += @{'ip.category'=@{'eq'=($IpCategory.GetEnumerator() | ForEach-Object {$IpCategoryValueMap.Get_Item($_)})}}}
+            If ($AppName)    {$FilterSet += @{'service'=    @{'eq'=($AppName.GetEnumerator() | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
+            If ($AppNameNot) {$FilterSet += @{'service'=    @{'neq'=($AppNameNot.GetEnumerator() | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
+            
+            # Simple filters
+            If ($User)                 {$FilterSet += @{'user.username'=       @{'eq'=$User}}}
+            If ($AppId)                {$FilterSet += @{'service'=             @{'eq'=$AppId}}}
+            If ($AppIdNot)             {$FilterSet += @{'service'=             @{'neq'=$AppIdNot}}}
+            If ($EventTypeName)        {$FilterSet += @{'activity.actionType'= @{'eq'=$EventTypeName}}}
+            If ($EventTypeNameNot)     {$FilterSet += @{'activity.actionType'= @{'neq'=$EventTypeNameNot}}}
+            If ($DeviceType)           {$FilterSet += @{'device.type'=         @{'eq'=$DeviceType.ToUpper()}}} # CAS API expects upper case here
+            If ($UserAgentContains)    {$FilterSet += @{'userAgent.userAgent'= @{'contains'=$UserAgentContains}}}
+            If ($UserAgentNotContains) {$FilterSet += @{'userAgent.userAgent'= @{'ncontains'=$UserAgentNotContains}}}
+            If ($IpStartsWith)         {$FilterSet += @{'ip.address'=          @{'startswith'=$IpStartsWith}}}
+            If ($IpDoesNotStartWith)   {$FilterSet += @{'ip.address'=          @{'doesnotstartwith'=$IpStartsWith}}} 
+            If ($AdminEvents)          {$FilterSet += @{'activity.type'=       @{'eq'=$true}}}
 
-            # Build filter set
-            If ($FilterSet)
-            {
-                # Convert filter set to JSON and touch it up
-                $JsonFilterSet = @()
-                ForEach ($Filter in $FilterSet) {$JsonFilterSet += ((($Filter | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{'))}
-                $JsonFilterSet = '{'+($JsonFilterSet -join '},')+'}}'
-
-                # Add the JSON filter string to the request body as the 'filter' property
-                $Body.Add('filters',$JsonFilterSet) 
-            }
+            # Add filter set to request body as the 'filter' property            
+            If ($FilterSet) {$Body.Add('filters',(ConvertTo-CASJsonFilterString $FilterSet))}
 
             #endregion ----------------------------FILTERING----------------------------
 
@@ -585,9 +584,19 @@ function Get-CASAlert
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [int[]]$Service,
 
+        # Limits the results to items related to the specified service names, such as 'Office 365' and 'Google Apps'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
+        [string[]]$ServiceName,
+
         # Limits the results to items not related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [int[]]$ServiceNot,
+
+        # Limits the results to items not related to the specified service names, such as 'Office 365' and 'Google Apps'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
+        [string[]]$ServiceNameNot,
 
         # Limits the results to items related to the specified policy, such as 'Contoso CAS Policy'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -602,13 +611,9 @@ function Get-CASAlert
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [string]$Source,
 
-        # Limits the results to unread items.
+        # Limits the results to read items, if true, unread items, if false.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$Unread,
-
-        # Limits the results to read items.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$Read,
+        [bool]$Read,
 
         # Specifies the property by which to sort the results. Possible Values: 'Date','Severity', 'ResolutionStatus'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -707,44 +712,30 @@ function Get-CASAlert
             #region ----------------------------FILTERING----------------------------
             $FilterSet = @() # Filter set array
 
-            # Value-mapped filters
-            If ($Severity) 
-            {
-                $ValueMap = @{'High'=2;'Medium'=1;'Low'=0}
-                $FilterSet += New-Object -TypeName PSObject -Property @{'severity'=(New-Object -TypeName PSObject -Property @{'eq'=($Severity.GetEnumerator() | ForEach-Object {$ValueMap.Get_Item($_)})})}
-            }
+            # Additional parameter validations and mutual exclusions
+            If ($ServiceName    -and ($Service     -or $ServiceNameNot -or $ServiceNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($Service        -and ($ServiceName -or $ServiceNameNot -or $ServiceNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($ServiceNameNot -and ($Service     -or $ServiceName    -or $ServiceNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($ServiceNot     -and ($Service     -or $ServiceNameNot -or $ServiceName)) {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
 
-            If ($ResolutionStatus) 
-            {
-                $ValueMap = @{'Resolved'=2;'Dismissed'=1;'Open'=0}
-                $FilterSet += New-Object -TypeName PSObject -Property @{'resolutionStatus'=(New-Object -TypeName PSObject -Property @{'eq'=($ResolutionStatus.GetEnumerator() | ForEach-Object {$ValueMap.Get_Item($_)})})}
-            }
+            # Value-mapped filters
+            If ($ServiceName)      {$FilterSet += @{'service'=         @{'eq'=($ServiceName.GetEnumerator()      | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
+            If ($ServiceNameNot)   {$FilterSet += @{'service'=         @{'neq'=($ServiceNameNot.GetEnumerator()  | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
+            If ($Severity)         {$FilterSet += @{'severity'=        @{'eq'=($Severity.GetEnumerator()         | ForEach-Object {$SeverityValueMap.Get_Item($_)})}}}
+            If ($ResolutionStatus) {$FilterSet += @{'resolutionStatus'=@{'eq'=($ResolutionStatus.GetEnumerator() | ForEach-Object {$ResolutionStatusValueMap.Get_Item($_)})}}}
 
             # Simple filters
-            If ($User)       {$FilterSet += New-Object -TypeName PSObject -Property @{'entity.user'=    (New-Object -TypeName PSObject -Property @{'eq'=$User})}}
-            If ($Service)    {$FilterSet += New-Object -TypeName PSObject -Property @{'entity.service'= (New-Object -TypeName PSObject -Property @{'eq'=$Service})}}
-            If ($ServiceNot) {$FilterSet += New-Object -TypeName PSObject -Property @{'entity.service'= (New-Object -TypeName PSObject -Property @{'neq'=$ServiceNot})}}
-            If ($Policy)     {$FilterSet += New-Object -TypeName PSObject -Property @{'entity.policy'=  (New-Object -TypeName PSObject -Property @{'eq'=$Policy})}}
-            If ($Risk)       {$FilterSet += New-Object -TypeName PSObject -Property @{'risk'=           (New-Object -TypeName PSObject -Property @{'eq'=$Risk})}}
-            If ($AlertType)  {$FilterSet += New-Object -TypeName PSObject -Property @{'id'=             (New-Object -TypeName PSObject -Property @{'eq'=$AlertType})}}
-            If ($Source)     {$FilterSet += New-Object -TypeName PSObject -Property @{'source'=         (New-Object -TypeName PSObject -Property @{'eq'=$Source})}}
-            
-            # Mutually exclusive filters
-            If ($Read -and $Unread) {Write-Error 'Cannot reconcile -Read and -Unread switches. Use zero or one of these, but not both.' -ErrorAction Stop}
-            If ($Unread) {$FilterSet += New-Object -TypeName PSObject -Property @{'read'=  (New-Object -TypeName PSObject -Property @{'eq'=$false})}}
-            If ($Read)   {$FilterSet += New-Object -TypeName PSObject -Property @{'read'=  (New-Object -TypeName PSObject -Property @{'eq'=$true})}}
+            If ($User)       {$FilterSet += @{'entity.user'=    @{'eq'=$User}}}
+            If ($Service)    {$FilterSet += @{'entity.service'= @{'eq'=$Service}}}
+            If ($ServiceNot) {$FilterSet += @{'entity.service'= @{'neq'=$ServiceNot}}}
+            If ($Policy)     {$FilterSet += @{'entity.policy'=  @{'eq'=$Policy}}}
+            If ($Risk)       {$FilterSet += @{'risk'=           @{'eq'=$Risk}}}
+            If ($AlertType)  {$FilterSet += @{'id'=             @{'eq'=$AlertType}}}
+            If ($Source)     {$FilterSet += @{'source'=         @{'eq'=$Source}}}
+            If ($Read)       {$FilterSet += @{'read'=           @{'eq'=$true}}}
  
-            # Build filter set
-            If ($FilterSet)
-            {
-                # Convert filter set to JSON and touch it up
-                $JsonFilterSet = @()
-                ForEach ($Filter in $FilterSet) {$JsonFilterSet += ((($Filter | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{'))}
-                $JsonFilterSet = '{'+($JsonFilterSet -join '},')+'}}'
-
-                # Add the JSON filter string to the request body as the 'filter' property
-                $Body.Add('filters',$JsonFilterSet)
-            }
+            # Add filter set to request body as the 'filter' property            
+            If ($FilterSet) {$Body.Add('filters',(ConvertTo-CASJsonFilterString $FilterSet))}
 
             #endregion ----------------------------FILTERING----------------------------
 
@@ -1135,17 +1126,8 @@ function Get-CASFile
             If ($Trashed)    {$FilterSet += New-Object -TypeName PSObject -Property @{'trashed'= (New-Object -TypeName PSObject -Property @{'eq'=$true})}}  #Working
             If ($TrashedNot) {$FilterSet += New-Object -TypeName PSObject -Property @{'trashed'= (New-Object -TypeName PSObject -Property @{'eq'=$false})}} #Working
            
-            # Build filter set
-            If ($FilterSet)
-            {
-                # Convert filter set to JSON and touch it up
-                $JsonFilterSet = @()
-                ForEach ($Filter in $FilterSet) {$JsonFilterSet += ((($Filter | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{'))}
-                $JsonFilterSet = '{'+($JsonFilterSet -join '},')+'}}'
-
-                # Add the JSON filter string to the request body as the 'filter' property
-                $Body.Add('filters',$JsonFilterSet)
-            }
+            # Add filter set to request body as the 'filter' property            
+            If ($FilterSet) {$Body.Add('filters',(ConvertTo-CASJsonFilterString $FilterSet))}
 
             #endregion ----------------------------FILTERING----------------------------
 
