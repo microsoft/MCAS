@@ -22,7 +22,7 @@ Function Test-ForErrors
         Catch 
         {
             #Write-Error "$Block encountered. The error was: $Error"
-            Write-Output (New-Object -TypeName PSObject -Property @{TestItem=$Block;Result=$Error})
+            Write-Output @{TestItem=$Block;Result=$Error}
         }
         If ($Error) {Write-Verbose 'ERROR'} Else {Write-Verbose 'SUCCESS'}
         $Error.Clear()
@@ -120,7 +120,7 @@ $FailureTests += {Get-CASFile -ResultSetSize 5001}
 #Get-CASAccount -ServiceNames 'Microsoft Cloud App Security' | FT
 
 
-$SuccessTestResults += $SuccessTests | ForEach {Test-ForErrors $_ -Verbose}
+$SuccessTestResults += $SuccessTests | ForEach {Test-ForErrors $_ }
 If ($SuccessTestResults.Count -ne 0)
 {
     $OverallSuccess = $false
@@ -128,7 +128,7 @@ If ($SuccessTestResults.Count -ne 0)
     $SuccessTestResults | FT TestItem,Result
 } 
 
-$FailureTestResults += $FailureTests | ForEach {Test-ForErrors $_ -Verbose}
+$FailureTestResults += $FailureTests | ForEach {Test-ForErrors $_ }
 If ($FailureTestResults.Count -ne $FailureTests.Count)
 {
     $OverallSuccess = $false
