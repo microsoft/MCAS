@@ -806,7 +806,7 @@ function Get-CASAlert
     contoso.portal.cloudappsecurity.com    System.Security.SecureString
 
 .EXAMPLE
-   Get-CASCredential -PassThru | Export-CliXml C:\Users\Alice\MyCASCred.credential -Force
+    Get-CASCredential -PassThru | Export-CliXml C:\Users\Alice\MyCASCred.credential -Force
 
     By specifying the -PassThru switch parameter, this will put the $CASCredential into the pipeline which can be exported to a .credential file that will store the tenant URL and encrypted version of the token in a file.
 
@@ -871,7 +871,7 @@ function Get-CASCredential
     This pulls back a single file record and is part of the 'List' parameter set.
 
 .EXAMPLE
-   Get-CASAccount -Identity 572caf4588011e452ec18ef0
+   Get-CASFile -Identity 572caf4588011e452ec18ef0
 
     This pulls back a single file record using the GUID and is part of the 'Fetch' parameter set.
 
@@ -1157,7 +1157,7 @@ function Get-CASFile
 .DESCRIPTION
    Send-CASDiscoveryLog uploads an edge device log file to be analyzed for SaaS discovery by Cloud App Security.
 
-   When using Send-CASDiscoveryLog, you must provide a log file by name/path and a log file type, which represents the source firewall or proxy device type. Also required is the name of the discovery data source with which the uploaded log should be associated.
+   When using Send-CASDiscoveryLog, you must provide a log file by name/path and a log file type, which represents the source firewall or proxy device type. Also required is the name of the discovery data source with which the uploaded log should be associated; this can be created in the console.
 
    Send-CASDiscoveryLog does not return any value
 
@@ -1371,7 +1371,9 @@ function Send-CASDiscoveryLog
     This will set the status of the specified alert as "Dismissed".
 
 .EXAMPLE
-   <Pipeline example>
+   Get-CASAlert -Unread -SortBy Date -SortDirection Descending -ResultSetSize 10 | Set-CASAlert -MarkAs Read
+
+    This will pull the last 10 alerts that were generated with a status of 'Unread' and will mark them all as 'Read'.
 
 .FUNCTIONALITY
    Set-CASAlert is intended to function as a mechanism for setting the status of alerts Cloud App Security.
