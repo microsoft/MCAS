@@ -1,5 +1,28 @@
 ﻿$ErrorActionPreference = 'Stop'
 
+#region ----------------------------Value Maps----------------------------
+
+$AppValueMap =              @{'Box'=10489;'Okta'=10980;'Salesforce'=11114;'Office 365'=11161;'Amazon Web Services'=11599;'Dropbox'=11627;'Google Apps'=11770;'ServiceNow'=14509;'Microsoft OneDrive for Business'=15600;'Microsoft Cloud App Security'=20595;'Microsoft Sharepoint Online'=20892;'Microsoft Exchange Online'=20893}
+
+$IpCategoryValueMap =       @{'None'=0;'Internal'=1;'Administrative'=2;'Risky'=3;'VPN'=4;'Cloud Provider'=5}
+
+$SeverityValueMap =         @{'High'=2;'Medium'=1;'Low'=0}
+
+$ResolutionStatusValueMap = @{'Resolved'=2;'Dismissed'=1;'Open'=0}
+
+$FileTypeValueMap =         @{'Other'=0;'Document'=1;'Spreadsheet'=2; 'Presentation'=3; 'Text'=4; 'Image'=5; 'Folder'=6}
+
+$FileAccessLevelValueMap =  @{'Private'=0;'Internal'=1;'External'=2;'Public'=3;'PublicInternet'=4}
+
+#endregion ----------------------------Value Maps----------------------------
+
+function ConvertTo-CASJsonFilterString ($colFilters) # Private function that should not be exported
+{
+    $colTemp = @()
+    ForEach ($f in $colFilters) {$colTemp += ((($f | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{'))} # Convert filter set to JSON and trim outer curly braces
+    Write-Output ('{'+($colTemp -join '},')+'}}') # Touch up the string just a little and return it
+}
+
 <#
 .Synopsis
    Gets user account information from your Cloud App Security tenant.
@@ -45,7 +68,7 @@
     This pulls back a single user record using the GUID and is part of the 'Fetch' parameter set.
 
 .EXAMPLE
-   (Get-CASAccount -Domain contoso.com).count
+   (Get-CASAccount -UserDomain contoso.com).count
 
     2
 
@@ -62,8 +85,17 @@
 
     This pulls back all accounts flagged as external to the domain and displays only unique records in a new property called 'Unique Domains'.
 
-.FUNCTIONALITY
-   Get-CASAccount is intended to function as a query mechanism for obtaining account information from Cloud App Security.
+.EXAMPLE
+   (Get-CASAccount -ServiceNames 'Microsoft Cloud App Security').serviceData.20595
+
+    email                              lastLogin                   lastSeen
+    -----                              ---------                   --------
+    admin@mod.onmicrosoft.com          2016-06-13T21:17:40.821000Z 2016-06-13T21:17:40.821000Z
+
+    This queries for any Cloud App Security accounts and displays the serviceData table containing the email, last login, and last seen properties. 20595 is the Service ID for Cloud App Security.
+
+    .FUNCTIONALITY
+       Get-CASAccount is intended to function as a query mechanism for obtaining account information from Cloud App Security.
 #>
 function Get-CASAccount
 {
@@ -85,28 +117,37 @@ function Get-CASAccount
         [Parameter(Mandatory=$false)]
         [System.Management.Automation.PSCredential]$Credential,
  
-        # Limits the results by access level. ('Internal','External')
+        # Limits the results to external, if true, or internal users, if false
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Internal','External')]
-        [string[]]$Affiliation,
+        [bool[]]$External,
         
-        # Limits the results to items related to the specified user/users, such as 'alice@contoso.com','bob@contoso.com'. 
+        # Limits the results to items related to the specified user names, such as 'alice@contoso.com','bob@contoso.com'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [string[]]$User,
+        [string[]]$UserName,
 
-        # Limits the results to items related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
+        # Limits the results to items related to the specified service IDs, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [int[]]$Service,
+        [int[]]$Services,
+
+        # Limits the results to items related to the specified service names, such as 'Office 365' and 'Google Apps'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
+        [string[]]$ServiceNames,
 
         # Limits the results to items not related to the specified service ids, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [int[]]$ServiceNot,
+        [int[]]$ServicesNot,
 
-        # Limits the results to items found in the specified domains, such as 'contoso.com'.
+        # Limits the results to items not related to the specified service names, such as 'Office 365' and 'Google Apps'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [string[]]$Domain,
+        [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
+        [string[]]$ServiceNamesNot,
 
-        # Specifies the property by which to sort the results. Possible Values: 'Username','LastSeen'.
+        # Limits the results to items found in the specified user domains, such as 'contoso.com'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [string[]]$UserDomain,
+
+        # Specifies the property by which to sort the results. Possible Values: 'UserName','LastSeen'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('Username','LastSeen')]
         [string]$SortBy,
@@ -203,30 +244,25 @@ function Get-CASAccount
             #region ----------------------------FILTERING----------------------------
             $FilterSet = @() # Filter set array
 
+            # Additional parameter validations and mutual exclusions
+            If ($ServiceNames    -and ($Services     -or $ServiceNamesNot -or $ServicesNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($Services        -and ($ServiceNames -or $ServiceNamesNot -or $ServicesNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($ServiceNamesNot -and ($Services     -or $ServiceNames    -or $ServicesNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($ServicesNot     -and ($Services     -or $ServiceNamesNot -or $ServiceNames)) {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
+            
             # Value-mapped filters
-            If ($Affiliation) 
-            {
-                $ValueMap = @{'Internal'=$false;'External'=$true}
-                $FilterSet += New-Object -TypeName PSObject -Property @{'affiliation'=(New-Object -TypeName PSObject -Property @{'eq'=($Affiliation.GetEnumerator() | ForEach-Object {$ValueMap.Get_Item($_)})})}
-            }
+            If ($ServiceNames)    {$FilterSet += @{'service'=@{'eq'=($ServiceNames.GetEnumerator() | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
+            If ($ServiceNamesNot) {$FilterSet += @{'service'=@{'neq'=($ServiceNamesNot.GetEnumerator() | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
 
             # Simple filters
-            If ($User)       {$FilterSet += New-Object -TypeName PSObject -Property @{'user.username'= (New-Object -TypeName PSObject -Property @{'eq'=$User})}}
-            If ($Service)    {$FilterSet += New-Object -TypeName PSObject -Property @{'service'=       (New-Object -TypeName PSObject -Property @{'eq'=$Service})}}
-            If ($ServiceNot) {$FilterSet += New-Object -TypeName PSObject -Property @{'service'=       (New-Object -TypeName PSObject -Property @{'neq'=$ServiceNot})}}
-            If ($Domain)     {$FilterSet += New-Object -TypeName PSObject -Property @{'domain'=        (New-Object -TypeName PSObject -Property @{'eq'=$Domain})}}
-                        
-            # Build filter set
-            If ($FilterSet)
-            {
-                # Convert filter set to JSON and touch it up
-                $JsonFilterSet = @()
-                ForEach ($Filter in $FilterSet) {$JsonFilterSet += ((($Filter | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{'))}
-                $JsonFilterSet = '{'+($JsonFilterSet -join '},')+'}}'
-
-                # Add the JSON filter string to the request body as the 'filter' property
-                $Body.Add('filters',$JsonFilterSet)
-            }
+            If ($External)    {$FilterSet += @{'affiliation'=   @{'eq'=$External}}}
+            If ($UserName)    {$FilterSet += @{'user.username'= @{'eq'=$UserName}}}
+            If ($Services)    {$FilterSet += @{'service'=       @{'eq'=$Services}}}
+            If ($ServicesNot) {$FilterSet += @{'service'=       @{'neq'=$ServicesNot}}}
+            If ($UserDomain)  {$FilterSet += @{'domain'=        @{'eq'=$UserDomain}}}
+            
+            # Add filter set to request body as the 'filter' property            
+            If ($FilterSet) {$Body.Add('filters',(ConvertTo-CASJsonFilterString $FilterSet))}
 
             #endregion ----------------------------FILTERING----------------------------
 
@@ -278,6 +314,16 @@ function Get-CASAccount
 
     This pulls back a single activity record using the GUID and is part of the 'Fetch' parameter set.
 
+.EXAMPLE
+   (Get-CASActivity -AppName Box).rawJson | ?{$_.event_type -match "upload"} | select ip_address -Unique
+
+    ip_address
+    ----------
+    69.4.151.176
+    98.29.2.44
+
+    This grabs the last 100 Box activities, searches for an event type called "upload" in the rawJson table, and returns a list of unique IP addresses.
+
 .FUNCTIONALITY
    Get-CASActivity is intended to function as a query mechanism for obtaining activity information from Cloud App Security.
 #>
@@ -307,11 +353,21 @@ function Get-CASActivity
 
         # Limits the results to items related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [int[]]$Service,
+        [int[]]$AppId,
+
+        # Limits the results to items related to the specified app names, such as 'Office 365' and 'Google Apps'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
+        [string[]]$AppName,
 
         # Limits the results to items not related to the specified service ID's, for example 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [int[]]$ServiceNot,
+        [int[]]$AppIdNot,
+        
+        # Limits the results to items not related to the specified app names, such as 'Office 365' and 'Google Apps'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
+        [string[]]$AppNameNot,
 
         # Limits the results to items of specified event type name, such as EVENT_CATEGORY_LOGIN,EVENT_CATEGORY_DOWNLOAD_FILE.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -341,13 +397,9 @@ function Get-CASActivity
         [ValidateSet('Desktop','Mobile','Tablet','Other')]
         [string[]]$DeviceType,
 
-        # Limits the results to admin event items.
+        # Limits the results to admin events if true, non-admin events, if false.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$AdminEvents,
-
-        # Limits the results to non-admin event items.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$NonAdminEvents,
+        [bool]$AdminEvents,
 
         # Specifies the property by which to sort the results. Possible Values: 'Date','Created'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -440,41 +492,32 @@ function Get-CASActivity
             #region ----------------------------FILTERING----------------------------
             $FilterSet = @() # Filter set array
 
-            # Value-mapped filters
-            If ($IpCategory) 
-            {
-                $ValueMap = @{'None'=0;'Internal'=1;'Administrative'=2;'Risky'=3;'VPN'=4;'Cloud Provider'=5}
-                $FilterSet += New-Object -TypeName PSObject -Property @{'ip.category'=(New-Object -TypeName PSObject -Property @{'eq'=($IpCategory.GetEnumerator() | ForEach-Object {$ValueMap.Get_Item($_)})})}
-            }
-
-            # Simple filters
-            If ($User)                 {$FilterSet += New-Object -TypeName PSObject -Property @{'user.username'=       (New-Object -TypeName PSObject -Property @{'eq'=$User})}}
-            If ($Service)              {$FilterSet += New-Object -TypeName PSObject -Property @{'service'=             (New-Object -TypeName PSObject -Property @{'eq'=$Service})}}
-            If ($ServiceNot)           {$FilterSet += New-Object -TypeName PSObject -Property @{'service'=             (New-Object -TypeName PSObject -Property @{'neq'=$ServiceNot})}}
-            If ($EventTypeName)        {$FilterSet += New-Object -TypeName PSObject -Property @{'activity.actionType'= (New-Object -TypeName PSObject -Property @{'eq'=$EventTypeName})}}
-            If ($EventTypeNameNot)     {$FilterSet += New-Object -TypeName PSObject -Property @{'activity.actionType'= (New-Object -TypeName PSObject -Property @{'neq'=$EventTypeNameNot})}}
-            If ($DeviceType)           {$FilterSet += New-Object -TypeName PSObject -Property @{'device.type'=         (New-Object -TypeName PSObject -Property @{'eq'=$DeviceType.ToUpper()})}} # CAS API expects upper case here
-            If ($UserAgentContains)    {$FilterSet += New-Object -TypeName PSObject -Property @{'userAgent.userAgent'= (New-Object -TypeName PSObject -Property @{'contains'=$UserAgentContains})}}
-            If ($UserAgentNotContains) {$FilterSet += New-Object -TypeName PSObject -Property @{'userAgent.userAgent'= (New-Object -TypeName PSObject -Property @{'ncontains'=$UserAgentNotContains})}}
-            If ($IpStartsWith)         {$FilterSet += New-Object -TypeName PSObject -Property @{'ip.address'=          (New-Object -TypeName PSObject -Property @{'startswith'=$IpStartsWith})}}
-            If ($IpDoesNotStartWith)   {$FilterSet += New-Object -TypeName PSObject -Property @{'ip.address'=          (New-Object -TypeName PSObject -Property @{'doesnotstartwith'=$IpStartsWith})}}
+            # Additional parameter validations and mutual exclusions
+            If ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
             
-            # Mutually exclusive filters
-            If ($AdminEvents -and $NonAdminEvents) {Write-Error 'Cannot reconcile -AdminEvents and -NonAdminEvents switches. Use zero or one of these, but not both.' -ErrorAction Stop}
-            If ($AdminEvents)    {$FilterSet += New-Object -TypeName PSObject -Property @{'activity.type'=  (New-Object -TypeName PSObject -Property @{'eq'=$true})}}
-            If ($NonAdminEvents) {$FilterSet += New-Object -TypeName PSObject -Property @{'activity.type'=  (New-Object -TypeName PSObject -Property @{'eq'=$false})}}
+            # Value-mapped filters
+            If ($IpCategory) {$FilterSet += @{'ip.category'=@{'eq'=($IpCategory.GetEnumerator() | ForEach-Object {$IpCategoryValueMap.Get_Item($_)})}}}
+            If ($AppName)    {$FilterSet += @{'service'=    @{'eq'=($AppName.GetEnumerator() | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
+            If ($AppNameNot) {$FilterSet += @{'service'=    @{'neq'=($AppNameNot.GetEnumerator() | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
+            
+            # Simple filters
+            If ($User)                 {$FilterSet += @{'user.username'=       @{'eq'=$User}}}
+            If ($AppId)                {$FilterSet += @{'service'=             @{'eq'=$AppId}}}
+            If ($AppIdNot)             {$FilterSet += @{'service'=             @{'neq'=$AppIdNot}}}
+            If ($EventTypeName)        {$FilterSet += @{'activity.actionType'= @{'eq'=$EventTypeName}}}
+            If ($EventTypeNameNot)     {$FilterSet += @{'activity.actionType'= @{'neq'=$EventTypeNameNot}}}
+            If ($DeviceType)           {$FilterSet += @{'device.type'=         @{'eq'=$DeviceType.ToUpper()}}} # CAS API expects upper case here
+            If ($UserAgentContains)    {$FilterSet += @{'userAgent.userAgent'= @{'contains'=$UserAgentContains}}}
+            If ($UserAgentNotContains) {$FilterSet += @{'userAgent.userAgent'= @{'ncontains'=$UserAgentNotContains}}}
+            If ($IpStartsWith)         {$FilterSet += @{'ip.address'=          @{'startswith'=$IpStartsWith}}}
+            If ($IpDoesNotStartWith)   {$FilterSet += @{'ip.address'=          @{'doesnotstartwith'=$IpStartsWith}}} 
+            If ($AdminEvents)          {$FilterSet += @{'activity.type'=       @{'eq'=$AdminEvents}}}
 
-            # Build filter set
-            If ($FilterSet)
-            {
-                # Convert filter set to JSON and touch it up
-                $JsonFilterSet = @()
-                ForEach ($Filter in $FilterSet) {$JsonFilterSet += ((($Filter | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{'))}
-                $JsonFilterSet = '{'+($JsonFilterSet -join '},')+'}}'
-
-                # Add the JSON filter string to the request body as the 'filter' property
-                $Body.Add('filters',$JsonFilterSet) 
-            }
+            # Add filter set to request body as the 'filter' property            
+            If ($FilterSet) {$Body.Add('filters',(ConvertTo-CASJsonFilterString $FilterSet))}
 
             #endregion ----------------------------FILTERING----------------------------
 
@@ -526,6 +569,14 @@ function Get-CASActivity
 
     This pulls back a single alert record using the GUID and is part of the 'Fetch' parameter set.
 
+.EXAMPLE
+   (Get-CASAlert -ResolutionStatus Open -Severity High | where{$_.title -match "system alert"}).descriptionTemplate.parameters.LOGRABBER_SYSTEM_ALERT_MESSAGE_BASE.functionObject.parameters.appName
+
+    ServiceNow
+    Box
+
+    This command showcases the ability to expand nested tables of alerts. First, we pull back only Open alerts marked as High severity and filter down to only those with a title that matches "system alert". By wrapping the initial call in parentheses you can now extract the names of the affected services by drilling into the nested tables and referencing the appName property.
+
 .FUNCTIONALITY
    Get-CASAlert is intended to function as a query mechanism for obtaining alert information from Cloud App Security.
 #>
@@ -567,9 +618,19 @@ function Get-CASAlert
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [int[]]$Service,
 
+        # Limits the results to items related to the specified service names, such as 'Office 365' and 'Google Apps'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
+        [string[]]$ServiceName,
+
         # Limits the results to items not related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [int[]]$ServiceNot,
+
+        # Limits the results to items not related to the specified service names, such as 'Office 365' and 'Google Apps'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
+        [string[]]$ServiceNameNot,
 
         # Limits the results to items related to the specified policy, such as 'Contoso CAS Policy'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -584,13 +645,9 @@ function Get-CASAlert
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [string]$Source,
 
-        # Limits the results to unread items.
+        # Limits the results to read items, if true, unread items, if false.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$Unread,
-
-        # Limits the results to read items.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$Read,
+        [bool]$Read,
 
         # Specifies the property by which to sort the results. Possible Values: 'Date','Severity', 'ResolutionStatus'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -689,44 +746,30 @@ function Get-CASAlert
             #region ----------------------------FILTERING----------------------------
             $FilterSet = @() # Filter set array
 
-            # Value-mapped filters
-            If ($Severity) 
-            {
-                $ValueMap = @{'High'=2;'Medium'=1;'Low'=0}
-                $FilterSet += New-Object -TypeName PSObject -Property @{'severity'=(New-Object -TypeName PSObject -Property @{'eq'=($Severity.GetEnumerator() | ForEach-Object {$ValueMap.Get_Item($_)})})}
-            }
+            # Additional parameter validations and mutual exclusions
+            If ($ServiceName    -and ($Service     -or $ServiceNameNot -or $ServiceNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($Service        -and ($ServiceName -or $ServiceNameNot -or $ServiceNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($ServiceNameNot -and ($Service     -or $ServiceName    -or $ServiceNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($ServiceNot     -and ($Service     -or $ServiceNameNot -or $ServiceName)) {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
 
-            If ($ResolutionStatus) 
-            {
-                $ValueMap = @{'Resolved'=2;'Dismissed'=1;'Open'=0}
-                $FilterSet += New-Object -TypeName PSObject -Property @{'resolutionStatus'=(New-Object -TypeName PSObject -Property @{'eq'=($ResolutionStatus.GetEnumerator() | ForEach-Object {$ValueMap.Get_Item($_)})})}
-            }
+            # Value-mapped filters
+            If ($ServiceName)      {$FilterSet += @{'service'=         @{'eq'=($ServiceName.GetEnumerator()      | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
+            If ($ServiceNameNot)   {$FilterSet += @{'service'=         @{'neq'=($ServiceNameNot.GetEnumerator()  | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
+            If ($Severity)         {$FilterSet += @{'severity'=        @{'eq'=($Severity.GetEnumerator()         | ForEach-Object {$SeverityValueMap.Get_Item($_)})}}}
+            If ($ResolutionStatus) {$FilterSet += @{'resolutionStatus'=@{'eq'=($ResolutionStatus.GetEnumerator() | ForEach-Object {$ResolutionStatusValueMap.Get_Item($_)})}}}
 
             # Simple filters
-            If ($User)       {$FilterSet += New-Object -TypeName PSObject -Property @{'entity.user'=    (New-Object -TypeName PSObject -Property @{'eq'=$User})}}
-            If ($Service)    {$FilterSet += New-Object -TypeName PSObject -Property @{'entity.service'= (New-Object -TypeName PSObject -Property @{'eq'=$Service})}}
-            If ($ServiceNot) {$FilterSet += New-Object -TypeName PSObject -Property @{'entity.service'= (New-Object -TypeName PSObject -Property @{'neq'=$ServiceNot})}}
-            If ($Policy)     {$FilterSet += New-Object -TypeName PSObject -Property @{'entity.policy'=  (New-Object -TypeName PSObject -Property @{'eq'=$Policy})}}
-            If ($Risk)       {$FilterSet += New-Object -TypeName PSObject -Property @{'risk'=           (New-Object -TypeName PSObject -Property @{'eq'=$Risk})}}
-            If ($AlertType)  {$FilterSet += New-Object -TypeName PSObject -Property @{'id'=             (New-Object -TypeName PSObject -Property @{'eq'=$AlertType})}}
-            If ($Source)     {$FilterSet += New-Object -TypeName PSObject -Property @{'source'=         (New-Object -TypeName PSObject -Property @{'eq'=$Source})}}
-            
-            # Mutually exclusive filters
-            If ($Read -and $Unread) {Write-Error 'Cannot reconcile -Read and -Unread switches. Use zero or one of these, but not both.' -ErrorAction Stop}
-            If ($Unread) {$FilterSet += New-Object -TypeName PSObject -Property @{'read'=  (New-Object -TypeName PSObject -Property @{'eq'=$false})}}
-            If ($Read)   {$FilterSet += New-Object -TypeName PSObject -Property @{'read'=  (New-Object -TypeName PSObject -Property @{'eq'=$true})}}
+            If ($User)       {$FilterSet += @{'entity.user'=    @{'eq'=$User}}}
+            If ($Service)    {$FilterSet += @{'entity.service'= @{'eq'=$Service}}}
+            If ($ServiceNot) {$FilterSet += @{'entity.service'= @{'neq'=$ServiceNot}}}
+            If ($Policy)     {$FilterSet += @{'entity.policy'=  @{'eq'=$Policy}}}
+            If ($Risk)       {$FilterSet += @{'risk'=           @{'eq'=$Risk}}}
+            If ($AlertType)  {$FilterSet += @{'id'=             @{'eq'=$AlertType}}}
+            If ($Source)     {$FilterSet += @{'source'=         @{'eq'=$Source}}}
+            If ($Read)       {$FilterSet += @{'read'=           @{'eq'=$Read}}}
  
-            # Build filter set
-            If ($FilterSet)
-            {
-                # Convert filter set to JSON and touch it up
-                $JsonFilterSet = @()
-                ForEach ($Filter in $FilterSet) {$JsonFilterSet += ((($Filter | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{'))}
-                $JsonFilterSet = '{'+($JsonFilterSet -join '},')+'}}'
-
-                # Add the JSON filter string to the request body as the 'filter' property
-                $Body.Add('filters',$JsonFilterSet)
-            }
+            # Add filter set to request body as the 'filter' property            
+            If ($FilterSet) {$Body.Add('filters',(ConvertTo-CASJsonFilterString $FilterSet))}
 
             #endregion ----------------------------FILTERING----------------------------
 
@@ -790,7 +833,7 @@ function Get-CASAlert
     contoso.portal.cloudappsecurity.com    System.Security.SecureString
 
 .EXAMPLE
-   Get-CASCredential -PassThru | Export-CliXml C:\Users\Alice\MyCASCred.credential -Force
+    Get-CASCredential -PassThru | Export-CliXml C:\Users\Alice\MyCASCred.credential -Force
 
     By specifying the -PassThru switch parameter, this will put the $CASCredential into the pipeline which can be exported to a .credential file that will store the tenant URL and encrypted version of the token in a file.
 
@@ -855,9 +898,20 @@ function Get-CASCredential
     This pulls back a single file record and is part of the 'List' parameter set.
 
 .EXAMPLE
-   Get-CASAccount -Identity 572caf4588011e452ec18ef0
+   Get-CASFile -Identity 572caf4588011e452ec18ef0
 
     This pulls back a single file record using the GUID and is part of the 'Fetch' parameter set.
+
+.EXAMPLE
+   Get-CASFile -AppName Box -Extension pdf -Domains 'microsoft.com' | select name
+
+    name                      dlpScanTime
+    ----                      -----------
+    pdf_creditcardnumbers.pdf 2016-06-08T19:00:36.534000Z
+    mytestdoc.pdf             2016-06-12T22:00:45.235000Z
+    powershellrules.pdf       2016-06-03T13:00:19.776000Z
+
+    This searches Box files for any PDF documents owned by any user in the microsoft.com domain and returns the names of those documents and the last time they were scanned for DLP violations.
 
 .FUNCTIONALITY
    Get-CASFile is intended to function as a query mechanism for obtaining file information from Cloud App Security.
@@ -895,15 +949,15 @@ function Get-CASFile
         # Limits the results to items of the specified sharing access level. Possible Values: 'Private','Internal','External','Public', 'PublicInternet'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('Private','Internal','External','Public', 'PublicInternet')]
-        [string[]]$Sharing,
+        [string[]]$FileAccessLevel,
 
         # Limits the results to items with the specified collaborator usernames, such as 'alice@contoso.com', 'bob@microsoft.com'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [string[]]$CollaboratorUser,
+        [string[]]$Collaborators,
 
         # Limits the results to items without the specified collaborator usernames, such as 'alice@contoso.com', 'bob@microsoft.com'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [string[]]$CollaboratorUserNot,
+        [string[]]$CollaboratorsNot,
 
         # Limits the results to items with the specified owner usernames, such as 'alice@contoso.com', 'bob@microsoft.com'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -923,27 +977,37 @@ function Get-CASFile
 
         # Limits the results to items shared with the specified domains, such as 'contoso.com', 'microsoft.com'.  
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [string[]]$CollaboratorWithDomain,
+        [string[]]$Domains,
 
         # Limits the results to items not shared with the specified domains, such as 'contoso.com', 'microsoft.com'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [string[]]$CollaboratorWithDomainNot,
+        [string[]]$DomainsNot,
 
         # Limits the results to items related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively). 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [int[]]$Service,
+        [int[]]$AppId,
 
         # Limits the results to items not related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [int[]]$ServiceNot,
+        [int[]]$AppIdNot,
+
+        # Limits the results to items related to the specified service names, such as Microsoft OneDrive or Box. 
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Box', 'Salesforce', 'Dropbox', 'Google Apps', 'ServiceNow', 'Microsoft OneDrive for Business', 'Microsoft Sharepoint Online')]
+        [string[]]$AppName,
+
+        # Limits the results to items not related to the specified service names, such as Microsoft OneDrive or Box. 
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Box', 'Salesforce', 'Dropbox', 'Google Apps', 'ServiceNow', 'Microsoft OneDrive for Business', 'Microsoft Sharepoint Online')]
+        [string[]]$AppNameNot,
 
         # Limits the results to items with the specified file name with extension, such as 'My Microsoft File.txt'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [string]$Filename,
+        [string]$Name,
 
         # Limits the results to items with the specified file name without extension, such as 'My Microsoft File'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [string]$FilenameWithoutExtension,
+        [string]$NameWithoutExtension,
 
         # Limits the results to items with the specified file extensions, such as 'jpg', 'txt'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -953,29 +1017,17 @@ function Get-CASFile
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [string]$ExtensionNot,
 
-        # Limits the results to items that CAS has marked as trashed.
+        # Limits the results to items that CAS has marked as trashed, if true, not trashed, if false.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$Trashed,
+        [bool]$Trashed,
 
-        # Limits the results to items that CAS has not marked as trashed. 
+        # Limits the results to items that CAS has marked as quarantined, if true, non-quarantined, if false.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$TrashedNot,
+        [bool]$Quarantined,
 
-        # Limits the results to items that CAS has marked as quarantined.
+        # Limits the results to items that CAS has marked as a folder, if true, non-folders, if false.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$Quarantined,
-
-        # Limits the results to items that CAS has marked as quarantined.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$QuarantinedNot,
-
-        # Limits the results to items that CAS has marked as a Folder.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$Folder,
-
-        # Limits the results to items that CAS has not marked as a Folder.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$FolderNot,
+        [bool]$Folder,
 
         # Specifies the property by which to sort the results. Possible Value: 'DateModified'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -1069,65 +1121,43 @@ function Get-CASFile
             #region ----------------------------FILTERING----------------------------
             $FilterSet = @() # Filter set array
 
+            # Additional parameter validations and mutual exclusions
+            If ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($Folder -and $FolderNot) {Write-Error 'Cannot reconcile -Folder and -FolderNot switches. Use zero or one of these, but not both.' -ErrorAction Stop}
+            If ($Quarantined -and $QuarantinedNot) {Write-Error 'Cannot reconcile -Quarantined and -QuarantinedNot switches. Use zero or one of these, but not both.' -ErrorAction Stop}
+            If ($Trashed -and $TrashedNot) {Write-Error 'Cannot reconcile -Trashed and -TrashedNot switches. Use zero or one of these, but not both.' -ErrorAction Stop}
+            
             # Value-mapped filters
-            If ($Filetype) #Error 500
-            {
-                $ValueMap = @{'Other'=0;'Document'=1;'Spreadsheet'=2; 'Presentation'=3; 'Text'=4; 'Image'=5; 'Folder'=6}
-                $FilterSet += New-Object -TypeName PSObject -Property @{'fileType'=(New-Object -TypeName PSObject -Property @{'eq'=($Filetype.GetEnumerator() | ForEach-Object {$ValueMap.Get_Item($_)})})}
-            }
-
-            If ($FiletypeNot) #Error 500
-            {
-                $ValueMap = @{'Other'=0;'Document'=1;'Spreadsheet'=2; 'Presentation'=3; 'Text'=4; 'Image'=5; 'Folder'=6}
-                $FilterSet += New-Object -TypeName PSObject -Property @{'fileType'=(New-Object -TypeName PSObject -Property @{'neq'=($FiletypeNot.GetEnumerator() | ForEach-Object {$ValueMap.Get_Item($_)})})}
-            }
-
-            If ($Sharing) #Working
-            {
-                $ValueMap = @{'Private'=0;'Internal'=1;'External'=2;'Public'=3;'PublicInternet'=4}
-                $FilterSet += New-Object -TypeName PSObject -Property @{'sharing'=(New-Object -TypeName PSObject -Property @{'eq'=($Sharing.GetEnumerator() | ForEach-Object {$ValueMap.Get_Item($_)})})}
-            }
+            If ($Filetype)        {$FilterSet += @{'fileType'=@{'eq'= ($Filetype.GetEnumerator()        | ForEach-Object {$FileTypeValueMap.Get_Item($_)})}}}
+            If ($FiletypeNot)     {$FilterSet += @{'fileType'=@{'neq'=($FiletypeNot.GetEnumerator()     | ForEach-Object {$FileTypeValueMap.Get_Item($_)})}}}
+            If ($FileAccessLevel) {$FilterSet += @{'sharing'= @{'eq'= ($FileAccessLevel.GetEnumerator() | ForEach-Object {$FileAccessLevelValueMap.Get_Item($_)})}}}
+            If ($AppName)         {$FilterSet += @{'service'= @{'eq'= ($AppName.GetEnumerator()         | ForEach-Object {$AppValueMap.Get_Item($_)})}}}  
+            If ($AppNameNot)      {$FilterSet += @{'service'= @{'neq'=($AppNameNot.GetEnumerator()      | ForEach-Object {$AppValueMap.Get_Item($_)})}}}  
 
             # Simple filters
-            If ($Service)                   {$FilterSet += New-Object -TypeName PSObject -Property @{'service'=                  (New-Object -TypeName PSObject -Property @{'eq'=$Service})}}
-            If ($ServiceNot)                {$FilterSet += New-Object -TypeName PSObject -Property @{'service'=                  (New-Object -TypeName PSObject -Property @{'neq'=$ServiceNot})}}
-            If ($Extension)                 {$FilterSet += New-Object -TypeName PSObject -Property @{'extension'=                (New-Object -TypeName PSObject -Property @{'eq'=$Extension})}}
-            If ($ExtensionNot)              {$FilterSet += New-Object -TypeName PSObject -Property @{'extension'=                (New-Object -TypeName PSObject -Property @{'neq'=$ExtensionNot})}}
-            If ($CollaboratorWithDomain)    {$FilterSet += New-Object -TypeName PSObject -Property @{'collaborators.withDomain'= (New-Object -TypeName PSObject -Property @{'eq'=$CollaboratorWithDomain})}}
-            If ($CollaboratorWithDomainNot) {$FilterSet += New-Object -TypeName PSObject -Property @{'collaborators.withDomain'= (New-Object -TypeName PSObject -Property @{'neq'=$CollaboratorWithDomainNot})}}
-            If ($CollaboratorUser)          {$FilterSet += New-Object -TypeName PSObject -Property @{'collaborators.users'=      (New-Object -TypeName PSObject -Property @{'eq'=$CollaboratorUser})}}
-            If ($CollaboratorUserNot)       {$FilterSet += New-Object -TypeName PSObject -Property @{'collaborators.users'=      (New-Object -TypeName PSObject -Property @{'neq'=$CollaboratorUserNot})}}
-            If ($Owner)                     {$FilterSet += New-Object -TypeName PSObject -Property @{'owner.username'=           (New-Object -TypeName PSObject -Property @{'eq'=$Owner})}}
-            If ($OwnerNot)                  {$FilterSet += New-Object -TypeName PSObject -Property @{'owner.username'=           (New-Object -TypeName PSObject -Property @{'neq'=$OwnerNot})}}
-            If ($MIMEType)                  {$FilterSet += New-Object -TypeName PSObject -Property @{'mimeType'=                 (New-Object -TypeName PSObject -Property @{'eq'=$MIMEType})}}
-            If ($MIMETypeNot)               {$FilterSet += New-Object -TypeName PSObject -Property @{'mimeType'=                 (New-Object -TypeName PSObject -Property @{'neq'=$MIMETypeNot})}}
-            If ($Filename)                  {$FilterSet += New-Object -TypeName PSObject -Property @{'filename'=                 (New-Object -TypeName PSObject -Property @{'eq'=$Filename})}}
-            If ($FilenameWithoutExtension)  {$FilterSet += New-Object -TypeName PSObject -Property @{'filename'=                 (New-Object -TypeName PSObject -Property @{'text'=$FilenameWithoutExtension})}}
-
-            # Mutually exclusive filters
-            If ($Folder -and $FolderNot) {Write-Error 'Cannot reconcile -Folder and -FolderNot switches. Use zero or one of these, but not both.' -ErrorAction Stop}
-            If ($Folder)    {$FilterSet += New-Object -TypeName PSObject -Property @{'folder'= (New-Object -TypeName PSObject -Property @{'eq'=$true})}}  #Working
-            If ($FolderNot) {$FilterSet += New-Object -TypeName PSObject -Property @{'folder'= (New-Object -TypeName PSObject -Property @{'eq'=$false})}} #Working 
-
-            If ($Quarantined -and $QuarantinedNot) {Write-Error 'Cannot reconcile -Quarantined and -QuarantinedNot switches. Use zero or one of these, but not both.' -ErrorAction Stop}
-            If ($Quarantined)    {$FilterSet += New-Object -TypeName PSObject -Property @{'quarantined'= (New-Object -TypeName PSObject -Property @{'eq'=$true})}}   #Working
-            If ($QuarantinedNot) {$FilterSet += New-Object -TypeName PSObject -Property @{'quarantined'= (New-Object -TypeName PSObject -Property @{'eq'=$false})}}  #Working
-
-            If ($Trashed -and $TrashedNot) {Write-Error 'Cannot reconcile -Trashed and -TrashedNot switches. Use zero or one of these, but not both.' -ErrorAction Stop}
-            If ($Trashed)    {$FilterSet += New-Object -TypeName PSObject -Property @{'trashed'= (New-Object -TypeName PSObject -Property @{'eq'=$true})}}  #Working
-            If ($TrashedNot) {$FilterSet += New-Object -TypeName PSObject -Property @{'trashed'= (New-Object -TypeName PSObject -Property @{'eq'=$false})}} #Working
+            If ($AppId)                {$FilterSet += @{'service'=                  @{'eq'=$AppId}}}
+            If ($AppIdNot)             {$FilterSet += @{'service'=                  @{'neq'=$AppIdNot}}}
+            If ($Extension)            {$FilterSet += @{'extension'=                @{'eq'=$Extension}}}
+            If ($ExtensionNot)         {$FilterSet += @{'extension'=                @{'neq'=$ExtensionNot}}}
+            If ($Domains)              {$FilterSet += @{'collaborators.withDomain'= @{'eq'=$Domains}}}
+            If ($DomainsNot)           {$FilterSet += @{'collaborators.withDomain'= @{'neq'=$DomainsNot}}}
+            If ($Collaborators)        {$FilterSet += @{'collaborators.users'=      @{'eq'=$Collaborators}}}
+            If ($CollaboratorsNot)     {$FilterSet += @{'collaborators.users'=      @{'neq'=$CollaboratorsNot}}}
+            If ($Owner)                {$FilterSet += @{'owner.username'=           @{'eq'=$Owner}}}
+            If ($OwnerNot)             {$FilterSet += @{'owner.username'=           @{'neq'=$OwnerNot}}}
+            If ($MIMEType)             {$FilterSet += @{'mimeType'=                 @{'eq'=$MIMEType}}}
+            If ($MIMETypeNot)          {$FilterSet += @{'mimeType'=                 @{'neq'=$MIMETypeNot}}}
+            If ($Name)                 {$FilterSet += @{'filename'=                 @{'eq'=$Name}}}
+            If ($NameWithoutExtension) {$FilterSet += @{'filename'=                 @{'text'=$NameWithoutExtension}}}
+            If ($Folder)               {$FilterSet += @{'folder'=                   @{'eq'=$Folder}}}
+            If ($Quarantined)          {$FilterSet += @{'quarantined'=              @{'eq'=$Quarantined}}} 
+            If ($Trashed)              {$FilterSet += @{'trashed'=                  @{'eq'=$Trashed}}}
            
-            # Build filter set
-            If ($FilterSet)
-            {
-                # Convert filter set to JSON and touch it up
-                $JsonFilterSet = @()
-                ForEach ($Filter in $FilterSet) {$JsonFilterSet += ((($Filter | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{'))}
-                $JsonFilterSet = '{'+($JsonFilterSet -join '},')+'}}'
-
-                # Add the JSON filter string to the request body as the 'filter' property
-                $Body.Add('filters',$JsonFilterSet)
-            }
+            # Add filter set to request body as the 'filter' property            
+            If ($FilterSet) {$Body.Add('filters',(ConvertTo-CASJsonFilterString $FilterSet))}
 
             #endregion ----------------------------FILTERING----------------------------
 
@@ -1165,7 +1195,7 @@ function Get-CASFile
 .DESCRIPTION
    Send-CASDiscoveryLog uploads an edge device log file to be analyzed for SaaS discovery by Cloud App Security.
 
-   When using Send-CASDiscoveryLog, you must provide a log file by name/path and a log file type, which represents the source firewall or proxy device type. Also required is the name of the discovery data source with which the uploaded log should be associated.
+   When using Send-CASDiscoveryLog, you must provide a log file by name/path and a log file type, which represents the source firewall or proxy device type. Also required is the name of the discovery data source with which the uploaded log should be associated; this can be created in the console.
 
    Send-CASDiscoveryLog does not return any value
 
@@ -1379,7 +1409,9 @@ function Send-CASDiscoveryLog
     This will set the status of the specified alert as "Dismissed".
 
 .EXAMPLE
-   <Pipeline example>
+   Get-CASAlert -Unread -SortBy Date -SortDirection Descending -ResultSetSize 10 | Set-CASAlert -MarkAs Read
+
+    This will pull the last 10 alerts that were generated with a status of 'Unread' and will mark them all as 'Read'.
 
 .FUNCTIONALITY
    Set-CASAlert is intended to function as a mechanism for setting the status of alerts Cloud App Security.
