@@ -75,7 +75,7 @@ function ConvertTo-CASJsonFilterString ($colFilters) # Private function that sho
     This pulls back all accounts from the specified domain and returns a count of the returned objects.
 
 .EXAMPLE
-   Get-CASAccount -External $true | select @{N='Unique Domains'; E={$_.userDomain}} -Unique 
+   Get-CASAccount -Affiliation External | select @{N='Unique Domains'; E={$_.userDomain}} -Unique 
 
     Unique Domains
     --------------
@@ -85,8 +85,17 @@ function ConvertTo-CASJsonFilterString ($colFilters) # Private function that sho
 
     This pulls back all accounts flagged as external to the domain and displays only unique records in a new property called 'Unique Domains'.
 
-.FUNCTIONALITY
-   Get-CASAccount is intended to function as a query mechanism for obtaining account information from Cloud App Security.
+.EXAMPLE
+   (Get-CASAccount -ServiceNames 'Microsoft Cloud App Security').serviceData.20595
+
+    email                              lastLogin                   lastSeen
+    -----                              ---------                   --------
+    admin@mod.onmicrosoft.com          2016-06-13T21:17:40.821000Z 2016-06-13T21:17:40.821000Z
+
+    This queries for any Cloud App Security accounts and displays the serviceData table containing the email, last login, and last seen properties. 20595 is the Service ID for Cloud App Security.
+
+    .FUNCTIONALITY
+       Get-CASAccount is intended to function as a query mechanism for obtaining account information from Cloud App Security.
 #>
 function Get-CASAccount
 {
@@ -304,6 +313,16 @@ function Get-CASAccount
    Get-CASActivity -Identity 572caf4588011e452ec18ef0
 
     This pulls back a single activity record using the GUID and is part of the 'Fetch' parameter set.
+
+.EXAMPLE
+   (Get-CASActivity -AppName Box).rawJson | ?{$_.event_type -match "upload"} | select ip_address -Unique
+
+    ip_address
+    ----------
+    69.4.151.176
+    98.29.2.44
+
+    This grabs the last 100 Box activities, searches for an event type called "upload" in the rawJson table, and returns a list of unique IP addresses.
 
 .FUNCTIONALITY
    Get-CASActivity is intended to function as a query mechanism for obtaining activity information from Cloud App Security.
@@ -549,6 +568,14 @@ function Get-CASActivity
    Get-CASAlert -Identity 572caf4588011e452ec18ef0
 
     This pulls back a single alert record using the GUID and is part of the 'Fetch' parameter set.
+
+.EXAMPLE
+   (Get-CASAlert -ResolutionStatus Open -Severity High | where{$_.title -match "system alert"}).descriptionTemplate.parameters.LOGRABBER_SYSTEM_ALERT_MESSAGE_BASE.functionObject.parameters.appName
+
+    ServiceNow
+    Box
+
+    This command showcases the ability to expand nested tables of alerts. First, we pull back only Open alerts marked as High severity and filter down to only those with a title that matches "system alert". By wrapping the initial call in parentheses you can now extract the names of the affected services by drilling into the nested tables and referencing the appName property.
 
 .FUNCTIONALITY
    Get-CASAlert is intended to function as a query mechanism for obtaining alert information from Cloud App Security.
@@ -806,7 +833,7 @@ function Get-CASAlert
     contoso.portal.cloudappsecurity.com    System.Security.SecureString
 
 .EXAMPLE
-   Get-CASCredential -PassThru | Export-CliXml C:\Users\Alice\MyCASCred.credential -Force
+    Get-CASCredential -PassThru | Export-CliXml C:\Users\Alice\MyCASCred.credential -Force
 
     By specifying the -PassThru switch parameter, this will put the $CASCredential into the pipeline which can be exported to a .credential file that will store the tenant URL and encrypted version of the token in a file.
 
@@ -871,9 +898,20 @@ function Get-CASCredential
     This pulls back a single file record and is part of the 'List' parameter set.
 
 .EXAMPLE
-   Get-CASAccount -Identity 572caf4588011e452ec18ef0
+   Get-CASFile -Identity 572caf4588011e452ec18ef0
 
     This pulls back a single file record using the GUID and is part of the 'Fetch' parameter set.
+
+.EXAMPLE
+   Get-CASFile -AppName Box -Extension pdf -Domains 'microsoft.com' | select name
+
+    name                      dlpScanTime
+    ----                      -----------
+    pdf_creditcardnumbers.pdf 2016-06-08T19:00:36.534000Z
+    mytestdoc.pdf             2016-06-12T22:00:45.235000Z
+    powershellrules.pdf       2016-06-03T13:00:19.776000Z
+
+    This searches Box files for any PDF documents owned by any user in the microsoft.com domain and returns the names of those documents and the last time they were scanned for DLP violations.
 
 .FUNCTIONALITY
    Get-CASFile is intended to function as a query mechanism for obtaining file information from Cloud App Security.
@@ -1157,7 +1195,7 @@ function Get-CASFile
 .DESCRIPTION
    Send-CASDiscoveryLog uploads an edge device log file to be analyzed for SaaS discovery by Cloud App Security.
 
-   When using Send-CASDiscoveryLog, you must provide a log file by name/path and a log file type, which represents the source firewall or proxy device type. Also required is the name of the discovery data source with which the uploaded log should be associated.
+   When using Send-CASDiscoveryLog, you must provide a log file by name/path and a log file type, which represents the source firewall or proxy device type. Also required is the name of the discovery data source with which the uploaded log should be associated; this can be created in the console.
 
    Send-CASDiscoveryLog does not return any value
 
@@ -1371,7 +1409,9 @@ function Send-CASDiscoveryLog
     This will set the status of the specified alert as "Dismissed".
 
 .EXAMPLE
-   <Pipeline example>
+   Get-CASAlert -Unread -SortBy Date -SortDirection Descending -ResultSetSize 10 | Set-CASAlert -MarkAs Read
+
+    This will pull the last 10 alerts that were generated with a status of 'Unread' and will mark them all as 'Read'.
 
 .FUNCTIONALITY
    Set-CASAlert is intended to function as a mechanism for setting the status of alerts Cloud App Security.
