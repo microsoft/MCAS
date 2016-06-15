@@ -127,20 +127,24 @@ function Get-CASAccount
 
         # Limits the results to items related to the specified service IDs, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [alias("AppId")]
         [int[]]$Services,
 
         # Limits the results to items related to the specified service names, such as 'Office 365' and 'Google Apps'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
+        [alias("AppName")]
         [string[]]$ServiceNames,
 
         # Limits the results to items not related to the specified service ids, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [alias("AppIdNot")]
         [int[]]$ServicesNot,
 
         # Limits the results to items not related to the specified service names, such as 'Office 365' and 'Google Apps'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
+        [alias("AppNameNot")]
         [string[]]$ServiceNamesNot,
 
         # Limits the results to items found in the specified user domains, such as 'contoso.com'.
@@ -616,20 +620,24 @@ function Get-CASAlert
 
         # Limits the results to items related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [alias("AppId")]
         [int[]]$Service,
 
         # Limits the results to items related to the specified service names, such as 'Office 365' and 'Google Apps'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
+        [alias("AppName")]
         [string[]]$ServiceName,
 
         # Limits the results to items not related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [alias("AppIdNot")]
         [int[]]$ServiceNot,
 
         # Limits the results to items not related to the specified service names, such as 'Office 365' and 'Google Apps'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
+        [alias("AppNameNot")]
         [string[]]$ServiceNameNot,
 
         # Limits the results to items related to the specified policy, such as 'Contoso CAS Policy'.
