@@ -761,8 +761,8 @@ function Get-CASAlert
             If ($ServiceNot     -and ($Service     -or $ServiceNameNot -or $ServiceName)) {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
 
             # Value-mapped filters
-            If ($ServiceName)      {$FilterSet += @{'service'=         @{'eq'=($ServiceName.GetEnumerator()      | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
-            If ($ServiceNameNot)   {$FilterSet += @{'service'=         @{'neq'=($ServiceNameNot.GetEnumerator()  | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
+            If ($ServiceName)      {$FilterSet += @{'entity.service'=         @{'eq'=($ServiceName.GetEnumerator()      | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
+            If ($ServiceNameNot)   {$FilterSet += @{'entity.service'=         @{'neq'=($ServiceNameNot.GetEnumerator()  | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
             If ($Severity)         {$FilterSet += @{'severity'=        @{'eq'=($Severity.GetEnumerator()         | ForEach-Object {$SeverityValueMap.Get_Item($_)})}}}
             If ($ResolutionStatus) {$FilterSet += @{'resolutionStatus'=@{'eq'=($ResolutionStatus.GetEnumerator() | ForEach-Object {$ResolutionStatusValueMap.Get_Item($_)})}}}
 
