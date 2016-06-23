@@ -640,7 +640,7 @@ function Get-CASAlert
         [alias("AppNameNot")]
         [string[]]$ServiceNameNot,
 
-        # Limits the results to items related to the specified policy, such as 'Contoso CAS Policy'.
+        # Limits the results to items related to the specified policy ID, such as 57595d0ba6b5d8cd76d6be8c.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [string[]]$Policy,
         
