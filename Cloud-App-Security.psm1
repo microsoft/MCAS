@@ -518,7 +518,9 @@ function Get-CASActivity
             If ($UserAgentNotContains) {$FilterSet += @{'userAgent.userAgent'= @{'ncontains'=$UserAgentNotContains}}}
             If ($IpStartsWith)         {$FilterSet += @{'ip.address'=          @{'startswith'=$IpStartsWith}}}
             If ($IpDoesNotStartWith)   {$FilterSet += @{'ip.address'=          @{'doesnotstartwith'=$IpStartsWith}}} 
-            If ($AdminEvents)          {$FilterSet += @{'activity.type'=       @{'eq'=$AdminEvents}}}
+
+            # boolean filters
+            If ($AdminEvents -ne $null) {$FilterSet += @{'activity.type'= @{'eq'=$AdminEvents}}}
 
             # Add filter set to request body as the 'filter' property            
             If ($FilterSet) {$Body.Add('filters',(ConvertTo-CASJsonFilterString $FilterSet))}
@@ -774,7 +776,9 @@ function Get-CASAlert
             If ($Risk)       {$FilterSet += @{'risk'=           @{'eq'=$Risk}}}
             If ($AlertType)  {$FilterSet += @{'id'=             @{'eq'=$AlertType}}}
             If ($Source)     {$FilterSet += @{'source'=         @{'eq'=$Source}}}
-            If ($Read)       {$FilterSet += @{'read'=           @{'eq'=$Read}}}
+
+            # boolean filters
+            If ($Read -ne $null) {$FilterSet += @{'read'= @{'eq'=$Read}}}
  
             # Add filter set to request body as the 'filter' property            
             If ($FilterSet) {$Body.Add('filters',(ConvertTo-CASJsonFilterString $FilterSet))}
@@ -1160,9 +1164,11 @@ function Get-CASFile
             If ($MIMETypeNot)          {$FilterSet += @{'mimeType'=                 @{'neq'=$MIMETypeNot}}}
             If ($Name)                 {$FilterSet += @{'filename'=                 @{'eq'=$Name}}}
             If ($NameWithoutExtension) {$FilterSet += @{'filename'=                 @{'text'=$NameWithoutExtension}}}
-            If ($Folder)               {$FilterSet += @{'folder'=                   @{'eq'=$Folder}}}
-            If ($Quarantined)          {$FilterSet += @{'quarantined'=              @{'eq'=$Quarantined}}} 
-            If ($Trashed)              {$FilterSet += @{'trashed'=                  @{'eq'=$Trashed}}}
+            
+            # boolean filters
+            If ($Folder -ne $null)      {$FilterSet += @{'folder'=      @{'eq'=$Folder}}}
+            If ($Quarantined -ne $null) {$FilterSet += @{'quarantined'= @{'eq'=$Quarantined}}} 
+            If ($Trashed -ne $null)     {$FilterSet += @{'trashed'=     @{'eq'=$Trashed}}}
            
             # Add filter set to request body as the 'filter' property            
             If ($FilterSet) {$Body.Add('filters',(ConvertTo-CASJsonFilterString $FilterSet))}
