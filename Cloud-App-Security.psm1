@@ -23,6 +23,92 @@ function ConvertTo-CASJsonFilterString ($colFilters) # Private function that sho
     Write-Output ('{'+($colTemp -join '},')+'}}') # Touch up the string just a little and return it
 }
 
+function Invoke-CASRestApi
+{
+    [CmdletBinding()]
+    Param
+    (
+        [Parameter(Mandatory=$true)]
+        [string]$TenantUri,
+
+        [Parameter(Mandatory=$true)]
+        [ValidateSet('accounts','activities','alerts','discovery','files')]
+        [string]$Endpoint,
+
+        [Parameter(Mandatory=$true)]
+        [ValidateSet('Get','Post','Put')]
+        [string]$Method,        
+        
+        [Parameter(Mandatory=$false)]
+        [string]$EndpointSuffix,
+        
+        [Parameter(Mandatory=$false)]
+        $Body,
+        
+        [Parameter(Mandatory=$true)]
+        [string]$Token,
+
+        [Switch]$Raw
+    )
+    
+    $Uri = "https://$TenantUri/api/v1/$Endpoint/"
+
+    If ($EndpointSuffix) {$Uri += "$EndpointSuffix/"}
+
+    Try
+    {
+        If ($Body) 
+        {
+            $Response = Invoke-WebRequest -Uri $Uri -Body $Body -Headers @{Authorization = "Token $Token"} -Method $Method -ErrorAction Stop  
+        }
+        Else
+        {   
+            $Response = Invoke-WebRequest -Uri $Uri -Headers @{Authorization = "Token $Token"} -Method $Method -ErrorAction Stop
+        }
+    }
+    Catch
+    {
+        If ($_ -like 'The remote server returned an error: (404) Not Found.') 
+        {
+            Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
+        }
+        ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
+        {
+            Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is authorized to perform the requested action.'
+        }
+        ElseIf ($_ -match "The remote name could not be resolved: ")
+        {
+            Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
+        }
+        Else 
+        {
+            Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
+        }
+    }
+
+    If ($Raw)
+    {
+        Write-Output $Response
+    }
+    Else
+    {
+        # Windows/Powershell case insensitivity causes collision of 'id' (string) and 'Id' (integer) properties, so this patches the problem by adding _int to the integer Id property for accounts
+        If ($Endpoint -eq 'accounts') {$Response = $Response -replace '"Id":', '"Id_int":'}
+    
+        # Convert from JSON to Powershell objects
+        $Response = $Response | ConvertFrom-Json
+
+        # For list responses, we need the data property only
+        If ($Response.data) {$Response = $Response.data}
+
+        # Add 'Identity' alias property, when appropriate
+        If ($Response._id) {$Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
+    
+        Write-Output $Response
+    }
+}
+
+
 <#
 .Synopsis
    Gets user account information from your Cloud App Security tenant.
