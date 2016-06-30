@@ -487,6 +487,10 @@ function Get-CASActivity
         [ValidateSet('Desktop','Mobile','Tablet','Other')]
         [string[]]$DeviceType,
 
+        # Limits the results by performing a free text search
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [string]$Text,
+
         # Limits the results to admin events if true, non-admin events, if false.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [bool]$AdminEvents,
@@ -604,6 +608,7 @@ function Get-CASActivity
             If ($UserAgentNotContains) {$FilterSet += @{'userAgent.userAgent'= @{'ncontains'=$UserAgentNotContains}}}
             If ($IpStartsWith)         {$FilterSet += @{'ip.address'=          @{'startswith'=$IpStartsWith}}}
             If ($IpDoesNotStartWith)   {$FilterSet += @{'ip.address'=          @{'doesnotstartwith'=$IpStartsWith}}} 
+            If ($Text)                 {$FilterSet += @{'text'=                @{'text'=$Text}}} 
 
             # boolean filters
             If ($AdminEvents -ne $null) {$FilterSet += @{'activity.type'= @{'eq'=$AdminEvents}}}
