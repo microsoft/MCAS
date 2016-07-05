@@ -16,8 +16,13 @@ $FileAccessLevelValueMap =  @{'Private'=0;'Internal'=1;'External'=2;'Public'=3;'
 
 #endregion ----------------------------Value Maps----------------------------
 
-function ConvertTo-CASJsonFilterString ($colFilters) # Private function that should not be exported
+function ConvertTo-CASJsonFilterString # Private function that should not be exported
 {
+    Param
+    (
+        [Parameter(Mandatory=$true)]
+        $colFilters
+    )
     $colTemp = @()
     ForEach ($f in $colFilters) {$colTemp += ((($f | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{'))} # Convert filter set to JSON and trim outer curly braces
     Write-Output ('{'+($colTemp -join '},')+'}}') # Touch up the string just a little and return it
@@ -107,7 +112,6 @@ function Invoke-CASRestApi
         Write-Output $Response
     }
 }
-
 
 <#
 .Synopsis
