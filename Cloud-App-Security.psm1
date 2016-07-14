@@ -21,11 +21,11 @@ function ConvertTo-CASJsonFilterString # Private function that should not be exp
     Param
     (
         [Parameter(Mandatory=$true)]
-        $colFilters
+        $FilterSet
     )
-    $colTemp = @()
-    ForEach ($f in $colFilters) {$colTemp += ((($f | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{'))} # Convert filter set to JSON and trim outer curly braces
-    Write-Output ('{'+($colTemp -join '},')+'}}') # Touch up the string just a little and return it
+    $Temp = @()
+    ForEach ($Filter in $FilterSet) {$Temp += ((($Filter | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{'))} # Convert filter set to JSON and trim outer curly braces
+    Write-Output ('{'+($Temp -join '},')+'}}') # Touch up the string just a little and return it
 }
 
 function Invoke-CASRestApi
@@ -45,12 +45,15 @@ function Invoke-CASRestApi
         [string]$Method,        
         
         [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()] 
         [string]$EndpointSuffix,
         
         [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()] 
         $Body,
         
         [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()] 
         [string]$Token,
 
         [Switch]$Raw
@@ -205,6 +208,7 @@ function Get-CASAccount
 
         # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
         [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential,
  
         # Limits the results to external, if true, or internal users, if false
@@ -213,11 +217,13 @@ function Get-CASAccount
         
         # Limits the results to items related to the specified user names, such as 'alice@contoso.com','bob@contoso.com'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string[]]$UserName,
 
         # Limits the results to items related to the specified service IDs, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [alias("AppId")]
+        [ValidateNotNullOrEmpty()]
         [int[]]$Services,
 
         # Limits the results to items related to the specified service names, such as 'Office 365' and 'Google Apps'.
@@ -228,6 +234,7 @@ function Get-CASAccount
 
         # Limits the results to items not related to the specified service ids, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [alias("AppIdNot")]
         [int[]]$ServicesNot,
 
@@ -239,6 +246,7 @@ function Get-CASAccount
 
         # Limits the results to items found in the specified user domains, such as 'contoso.com'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string[]]$UserDomain,
 
         # Specifies the property by which to sort the results. Possible Values: 'UserName','LastSeen'.
@@ -439,14 +447,17 @@ function Get-CASActivity
 
         # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
         [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential,
 
         # -User limits the results to items related to the specified user/users, for example 'alice@contoso.com','bob@contoso.com'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string[]]$User,
 
         # Limits the results to items related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [int[]]$AppId,
 
         # Limits the results to items related to the specified app names, such as 'Office 365' and 'Google Apps'.
@@ -456,6 +467,7 @@ function Get-CASActivity
 
         # Limits the results to items not related to the specified service ID's, for example 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [int[]]$AppIdNot,
         
         # Limits the results to items not related to the specified app names, such as 'Office 365' and 'Google Apps'.
@@ -465,10 +477,12 @@ function Get-CASActivity
 
         # Limits the results to items of specified event type name, such as EVENT_CATEGORY_LOGIN,EVENT_CATEGORY_DOWNLOAD_FILE.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string[]]$EventTypeName,
 
         # Limits the results to items not of specified event type name, such as EVENT_CATEGORY_LOGIN,EVENT_CATEGORY_DOWNLOAD_FILE.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string[]]$EventTypeNameNot,
 
         # Limits the results by ip category. Possible Values: 'None','Internal','Administrative','Risky','VPN','Cloud Provider'. 
@@ -493,6 +507,7 @@ function Get-CASActivity
 
         # Limits the results by performing a free text search
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()] 
         [string]$Text,
 
         # Limits the results to admin events if true, non-admin events, if false.
@@ -699,6 +714,7 @@ function Get-CASAlert
 
         # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
         [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential,
 
         # Limits the results by severity. Possible Values: 'High','Medium','Low'. 
@@ -713,11 +729,13 @@ function Get-CASAlert
 
         # Limits the results to items related to the specified user/users, such as 'alice@contoso.com','bob@contoso.com'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string[]]$User,
 
         # Limits the results to items related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [alias("AppId")]
+        [ValidateNotNullOrEmpty()]
         [int[]]$Service,
 
         # Limits the results to items related to the specified service names, such as 'Office 365' and 'Google Apps'.
@@ -728,6 +746,7 @@ function Get-CASAlert
 
         # Limits the results to items not related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [alias("AppIdNot")]
         [int[]]$ServiceNot,
 
@@ -739,6 +758,7 @@ function Get-CASAlert
 
         # Limits the results to items related to the specified policy ID, such as 57595d0ba6b5d8cd76d6be8c.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string[]]$Policy,
         
         # Limits the results to items with a specific risk score. The valid range is 1-10. 
@@ -748,6 +768,7 @@ function Get-CASAlert
         
         # Limits the results to items from a specific source.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string]$Source,
 
         # Limits the results to read items, if true, unread items, if false.
@@ -1041,6 +1062,7 @@ function Get-CASFile
 
         # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
         [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential,
 
         # Limits the results to items of the specified file type. Possible Values: 'Other','Document','Spreadsheet', 'Presentation', 'Text', 'Image', 'Folder'.
@@ -1060,42 +1082,52 @@ function Get-CASFile
 
         # Limits the results to items with the specified collaborator usernames, such as 'alice@contoso.com', 'bob@microsoft.com'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string[]]$Collaborators,
 
         # Limits the results to items without the specified collaborator usernames, such as 'alice@contoso.com', 'bob@microsoft.com'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string[]]$CollaboratorsNot,
 
         # Limits the results to items with the specified owner usernames, such as 'alice@contoso.com', 'bob@microsoft.com'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string[]]$Owner,
 
         # Limits the results to items without the specified owner usernames, such as 'alice@contoso.com', 'bob@microsoft.com'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string[]]$OwnerNot,
 
         # Limits the results to items with the specified MIME Type, such as 'text/plain', 'image/vnd.adobe.photoshop'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string]$MIMEType,
 
         # Limits the results to items without the specified MIME Type, such as 'text/plain', 'image/vnd.adobe.photoshop'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string]$MIMETypeNot,
 
         # Limits the results to items shared with the specified domains, such as 'contoso.com', 'microsoft.com'.  
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string[]]$Domains,
 
         # Limits the results to items not shared with the specified domains, such as 'contoso.com', 'microsoft.com'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string[]]$DomainsNot,
 
         # Limits the results to items related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively). 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [int[]]$AppId,
 
         # Limits the results to items not related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [int[]]$AppIdNot,
 
         # Limits the results to items related to the specified service names, such as Microsoft OneDrive or Box. 
@@ -1110,18 +1142,22 @@ function Get-CASFile
 
         # Limits the results to items with the specified file name with extension, such as 'My Microsoft File.txt'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string]$Name,
 
         # Limits the results to items with the specified file name without extension, such as 'My Microsoft File'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string]$NameWithoutExtension,
 
         # Limits the results to items with the specified file extensions, such as 'jpg', 'txt'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string]$Extension,
 
         # Limits the results to items without the specified file extensions, such as 'jpg', 'txt'.  
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string]$ExtensionNot,
 
         # Limits the results to items that CAS has marked as trashed, if true, not trashed, if false.
@@ -1333,6 +1369,7 @@ function Send-CASDiscoveryLog
         
         # Specifies the discovery data source name as reflected in your CAS console, such as 'US West Microsoft ASA'.
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=2)]
+        [ValidateNotNullOrEmpty()]
         [string]$DiscoveryDataSource,
         
         # Specifies that the uploaded log file should be deleted after the upload operation completes.
@@ -1346,6 +1383,7 @@ function Send-CASDiscoveryLog
 
         # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
         [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential
     )
     Begin
@@ -1551,6 +1589,7 @@ function Set-CASAlert
 
         # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
         [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential
     )
     Begin
