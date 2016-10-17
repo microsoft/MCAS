@@ -1,38 +1,108 @@
 ﻿$ErrorActionPreference = 'Stop'
 
+
 #region ----------------------------Value Maps----------------------------
 
-$AppValueMap =              @{'Box'=10489;'Okta'=10980;'Salesforce'=11114;'Office 365'=11161;'Amazon Web Services'=11599;'Dropbox'=11627;'Google Apps'=11770;'ServiceNow'=14509;'Microsoft OneDrive for Business'=15600;'Microsoft Cloud App Security'=20595;'Microsoft Sharepoint Online'=20892;'Microsoft Exchange Online'=20893}
+$AppValueMap = @{
+    'Box' = 10489
+    'Okta' = 10980
+    'Salesforce' = 11114
+    'Office 365' = 11161
+    'Amazon Web Services' = 11599
+    'Dropbox' = 11627
+    'Google Apps' = 11770
+    'ServiceNow' = 14509
+    'Microsoft OneDrive for Business' = 15600
+    'Microsoft Cloud App Security' = 20595
+    'Microsoft Sharepoint Online' = 20892
+    'Microsoft Exchange Online' = 20893
+    }
 
-$IpCategoryValueMap =       @{'None'=0;'Internal'=1;'Administrative'=2;'Risky'=3;'VPN'=4;'Cloud Provider'=5}
+$IpCategoryValueMap = @{
+    'None' = 0
+    'Internal' = 1
+    'Administrative' = 2
+    'Risky' = 3
+    'VPN' = 4
+    'Cloud Provider' = 5
+    }
 
-$SeverityValueMap =         @{'High'=2;'Medium'=1;'Low'=0}
+$SeverityValueMap = @{
+    'High' = 2
+    'Medium' = 1
+    'Low' = 0
+    }
 
-$ResolutionStatusValueMap = @{'Resolved'=2;'Dismissed'=1;'Open'=0}
+$ResolutionStatusValueMap = @{
+    'Resolved' = 2
+    'Dismissed' = 1
+    'Open' = 0
+    }
 
-$FileTypeValueMap =         @{'Other'=0;'Document'=1;'Spreadsheet'=2; 'Presentation'=3; 'Text'=4; 'Image'=5; 'Folder'=6}
+$FileTypeValueMap = @{
+    'Other' = 0
+    'Document' = 1
+    'Spreadsheet' = 2
+    'Presentation' = 3
+    'Text' = 4
+    'Image' = 5
+    'Folder' = 6
+    }
 
-$FileAccessLevelValueMap =  @{'Private'=0;'Internal'=1;'External'=2;'Public'=3;'PublicInternet'=4}
+$FileAccessLevelValueMap = @{
+    'Private' = 0
+    'Internal' = 1
+    'External' = 2
+    'Public' = 3
+    'PublicInternet' = 4
+    }
+
+<#
+$AlertIDValueMap = @{
+    'ALERT_ADMIN_USER' = 14680070
+    'ALERT_CABINET_EVENT_MATCH_AUDIT' = 15728641
+    'ALERT_CABINET_EVENT_MATCH_FILE' = 15728642
+    'ALERT_GEOLOCATION_NEW_COUNTRY' = 196608
+    'ALERT_MANAGEMENT_DISCONNECTED_API' = 15794945
+    'ALERT_SUSPICIOUS_ACTIVITY' = 14680083   
+    #'ALERT_COMPROMISED_ACCOUNT' = 
+    #'ALERT_DISCOVERY_ANOMALY_DETECTION' = 
+    #'ALERT_CABINET_INLINE_EVENT_MATCH' = 
+    #'ALERT_CABINET_EVENT_MATCH_OBJECT' = 
+    #'ALERT_CABINET_DISCOVERY_NEW_SERVICE' = 
+    #'ALERT_NEW_ADMIN_LOCATION' = 
+    #'ALERT_PERSONAL_USER_SAGE' = 
+    #'ALERT_ZOMBIE_USER' = 
+    }
+#>
 
 #endregion ----------------------------Value Maps----------------------------
 
-function ConvertTo-CASJsonFilterString # Private function that should not be exported
-{
-    Param
-    (
+
+function ConvertTo-CASJsonFilterString {
+    [CmdletBinding()]
+    Param (
         [Parameter(Mandatory=$true)]
         $FilterSet
-    )
-    $Temp = @()
-    ForEach ($Filter in $FilterSet) {$Temp += ((($Filter | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{'))} # Convert filter set to JSON and trim outer curly braces
-    Write-Output ('{'+($Temp -join '},')+'}}') # Touch up the string just a little and return it
-}
+        )
 
-function Invoke-CASRestApi
+    $Temp = @()
+    
+    ForEach ($Filter in $FilterSet) {
+        $Temp += ((($Filter | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{')) 
+        }
+    
+    $RawJsonFilter = ('{'+($Temp -join '},')+'}}')
+
+    Write-Verbose "ConvertTo-CASJsonFilterString: Converted filter set $FilterSet to JSON filter $RawJsonFilter"
+    
+    Write-Output $RawJsonFilter
+    }
+
+function Invoke-MCASRestMethod 
 {
     [CmdletBinding()]
-    Param
-    (
+    Param (
         [Parameter(Mandatory=$true)]
         [string]$TenantUri,
 
@@ -57,62 +127,64 @@ function Invoke-CASRestApi
         [string]$Token,
 
         [Switch]$Raw
-    )
+        )
+    Process
+    {
+        $Uri = "https://$TenantUri/api/v1/$Endpoint/"
+
+        If ($EndpointSuffix) {
+            $Uri += "$EndpointSuffix/"
+            }
+
+        Try {
+        If ($Body) {
+            $Response = Invoke-WebRequest -Uri $Uri -Body $Body -Headers @{Authorization = "Token $Token"} -Method $Method -UseBasicParsing -ErrorAction Stop  
+            }
+        Else {   
+            $Response = Invoke-WebRequest -Uri $Uri -Headers @{Authorization = "Token $Token"} -Method $Method -UseBasicParsing -ErrorAction Stop
+            }
+        }
+            Catch {
+            If ($_ -like 'The remote server returned an error: (404) Not Found.') {
+                Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
+                }
+            ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.') {
+                Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is valid.'
+                }        
+            ElseIf ($_ -match "The remote name could not be resolved: ") {
+                Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
+                }
+            Else {
+                Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
+                }
+            }
     
-    $Uri = "https://$TenantUri/api/v1/$Endpoint/"
-
-    If ($EndpointSuffix) {$Uri += "$EndpointSuffix/"}
-
-    Try
-    {
-        If ($Body) 
-        {
-            $Response = Invoke-WebRequest -Uri $Uri -Body $Body -Headers @{Authorization = "Token $Token"} -Method $Method -ErrorAction Stop  
-        }
-        Else
-        {   
-            $Response = Invoke-WebRequest -Uri $Uri -Headers @{Authorization = "Token $Token"} -Method $Method -ErrorAction Stop
-        }
-    }
-    Catch
-    {
-        If ($_ -like 'The remote server returned an error: (404) Not Found.') 
-        {
-            Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
-        }
-        ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
-        {
-            Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is authorized to perform the requested action.'
-        }
-        ElseIf ($_ -match "The remote name could not be resolved: ")
-        {
-            Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
-        }
-        Else 
-        {
-            Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
-        }
-    }
-
-    If ($Raw)
-    {
-        Write-Output $Response
-    }
-    Else
-    {
+        Write-Verbose "Invoke-MCASRestMethod: Raw response from MCAS REST API: $Response"
+        If ($Raw) {
+            $Response
+            }
+                                                                                    Else {
         # Windows/Powershell case insensitivity causes collision of 'id' (string) and 'Id' (integer) properties, so this patches the problem by adding _int to the integer Id property for accounts
-        If ($Endpoint -eq 'accounts') {$Response = $Response -replace '"Id":', '"Id_int":'}
+        If ($Endpoint -eq 'accounts' -and $Response -ccontains '"Id":') {
+            $Response = $Response -replace '"Id":', '"Id_int":'
+            Write-Verbose "Invoke-MCASRestMethod: A property name collision was detected in the response from MCAS REST API $Endpoint endpoint for the following property names; 'id' and 'Id'. The 'Id' property was renamed to 'Id_int'."
+            }
     
         # Convert from JSON to Powershell objects
         $Response = $Response | ConvertFrom-Json
 
         # For list responses, we need the data property only
-        If ($Response.data) {$Response = $Response.data}
+        If ($Response.data) {
+            $Response = $Response.data
+            }
 
         # Add 'Identity' alias property, when appropriate
-        If ($Response._id) {$Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
+        If ($Response._id) {
+            $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
+            }
     
-        Write-Output $Response
+        $Response
+        }
     }
 }
 
@@ -211,9 +283,13 @@ function Get-CASAccount
         [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential,
  
-        # Limits the results to external, if true, or internal users, if false
+        # Limits the results to external users
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [bool[]]$External,
+        [switch]$External,
+
+        # Limits the results to internal users
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [switch]$Internal,
         
         # Limits the results to items related to the specified user names, such as 'alice@contoso.com','bob@contoso.com'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -262,7 +338,7 @@ function Get-CASAccount
         # Specifies the maximum number of results (up to 5000) to retrieve when listing items matching the specified filter criteria.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateRange(1,5000)]
-        [int]$ResultSetSize = 100,
+        [int]$ResultSetSize = 5000,
 
         # Specifies the number of records, from the beginning of the result set, to skip.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -270,6 +346,8 @@ function Get-CASAccount
     )
     Begin
     {
+        $Endpoint = 'accounts'
+        
         If (!$TenantUri) # If -TenantUri specified, use it and skip these
         {
             If ($CASCredential) {$TenantUri = $CASCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
@@ -284,33 +362,18 @@ function Get-CASAccount
     Process
     {        
         # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
-        If ($PSCmdlet.ParameterSetName -eq 'Fetch') 
+        If ($PSCmdlet.ParameterSetName -eq 'Fetch')
         {        
             Try 
             {
-                # Fetch the item by its id          
-                $FetchResponse = (Invoke-WebRequest -Uri "https://$TenantUri/api/v1/accounts/$Identity/" -Headers @{Authorization = "Token $Token"} -Method Get -ErrorAction Stop) -replace '"Id":', '"Id_int":' | ConvertFrom-Json             
+                # Fetch the item by its id
+                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix $Identity -Method Post -Token $Token -ErrorAction Stop
             }
-            Catch 
-            { 
-                If ($_ -like 'The remote server returned an error: (404) Not Found.') 
-                {
-                    Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
+                Catch
+                { 
+                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-                ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
-                {
-                    Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is authorized to perform the requested action.'
-                }
-                ElseIf ($_ -match "The remote name could not be resolved: ")
-                {
-                    Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
-                }
-                Else 
-                {
-                    Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
-                }
-            }
-            If ($FetchResponse) {Write-Output $FetchResponse | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
+            $FetchResponse
         }
     }
     End
@@ -351,48 +414,38 @@ function Get-CASAccount
             If ($Services        -and ($ServiceNames -or $ServiceNamesNot -or $ServicesNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
             If ($ServiceNamesNot -and ($Services     -or $ServiceNames    -or $ServicesNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
             If ($ServicesNot     -and ($Services     -or $ServiceNamesNot -or $ServiceNames)) {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
-            
+            If ($External -and $Internal) {Write-Error 'Cannot reconcile -External and -Internal switches. Use zero or one of these, but not both.' -ErrorAction Stop}
+
             # Value-mapped filters
             If ($ServiceNames)    {$FilterSet += @{'service'=@{'eq'=($ServiceNames.GetEnumerator() | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
             If ($ServiceNamesNot) {$FilterSet += @{'service'=@{'neq'=($ServiceNamesNot.GetEnumerator() | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
 
             # Simple filters
-            If ($External)    {$FilterSet += @{'affiliation'=   @{'eq'=$External}}}
+            If ($Internal)    {$FilterSet += @{'affiliation'=   @{'eq'=$false}}}
+            If ($External)    {$FilterSet += @{'affiliation'=   @{'eq'=$true}}}
             If ($UserName)    {$FilterSet += @{'user.username'= @{'eq'=$UserName}}}
             If ($Services)    {$FilterSet += @{'service'=       @{'eq'=$Services}}}
             If ($ServicesNot) {$FilterSet += @{'service'=       @{'neq'=$ServicesNot}}}
             If ($UserDomain)  {$FilterSet += @{'domain'=        @{'eq'=$UserDomain}}}
             
+            # boolean filters
+            #If ($External -ne $null) {$FilterSet += @{'affiliation'= @{'eq'=$External}}}
+
             # Add filter set to request body as the 'filter' property            
             If ($FilterSet) {$Body.Add('filters',(ConvertTo-CASJsonFilterString $FilterSet))}
 
             #endregion ----------------------------FILTERING----------------------------
 
-            # Get the matching alerts and handle errors
+            # Get the matching items and handle errors
             Try 
             {
-                $ListResponse = ((Invoke-WebRequest -Uri "https://$TenantUri/api/v1/accounts/" -Body $Body -Headers @{Authorization = "Token $Token"} -Method Post -ErrorAction Stop) -replace '"Id":', '"Id_int":' | ConvertFrom-Json).data              
+                $ListResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token -ErrorAction Stop                    
             }
-            Catch 
-            { 
-                If ($_ -like 'The remote server returned an error: (404) Not Found.') 
-                {
-                    Write-Error "404 - Not Found: Check to ensure the -TenantUri parameter is valid."
+                Catch 
+                { 
+                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-                ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
-                {
-                    Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is authorized to perform the requested action.'
-                }
-                ElseIf ($_ -match "The remote name could not be resolved: ")
-                {
-                    Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
-                }
-                Else 
-                {
-                    Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
-                }
-            }
-            If ($ListResponse) {Write-Output $ListResponse | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
+            $ListResponse
         }
     }
 }
@@ -510,6 +563,11 @@ function Get-CASActivity
         [ValidateNotNullOrEmpty()] 
         [string]$Text,
 
+        # Limits the results to items occuring in the last x number of days.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateRange(1,180)] 
+        [int]$DaysAgo,
+
         # Limits the results to admin events if true, non-admin events, if false.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [bool]$AdminEvents,
@@ -527,7 +585,7 @@ function Get-CASActivity
         # Specifies the maximum number of results (up to 10000) to retrieve when listing items matching the specified filter criteria.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateRange(1,10000)]
-        [int]$ResultSetSize = 100,
+        [int]$ResultSetSize = 10000,
 
         # Specifies the number of records, from the beginning of the result set, to skip.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -535,6 +593,8 @@ function Get-CASActivity
     )
     Begin
     {
+        $Endpoint = 'activities'
+
         #$ErrorActionPreference = 'Stop'
         If (!$TenantUri) # If -TenantUri specified, use it and skip these
         {
@@ -550,33 +610,18 @@ function Get-CASActivity
     Process
     {        
         # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
-        If ($PSCmdlet.ParameterSetName -eq 'Fetch') 
+        If ($PSCmdlet.ParameterSetName -eq 'Fetch')
         {        
             Try 
             {
-                # Fetch the activity by its id          
-                $FetchResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/activities/$Identity/" -Headers @{Authorization = "Token $Token"} -Method Get -ErrorAction Stop             
+                # Fetch the item by its id
+                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix $Identity -Method Post -Token $Token -ErrorAction Stop
             }
-            Catch 
-            { 
-                If ($_ -like 'The remote server returned an error: (404) Not Found.') 
-                {
-                    Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
+                Catch
+                { 
+                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-                ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
-                {
-                    Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is authorized to perform the requested action.'
-                }
-                ElseIf ($_ -match "The remote name could not be resolved: ")
-                {
-                    Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
-                }
-                Else 
-                {
-                    Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
-                }
-            }
-            If ($FetchResponse) {Write-Output $FetchResponse | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
+            $FetchResponse
         }
     }
     End
@@ -628,6 +673,7 @@ function Get-CASActivity
             If ($IpStartsWith)         {$FilterSet += @{'ip.address'=          @{'startswith'=$IpStartsWith}}}
             If ($IpDoesNotStartWith)   {$FilterSet += @{'ip.address'=          @{'doesnotstartwith'=$IpStartsWith}}} 
             If ($Text)                 {$FilterSet += @{'text'=                @{'text'=$Text}}} 
+            If ($DaysAgo)              {$FilterSet += @{'date'=                @{'gte_ndays'=$DaysAgo}}} 
 
             # boolean filters
             If ($AdminEvents -ne $null) {$FilterSet += @{'activity.type'= @{'eq'=$AdminEvents}}}
@@ -637,31 +683,16 @@ function Get-CASActivity
 
             #endregion ----------------------------FILTERING----------------------------
 
-            # Get the matching alerts and handle errors
+            # Get the matching items and handle errors
             Try 
             {
-                $ListResponse = (Invoke-RestMethod -Uri "https://$TenantUri/api/v1/activities/" -Body $Body -Headers @{Authorization = "Token $Token"} -Method Post -ErrorAction Stop).data              
+                $ListResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token -ErrorAction Stop                    
             }
-            Catch 
-            { 
-                If ($_ -like 'The remote server returned an error: (404) Not Found.') 
-                {
-                    Write-Error "404 - Not Found: Check to ensure the -TenantUri parameter is valid."
+                Catch 
+                { 
+                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-                ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
-                {
-                    Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is authorized to perform the requested action.'
-                }
-                ElseIf ($_ -match "The remote name could not be resolved: ")
-                {
-                    Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
-                }
-                Else 
-                {
-                    Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
-                }
-            }
-            If ($ListResponse) {Write-Output $ListResponse | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
+            $ListResponse
         }
     }
 }
@@ -771,9 +802,13 @@ function Get-CASAlert
         [ValidateNotNullOrEmpty()]
         [string]$Source,
 
-        # Limits the results to read items, if true, unread items, if false.
+        # Limits the results to read items.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [bool]$Read,
+        [switch]$Read,
+
+        # Limits the results to unread items.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [switch]$Unread,
 
         # Specifies the property by which to sort the results. Possible Values: 'Date','Severity', 'ResolutionStatus'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -788,7 +823,7 @@ function Get-CASAlert
         # Specifies the maximum number of results (up to 10000) to retrieve when listing items matching the specified filter criteria.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateRange(1,10000)]
-        [int]$ResultSetSize = 100,
+        [int]$ResultSetSize = 10000,
 
         # Specifies the number of records, from the beginning of the result set, to skip.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -796,6 +831,8 @@ function Get-CASAlert
     )
     Begin
     {
+        $Endpoint = 'alerts'
+
         If (!$TenantUri) # If -TenantUri specified, use it and skip these
         {
             If ($CASCredential) {$TenantUri = $CASCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
@@ -810,33 +847,18 @@ function Get-CASAlert
     Process
     {        
         # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
-        If ($PSCmdlet.ParameterSetName -eq 'Fetch') 
+        If ($PSCmdlet.ParameterSetName -eq 'Fetch')
         {        
             Try 
             {
-                # Fetch the item by its id          
-                $FetchResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/alerts/$Identity/" -Headers @{Authorization = "Token $Token"} -Method Get -ErrorAction Stop             
+                # Fetch the item by its id
+                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix $Identity -Method Post -Token $Token -ErrorAction Stop
             }
-            Catch 
-            { 
-                If ($_ -like 'The remote server returned an error: (404) Not Found.') 
-                {
-                    Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
+                Catch
+                { 
+                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-                ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
-                {
-                    Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is authorized to perform the requested action.'
-                }
-                ElseIf ($_ -match "The remote name could not be resolved: ")
-                {
-                    Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
-                }
-                Else 
-                {
-                    Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
-                }
-            }
-            If ($FetchResponse) {Write-Output $FetchResponse | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
+            $FetchResponse
         }
     }
     End
@@ -872,11 +894,12 @@ function Get-CASAlert
             #region ----------------------------FILTERING----------------------------
             $FilterSet = @() # Filter set array
 
-            # Additional parameter validations and mutual exclusions
+            # Additional parameter validations and mutexes
             If ($ServiceName    -and ($Service     -or $ServiceNameNot -or $ServiceNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
             If ($Service        -and ($ServiceName -or $ServiceNameNot -or $ServiceNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
             If ($ServiceNameNot -and ($Service     -or $ServiceName    -or $ServiceNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
             If ($ServiceNot     -and ($Service     -or $ServiceNameNot -or $ServiceName)) {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($Read -and $Unread) {Write-Error 'Cannot reconcile -Read and -Unread parameters. Only use one of them at a time.' -ErrorAction Stop}
 
             # Value-mapped filters
             If ($ServiceName)      {$FilterSet += @{'entity.service'=         @{'eq'=($ServiceName.GetEnumerator()      | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
@@ -892,40 +915,25 @@ function Get-CASAlert
             If ($Risk)       {$FilterSet += @{'risk'=           @{'eq'=$Risk}}}
             If ($AlertType)  {$FilterSet += @{'id'=             @{'eq'=$AlertType}}}
             If ($Source)     {$FilterSet += @{'source'=         @{'eq'=$Source}}}
-
-            # boolean filters
-            If ($Read -ne $null) {$FilterSet += @{'read'= @{'eq'=$Read}}}
+            If ($Read)       {$FilterSet += @{'read'=           @{'eq'=$true}}}
+            If ($Unread)     {$FilterSet += @{'read'=           @{'eq'=$false}}}
+ 
  
             # Add filter set to request body as the 'filter' property            
             If ($FilterSet) {$Body.Add('filters',(ConvertTo-CASJsonFilterString $FilterSet))}
 
             #endregion ----------------------------FILTERING----------------------------
 
-            # Get the matching alerts and handle errors
+            # Get the matching items and handle errors
             Try 
             {
-                $ListResponse = (Invoke-RestMethod -Uri "https://$TenantUri/api/v1/alerts/" -Body $Body -Headers @{Authorization = "Token $Token"} -Method Post -ErrorAction Stop).data              
+                $ListResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token -ErrorAction Stop                    
             }
-            Catch 
-            { 
-                If ($_ -like 'The remote server returned an error: (404) Not Found.') 
-                {
-                    Write-Error "404 - Not Found: Check to ensure the -TenantUri parameter is valid."
+                Catch 
+                { 
+                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-                ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
-                {
-                    Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is authorized to perform the requested action.'
-                }
-                ElseIf ($_ -match "The remote name could not be resolved: ")
-                {
-                    Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
-                }
-                Else 
-                {
-                    Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
-                }
-            }
-            If ($ListResponse) {Write-Output $ListResponse | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
+            $ListResponse
         }
     }
 }
@@ -1160,17 +1168,29 @@ function Get-CASFile
         [ValidateNotNullOrEmpty()]
         [string]$ExtensionNot,
 
-        # Limits the results to items that CAS has marked as trashed, if true, not trashed, if false.
+        # Limits the results to items that CAS has marked as trashed.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [bool]$Trashed,
+        [switch]$Trashed,
 
-        # Limits the results to items that CAS has marked as quarantined, if true, non-quarantined, if false.
+        # Limits the results to items that CAS has marked as not trashed.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [bool]$Quarantined,
+        [switch]$TrashedNot,
 
-        # Limits the results to items that CAS has marked as a folder, if true, non-folders, if false.
+        # Limits the results to items that CAS has marked as quarantined.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [bool]$Folder,
+        [switch]$Quarantined,
+        
+        # Limits the results to items that CAS has marked as not quarantined.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [switch]$QuarantinedNot,
+
+        # Limits the results to items that CAS has marked as a folder.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [switch]$Folders,
+
+        # Limits the results to items that CAS has marked as not a folder.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [switch]$FoldersNot,
 
         # Specifies the property by which to sort the results. Possible Value: 'DateModified'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -1185,7 +1205,7 @@ function Get-CASFile
         # Specifies the maximum number of results (up to 5000) to retrieve when listing items matching the specified filter criteria.  
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateRange(1,5000)]
-        [int]$ResultSetSize = 100,
+        [int]$ResultSetSize = 5000,
 
         # Specifies the number of records, from the beginning of the result set, to skip.  
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -1193,6 +1213,8 @@ function Get-CASFile
     )
     Begin
     {
+        $Endpoint = 'files'
+        
         If (!$TenantUri) # If -TenantUri specified, use it and skip these
         {
             If ($CASCredential) {$TenantUri = $CASCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
@@ -1214,25 +1236,25 @@ function Get-CASFile
                 # Fetch the item by its id          
                 $FetchResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/files/$Identity/" -Headers @{Authorization = "Token $Token"} -Method Get -ErrorAction Stop             
             }
-            Catch 
-            { 
-                If ($_ -like 'The remote server returned an error: (404) Not Found.') 
-                {
-                    Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
+                Catch 
+                { 
+                    If ($_ -like 'The remote server returned an error: (404) Not Found.') 
+                    {
+                        Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
+                    }
+                    ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
+                    {
+                        Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is authorized to perform the requested action.'
+                    }
+                    ElseIf ($_ -match "The remote name could not be resolved: ")
+                    {
+                        Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
+                    }
+                    Else 
+                    {
+                        Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
+                    }
                 }
-                ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
-                {
-                    Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is authorized to perform the requested action.'
-                }
-                ElseIf ($_ -match "The remote name could not be resolved: ")
-                {
-                    Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
-                }
-                Else 
-                {
-                    Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
-                }
-            }
             If ($FetchResponse) {Write-Output $FetchResponse | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
         }
     }
@@ -1269,7 +1291,7 @@ function Get-CASFile
             If ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
             If ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
             If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
-            If ($Folder -and $FolderNot) {Write-Error 'Cannot reconcile -Folder and -FolderNot switches. Use zero or one of these, but not both.' -ErrorAction Stop}
+            If ($Folders -and $FoldersNot) {Write-Error 'Cannot reconcile -Folder and -FolderNot switches. Use zero or one of these, but not both.' -ErrorAction Stop}
             If ($Quarantined -and $QuarantinedNot) {Write-Error 'Cannot reconcile -Quarantined and -QuarantinedNot switches. Use zero or one of these, but not both.' -ErrorAction Stop}
             If ($Trashed -and $TrashedNot) {Write-Error 'Cannot reconcile -Trashed and -TrashedNot switches. Use zero or one of these, but not both.' -ErrorAction Stop}
             
@@ -1295,11 +1317,12 @@ function Get-CASFile
             If ($MIMETypeNot)          {$FilterSet += @{'mimeType'=                 @{'neq'=$MIMETypeNot}}}
             If ($Name)                 {$FilterSet += @{'filename'=                 @{'eq'=$Name}}}
             If ($NameWithoutExtension) {$FilterSet += @{'filename'=                 @{'text'=$NameWithoutExtension}}}
-            
-            # boolean filters
-            If ($Folder -ne $null)      {$FilterSet += @{'folder'=      @{'eq'=$Folder}}}
-            If ($Quarantined -ne $null) {$FilterSet += @{'quarantined'= @{'eq'=$Quarantined}}} 
-            If ($Trashed -ne $null)     {$FilterSet += @{'trashed'=     @{'eq'=$Trashed}}}
+            If ($Folders)              {$FilterSet += @{'folder'=      @{'eq'=$true}}}
+            If ($FoldersNot)           {$FilterSet += @{'folder'=      @{'eq'=$false}}}
+            If ($Quarantined)          {$FilterSet += @{'quarantined'= @{'eq'=$true}}} 
+            If ($QuarantinedNot)       {$FilterSet += @{'quarantined'= @{'eq'=$false}}} 
+            If ($Trashed)              {$FilterSet += @{'trashed'=     @{'eq'=$true}}}
+            If ($TrashedNot)           {$FilterSet += @{'trashed'=     @{'eq'=$false}}}
            
             # Add filter set to request body as the 'filter' property            
             If ($FilterSet) {$Body.Add('filters',(ConvertTo-CASJsonFilterString $FilterSet))}
@@ -1311,25 +1334,25 @@ function Get-CASFile
             {
                 $ListResponse = (Invoke-RestMethod -Uri "https://$TenantUri/api/v1/files/" -Body $Body -Headers @{Authorization = "Token $Token"} -Method Post -ErrorAction Stop).data              
             }
-            Catch 
-            { 
-                If ($_ -like 'The remote server returned an error: (404) Not Found.') 
-                {
-                    Write-Error "404 - Not Found: Check to ensure the -TenantUri parameter is valid."
+                Catch 
+                { 
+                    If ($_ -like 'The remote server returned an error: (404) Not Found.') 
+                    {
+                        Write-Error "404 - Not Found: Check to ensure the -TenantUri parameter is valid."
+                    }
+                    ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
+                    {
+                        Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is authorized to perform the requested action.'
+                    }
+                    ElseIf ($_ -match "The remote name could not be resolved: ")
+                    {
+                        Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
+                    }
+                    Else 
+                    {
+                        Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
+                    }
                 }
-                ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
-                {
-                    Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is authorized to perform the requested action.'
-                }
-                ElseIf ($_ -match "The remote name could not be resolved: ")
-                {
-                    Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
-                }
-                Else 
-                {
-                    Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
-                }
-            }
             If ($ListResponse) {Write-Output $ListResponse | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
         }
     }
@@ -1406,10 +1429,10 @@ function Send-CASDiscoveryLog
         {
             $FileName = (Get-Item $LogFile).Name
         }
-        Catch
-        {
-            Write-Error "Could not get $LogFile : $_" -ErrorAction Stop    
-        }
+            Catch
+            {
+                Write-Error "Could not get $LogFile : $_" -ErrorAction Stop    
+            }
 
         #region GET UPLOAD URL
         Try 
@@ -1419,25 +1442,25 @@ function Send-CASDiscoveryLog
 
             $UploadUrl = $GetUploadUrlResponse.url           
         }
-        Catch 
-        { 
-            If ($_ -like 'The remote server returned an error: (404) Not Found.') 
-            {
-                Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
-            }
-            ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
-            {
-                Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified credential is authorized to perform the requested action.'
-            }
-            ElseIf ($_ -match "The remote name could not be resolved: ")
-            {
-                Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
-            }
-            Else 
-            {
-                Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
-            }
-        }            
+            Catch 
+            { 
+                If ($_ -like 'The remote server returned an error: (404) Not Found.') 
+                {
+                    Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
+                }
+                ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
+                {
+                    Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified credential is authorized to perform the requested action.'
+                }
+                ElseIf ($_ -match "The remote name could not be resolved: ")
+                {
+                    Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
+                }
+                Else 
+                {
+                    Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
+                }
+            }            
         #endregion GET UPLOAD URL
 
         #region UPLOAD LOG FILE
@@ -1464,25 +1487,25 @@ function Send-CASDiscoveryLog
                 If (Test-Path $LogFile) {Invoke-RestMethod -Uri $UploadUrl -InFile $LogFile -Method Put -ErrorAction Stop}
             }
         }
-        Catch 
-        { 
-            If ($_ -like 'The remote server returned an error: (404) Not Found.') 
-            {
-                Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
+            Catch 
+            { 
+                If ($_ -like 'The remote server returned an error: (404) Not Found.') 
+                {
+                    Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
+                }
+                ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
+                {
+                    Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified credential is authorized to perform the requested action.'
+                }
+                ElseIf ($_ -match "The remote name could not be resolved: ")
+                {
+                    Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
+                }
+                Else 
+                {
+                    Write-Error "File upload failed: $_"
+                }
             }
-            ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
-            {
-                Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified credential is authorized to perform the requested action.'
-            }
-            ElseIf ($_ -match "The remote name could not be resolved: ")
-            {
-                Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
-            }
-            Else 
-            {
-                Write-Error "File upload failed: $_"
-            }
-        }
         #endregion UPLOAD LOG FILE
 
         #region FINALIZE UPLOAD 
@@ -1491,29 +1514,29 @@ function Send-CASDiscoveryLog
             # Finalize the upload           
             $FinalizeUploadResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/discovery/done_upload/" -Headers @{Authorization = "Token $Token"} -Body @{'uploadUrl'=$UploadUrl;'inputStreamName'=$DiscoveryDataSource} -Method Post -ErrorAction Stop                
         }
-        Catch 
-        { 
-            If ($_ -like 'The remote server returned an error: (404) Not Found.') 
-            {
-                Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
+            Catch 
+            { 
+                If ($_ -like 'The remote server returned an error: (404) Not Found.') 
+                {
+                    Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
+                }
+                ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
+                {
+                    Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified credential is authorized to perform the requested action.'
+                }
+                ElseIf ($_ -match "The remote name could not be resolved: ")
+                {
+                    Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
+                }
+                ElseIf ($_ -match "The remote server returned an error: (400) Bad Request.")
+                {
+                    Write-Error "400 - Bad Request: Ensure the -DiscoveryDataSource parameter specifies a valid data source name that you have created in the CAS web console."
+                }
+                Else 
+                {
+                    Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
+                }
             }
-            ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
-            {
-                Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified credential is authorized to perform the requested action.'
-            }
-            ElseIf ($_ -match "The remote name could not be resolved: ")
-            {
-                Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
-            }
-            ElseIf ($_ -match "The remote server returned an error: (400) Bad Request.")
-            {
-                Write-Error "400 - Bad Request: Ensure the -DiscoveryDataSource parameter specifies a valid data source name that you have created in the CAS web console."
-            }
-            Else 
-            {
-                Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
-            }
-        }
         #endregion FINALIZE UPLOAD
 
         Try 
@@ -1521,10 +1544,10 @@ function Send-CASDiscoveryLog
             # Delete the file           
             If ($Delete) {Remove-Item $LogFile -Force -ErrorAction Stop}            
         }
-        Catch
-        {
-            Write-Error "Could not delete $LogFile : $_" -ErrorAction Stop
-        }
+            Catch
+            {
+                Write-Error "Could not delete $LogFile : $_" -ErrorAction Stop
+            }
     }
     End
     {
@@ -1594,6 +1617,8 @@ function Set-CASAlert
     )
     Begin
     {
+        $Endpoint = 'alerts'
+
         If (!$TenantUri) # If -TenantUri specified, use it and skip these
         {
             If ($CASCredential) {$TenantUri = $CASCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
@@ -1611,35 +1636,20 @@ function Set-CASAlert
         If ($MarkAs)  {$Action = $MarkAs.ToLower()} # Convert -MarkAs to lower case, as expected by the CAS API
 
         Try 
-        {
-            # Set the alert's state by its id          
-            $SetResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/alerts/$Identity/$Action/" -Headers @{Authorization = "Token $Token"} -Method Post -ErrorAction Stop             
-        }
-        Catch 
-        { 
-            If ($_ -like 'The remote server returned an error: (404) Not Found.') 
             {
-                Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
+                # Set the alert's state by its id
+                $SetResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix $Identity/$Action -Method Post -Token $Token -ErrorAction Stop
             }
-            ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
-            {
-                Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is authorized to perform the requested action.'
-            }
-            ElseIf ($_ -match "The remote name could not be resolved: ")
-            {
-                Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
-            }
-            Else 
-            {
-                Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
-            }
-        }
+            Catch
+                { 
+                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+                }
+            $SetResponse
     }
     End
     {
     }
 }
-
 
 # Vars to export
 Export-ModuleMember -Variable CASCredential
@@ -1652,3 +1662,7 @@ Export-ModuleMember -Function Get-CASCredential
 Export-ModuleMember -Function Get-CASFile
 Export-ModuleMember -Function Send-CASDiscoveryLog
 Export-ModuleMember -Function Set-CASAlert
+
+# Items to only export during dev/testing only
+Export-ModuleMember -Function ConvertTo-CASJsonFilterString
+Export-ModuleMember -Function Invoke-MCASRestMethod
