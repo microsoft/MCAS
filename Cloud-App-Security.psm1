@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = 'Stop'
+﻿#$ErrorActionPreference = 'Stop'
 
 
 #region ----------------------------Value Maps----------------------------
@@ -79,7 +79,9 @@ $AlertIDValueMap = @{
 #endregion ----------------------------Value Maps----------------------------
 
 
-function ConvertTo-CASJsonFilterString {
+#region ------------------------Internal Functions------------------------
+
+function ConvertTo-MCASJsonFilterString {
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory=$true)]
@@ -94,7 +96,7 @@ function ConvertTo-CASJsonFilterString {
     
     $RawJsonFilter = ('{'+($Temp -join '},')+'}}')
 
-    Write-Verbose "ConvertTo-CASJsonFilterString: Converted filter set $FilterSet to JSON filter $RawJsonFilter"
+    Write-Verbose "ConvertTo-MCASJsonFilterString: Converted filter set $FilterSet to JSON filter $RawJsonFilter"
     
     Write-Output $RawJsonFilter
     }
@@ -138,7 +140,7 @@ function Invoke-MCASRestMethod
 
         Try {
         If ($Body) {
-            $Response = Invoke-WebRequest -Uri $Uri -Body $Body -Headers @{Authorization = "Token $Token"} -Method $Method -UseBasicParsing -ErrorAction Stop  
+            $Response = Invoke-WebRequest -Uri $Uri -Body $Body -Headers @{Authorization = "Token $Token"} -Method $Method -UseBasicParsing -ErrorAction Stop
             }
         Else {   
             $Response = Invoke-WebRequest -Uri $Uri -Headers @{Authorization = "Token $Token"} -Method $Method -UseBasicParsing -ErrorAction Stop
@@ -146,16 +148,16 @@ function Invoke-MCASRestMethod
         }
             Catch {
             If ($_ -like 'The remote server returned an error: (404) Not Found.') {
-                Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
+                Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid." -ErrorAction Stop
                 }
             ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.') {
-                Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is valid.'
+                Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is valid.' -ErrorAction Stop
                 }        
             ElseIf ($_ -match "The remote name could not be resolved: ") {
-                Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
+                Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid." -ErrorAction Stop
                 }
             Else {
-                Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
+                Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_" -ErrorAction Stop
                 }
             }
     
@@ -187,6 +189,40 @@ function Invoke-MCASRestMethod
         }
     }
 }
+
+function Select-MCASTenantUri
+{       
+    If ($TenantUri) {
+        $TenantUri
+        }
+    ElseIf ($Credential) {
+        $Credential.GetNetworkCredential().username
+        }
+    ElseIf ($CASCredential) {
+        $CASCredential.GetNetworkCredential().username
+        }
+    Else {
+        Write-Error 'No tenant URI available. Please check the -TenantUri parameter or username of the supplied credential' -ErrorAction Stop
+        }
+}
+
+function Select-MCASToken
+{
+    If ($Credential) {
+        $Credential.GetNetworkCredential().Password.ToLower()
+        }
+    ElseIf ($CASCredential) {
+        $CASCredential.GetNetworkCredential().Password.ToLower()
+        }
+    Else {
+        Write-Error 'No token available. Please check the OAuth token (password) of the supplied credential' -ErrorAction Stop
+        }
+}
+
+#endregion ------------------------Internal Functions------------------------
+
+
+#region ------------------------------Cmdlets-----------------------------
 
 <#
 .Synopsis
@@ -275,7 +311,7 @@ function Get-CASAccount
 
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
-        [ValidateScript({(($_.StartsWith('https://') -eq $false) -and ($_.EndsWith('.adallom.com') -or $_.EndsWith('.cloudappsecurity.com')))})]
+        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
         [string]$TenantUri,
 
         # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
@@ -348,16 +384,11 @@ function Get-CASAccount
     {
         $Endpoint = 'accounts'
         
-        If (!$TenantUri) # If -TenantUri specified, use it and skip these
-        {
-            If ($CASCredential) {$TenantUri = $CASCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
-            If ($Credential)                          {$TenantUri = $Credential.GetNetworkCredential().username} # If -Credential specfied, use it over the well-known cred session var
-        }
-        If (!$TenantUri) {Write-Error 'No tenant URI available. Please check the -TenantUri parameter or username of the supplied credential' -ErrorAction Stop}
-      
-        If ($CASCredential) {$Token = $CASCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
-        If ($Credential)                          {$Token = $Credential.GetNetworkCredential().Password.ToLower()} # If -Credential specfied, use it over the well-known cred session var
-        If (!$Token) {Write-Error 'No token available. Please check the OAuth token (password) of the supplied credential' -ErrorAction Stop}
+        Try {$TenantUri = Select-MCASTenantUri}
+            Catch {Throw $_}
+
+        Try {$Token = Select-MCASToken}
+            Catch {Throw $_}
     }
     Process
     {        
@@ -367,7 +398,7 @@ function Get-CASAccount
             Try 
             {
                 # Fetch the item by its id
-                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix $Identity -Method Post -Token $Token -ErrorAction Stop
+                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix $Identity -Method Post -Token $Token
             }
                 Catch
                 { 
@@ -386,7 +417,7 @@ function Get-CASAccount
 
             #region ----------------------------SORTING----------------------------
         
-            If ($SortBy -xor $SortDirection) {Write-Error 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.' -ErrorAction Stop}
+            If ($SortBy -xor $SortDirection) {Throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'}
 
             # Add sort direction to request body, if specified
             If ($SortDirection -eq 'Ascending')  {$Body.Add('sortDirection','asc')}
@@ -410,11 +441,11 @@ function Get-CASAccount
             $FilterSet = @() # Filter set array
 
             # Additional parameter validations and mutual exclusions
-            If ($ServiceNames    -and ($Services     -or $ServiceNamesNot -or $ServicesNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
-            If ($Services        -and ($ServiceNames -or $ServiceNamesNot -or $ServicesNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
-            If ($ServiceNamesNot -and ($Services     -or $ServiceNames    -or $ServicesNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
-            If ($ServicesNot     -and ($Services     -or $ServiceNamesNot -or $ServiceNames)) {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
-            If ($External -and $Internal) {Write-Error 'Cannot reconcile -External and -Internal switches. Use zero or one of these, but not both.' -ErrorAction Stop}
+            If ($ServiceNames    -and ($Services     -or $ServiceNamesNot -or $ServicesNot))  {Throw 'Cannot reconcile service parameters. Only use one of them at a time.'}
+            If ($Services        -and ($ServiceNames -or $ServiceNamesNot -or $ServicesNot))  {Throw 'Cannot reconcile service parameters. Only use one of them at a time.'}
+            If ($ServiceNamesNot -and ($Services     -or $ServiceNames    -or $ServicesNot))  {Throw 'Cannot reconcile service parameters. Only use one of them at a time.'}
+            If ($ServicesNot     -and ($Services     -or $ServiceNamesNot -or $ServiceNames)) {Throw 'Cannot reconcile service parameters. Only use one of them at a time.'}
+            If ($External -and $Internal) {Throw 'Cannot reconcile -External and -Internal switches. Use zero or one of these, but not both.'}
 
             # Value-mapped filters
             If ($ServiceNames)    {$FilterSet += @{'service'=@{'eq'=($ServiceNames.GetEnumerator() | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
@@ -432,14 +463,14 @@ function Get-CASAccount
             #If ($External -ne $null) {$FilterSet += @{'affiliation'= @{'eq'=$External}}}
 
             # Add filter set to request body as the 'filter' property            
-            If ($FilterSet) {$Body.Add('filters',(ConvertTo-CASJsonFilterString $FilterSet))}
+            If ($FilterSet) {$Body.Add('filters',(ConvertTo-MCASJsonFilterString $FilterSet))}
 
             #endregion ----------------------------FILTERING----------------------------
 
             # Get the matching items and handle errors
             Try 
             {
-                $ListResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token -ErrorAction Stop                    
+                $ListResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token                    
             }
                 Catch 
                 { 
@@ -495,7 +526,7 @@ function Get-CASActivity
         
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
-        [ValidateScript({(($_.StartsWith('https://') -eq $false) -and ($_.EndsWith('.adallom.com') -or $_.EndsWith('.cloudappsecurity.com')))})]
+        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
         [string]$TenantUri,
 
         # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
@@ -595,17 +626,11 @@ function Get-CASActivity
     {
         $Endpoint = 'activities'
 
-        #$ErrorActionPreference = 'Stop'
-        If (!$TenantUri) # If -TenantUri specified, use it and skip these
-        {
-            If ($CASCredential) {$TenantUri = $CASCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
-            If ($Credential)                          {$TenantUri = $Credential.GetNetworkCredential().username} # If -Credential specfied, use it over the well-known cred session var
-        }
-        If (!$TenantUri) {Write-Error 'No tenant URI available. Please check the -TenantUri parameter or username of the supplied credential' -ErrorAction Stop}
-      
-        If ($CASCredential) {$Token = $CASCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
-        If ($Credential)                          {$Token = $Credential.GetNetworkCredential().Password.ToLower()} # If -Credential specfied, use it over the well-known cred session var
-        If (!$Token) {Write-Error 'No token available. Please check the OAuth token (password) of the supplied credential' -ErrorAction Stop}
+        Try {$TenantUri = Select-MCASTenantUri}
+            Catch {Throw $_}
+
+        Try {$Token = Select-MCASToken}
+            Catch {Throw $_}
     }
     Process
     {        
@@ -615,7 +640,7 @@ function Get-CASActivity
             Try 
             {
                 # Fetch the item by its id
-                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix $Identity -Method Post -Token $Token -ErrorAction Stop
+                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix $Identity -Method Post -Token $Token
             }
                 Catch
                 { 
@@ -634,7 +659,7 @@ function Get-CASActivity
 
             #region ----------------------------SORTING----------------------------
         
-            If ($SortBy -xor $SortDirection) {Write-Error 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.' -ErrorAction Stop}
+            If ($SortBy -xor $SortDirection) {Throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'}
 
             # Add sort direction to request body, if specified
             If ($SortDirection -eq 'Ascending')  {$Body.Add('sortDirection','asc')}
@@ -651,10 +676,10 @@ function Get-CASActivity
             $FilterSet = @() # Filter set array
 
             # Additional parameter validations and mutual exclusions
-            If ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
-            If ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
-            If ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
-            If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            If ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            If ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
             
             # Value-mapped filters
             If ($IpCategory) {$FilterSet += @{'ip.category'=@{'eq'=($IpCategory.GetEnumerator() | ForEach-Object {$IpCategoryValueMap.Get_Item($_)})}}}
@@ -679,14 +704,14 @@ function Get-CASActivity
             If ($AdminEvents -ne $null) {$FilterSet += @{'activity.type'= @{'eq'=$AdminEvents}}}
 
             # Add filter set to request body as the 'filter' property            
-            If ($FilterSet) {$Body.Add('filters',(ConvertTo-CASJsonFilterString $FilterSet))}
+            If ($FilterSet) {$Body.Add('filters',(ConvertTo-MCASJsonFilterString $FilterSet))}
 
             #endregion ----------------------------FILTERING----------------------------
 
             # Get the matching items and handle errors
             Try 
             {
-                $ListResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token -ErrorAction Stop                    
+                $ListResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token                    
             }
                 Catch 
                 { 
@@ -740,7 +765,7 @@ function Get-CASAlert
         
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
-        [ValidateScript({(($_.StartsWith('https://') -eq $false) -and ($_.EndsWith('.adallom.com') -or $_.EndsWith('.cloudappsecurity.com')))})]
+        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
         [string]$TenantUri,
 
         # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
@@ -833,16 +858,11 @@ function Get-CASAlert
     {
         $Endpoint = 'alerts'
 
-        If (!$TenantUri) # If -TenantUri specified, use it and skip these
-        {
-            If ($CASCredential) {$TenantUri = $CASCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
-            If ($Credential)                          {$TenantUri = $Credential.GetNetworkCredential().username} # If -Credential specfied, use it over the well-known cred session var
-        }
-        If (!$TenantUri) {Write-Error 'No tenant URI available. Please check the -TenantUri parameter or username of the supplied credential' -ErrorAction Stop}
-      
-        If ($CASCredential) {$Token = $CASCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
-        If ($Credential)                          {$Token = $Credential.GetNetworkCredential().Password.ToLower()} # If -Credential specfied, use it over the well-known cred session var
-        If (!$Token) {Write-Error 'No token available. Please check the OAuth token (password) of the supplied credential' -ErrorAction Stop}
+        Try {$TenantUri = Select-MCASTenantUri}
+            Catch {Throw $_}
+
+        Try {$Token = Select-MCASToken}
+            Catch {Throw $_}
     }
     Process
     {        
@@ -852,7 +872,7 @@ function Get-CASAlert
             Try 
             {
                 # Fetch the item by its id
-                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix $Identity -Method Post -Token $Token -ErrorAction Stop
+                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix $Identity -Method Post -Token $Token
             }
                 Catch
                 { 
@@ -871,7 +891,7 @@ function Get-CASAlert
 
             #region ----------------------------SORTING----------------------------
         
-            If ($SortBy -xor $SortDirection) {Write-Error 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.' -ErrorAction Stop}
+            If ($SortBy -xor $SortDirection) {Throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'}
 
             # Add sort direction to request body, if specified
             If ($SortDirection -eq 'Ascending')  {$Body.Add('sortDirection','asc')}
@@ -895,11 +915,11 @@ function Get-CASAlert
             $FilterSet = @() # Filter set array
 
             # Additional parameter validations and mutexes
-            If ($ServiceName    -and ($Service     -or $ServiceNameNot -or $ServiceNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
-            If ($Service        -and ($ServiceName -or $ServiceNameNot -or $ServiceNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
-            If ($ServiceNameNot -and ($Service     -or $ServiceName    -or $ServiceNot))  {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
-            If ($ServiceNot     -and ($Service     -or $ServiceNameNot -or $ServiceName)) {Write-Error 'Cannot reconcile service parameters. Only use one of them at a time.' -ErrorAction Stop}
-            If ($Read -and $Unread) {Write-Error 'Cannot reconcile -Read and -Unread parameters. Only use one of them at a time.' -ErrorAction Stop}
+            If ($ServiceName    -and ($Service     -or $ServiceNameNot -or $ServiceNot))  {Throw 'Cannot reconcile service parameters. Only use one of them at a time.'}
+            If ($Service        -and ($ServiceName -or $ServiceNameNot -or $ServiceNot))  {Throw 'Cannot reconcile service parameters. Only use one of them at a time.'}
+            If ($ServiceNameNot -and ($Service     -or $ServiceName    -or $ServiceNot))  {Throw 'Cannot reconcile service parameters. Only use one of them at a time.'}
+            If ($ServiceNot     -and ($Service     -or $ServiceNameNot -or $ServiceName)) {Throw 'Cannot reconcile service parameters. Only use one of them at a time.'}
+            If ($Read -and $Unread) {Throw 'Cannot reconcile -Read and -Unread parameters. Only use one of them at a time.'}
 
             # Value-mapped filters
             If ($ServiceName)      {$FilterSet += @{'entity.service'=         @{'eq'=($ServiceName.GetEnumerator()      | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
@@ -920,14 +940,14 @@ function Get-CASAlert
  
  
             # Add filter set to request body as the 'filter' property            
-            If ($FilterSet) {$Body.Add('filters',(ConvertTo-CASJsonFilterString $FilterSet))}
+            If ($FilterSet) {$Body.Add('filters',(ConvertTo-MCASJsonFilterString $FilterSet))}
 
             #endregion ----------------------------FILTERING----------------------------
 
             # Get the matching items and handle errors
             Try 
             {
-                $ListResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token -ErrorAction Stop                    
+                $ListResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token                    
             }
                 Catch 
                 { 
@@ -993,16 +1013,13 @@ function Get-CASCredential
     (
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
-        [ValidateScript({(($_.StartsWith('https://') -eq $false) -and ($_.EndsWith('.adallom.com') -or $_.EndsWith('.cloudappsecurity.com')))})]
+        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
         [string]$TenantUri,
 
         # Specifies that the credential should be returned into the pipeline for further processing.
         [Parameter(Mandatory=$false)]
         [switch]$PassThru
     )
-    Begin
-    {
-    }
     Process
     {
         # If tenant URI is specified, prompt for OAuth token and get it all into a global variable
@@ -1013,9 +1030,6 @@ function Get-CASCredential
 
         # If -PassThru is specified, write the credential object to the pipeline (the global variable will also be exported to the calling session with Export-ModuleMember)
         If ($PassThru) {Write-Output $CASCredential}
-    }
-    End
-    {
     }
 }
 
@@ -1057,15 +1071,16 @@ function Get-CASFile
     [CmdletBinding()]
     Param
     (   
-        # Fetches a file object by its unique identifier. 
+        <# Fetches a file object by its unique identifier. 
         [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
         [ValidatePattern({^[A-Fa-f0-9]{24}$})]
         [alias("_id")]
         [string]$Identity,
+        #>
         
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
-        [ValidateScript({(($_.StartsWith('https://') -eq $false) -and ($_.EndsWith('.adallom.com') -or $_.EndsWith('.cloudappsecurity.com')))})]
+        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
         [string]$TenantUri,
 
         # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
@@ -1215,47 +1230,27 @@ function Get-CASFile
     {
         $Endpoint = 'files'
         
-        If (!$TenantUri) # If -TenantUri specified, use it and skip these
-        {
-            If ($CASCredential) {$TenantUri = $CASCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
-            If ($Credential)                          {$TenantUri = $Credential.GetNetworkCredential().username} # If -Credential specfied, use it over the well-known cred session var
-        }
-        If (!$TenantUri) {Write-Error 'No tenant URI available. Please check the -TenantUri parameter or username of the supplied credential' -ErrorAction Stop}
-      
-        If ($CASCredential) {$Token = $CASCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
-        If ($Credential)                          {$Token = $Credential.GetNetworkCredential().Password.ToLower()} # If -Credential specfied, use it over the well-known cred session var
-        If (!$Token) {Write-Error 'No token available. Please check the OAuth token (password) of the supplied credential' -ErrorAction Stop}
+        Try {$TenantUri = Select-MCASTenantUri}
+            Catch {Throw $_}
+
+        Try {$Token = Select-MCASToken}
+            Catch {Throw $_}
     }
     Process
     {        
         # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
-        If ($PSCmdlet.ParameterSetName -eq 'Fetch') 
+        If ($PSCmdlet.ParameterSetName -eq 'Fetch')
         {        
             Try 
             {
-                # Fetch the item by its id          
-                $FetchResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/files/$Identity/" -Headers @{Authorization = "Token $Token"} -Method Get -ErrorAction Stop             
+                # Fetch the item by its id
+                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix $Identity -Method Post -Token $Token
             }
-                Catch 
+                Catch
                 { 
-                    If ($_ -like 'The remote server returned an error: (404) Not Found.') 
-                    {
-                        Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
-                    }
-                    ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
-                    {
-                        Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is authorized to perform the requested action.'
-                    }
-                    ElseIf ($_ -match "The remote name could not be resolved: ")
-                    {
-                        Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
-                    }
-                    Else 
-                    {
-                        Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
-                    }
+                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-            If ($FetchResponse) {Write-Output $FetchResponse | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
+            $FetchResponse
         }
     }
     End
@@ -1268,7 +1263,7 @@ function Get-CASFile
 
             #region ----------------------------SORTING----------------------------
         
-            If ($SortBy -xor $SortDirection) {Write-Error 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.' -ErrorAction Stop}
+            If ($SortBy -xor $SortDirection) {Throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'}
 
             # Add sort direction to request body, if specified
             If ($SortDirection -eq 'Ascending')  {$Body.Add('sortDirection','asc')}
@@ -1287,13 +1282,13 @@ function Get-CASFile
             $FilterSet = @() # Filter set array
 
             # Additional parameter validations and mutual exclusions
-            If ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
-            If ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
-            If ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
-            If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Write-Error 'Cannot reconcile app parameters. Only use one of them at a time.' -ErrorAction Stop}
-            If ($Folders -and $FoldersNot) {Write-Error 'Cannot reconcile -Folder and -FolderNot switches. Use zero or one of these, but not both.' -ErrorAction Stop}
-            If ($Quarantined -and $QuarantinedNot) {Write-Error 'Cannot reconcile -Quarantined and -QuarantinedNot switches. Use zero or one of these, but not both.' -ErrorAction Stop}
-            If ($Trashed -and $TrashedNot) {Write-Error 'Cannot reconcile -Trashed and -TrashedNot switches. Use zero or one of these, but not both.' -ErrorAction Stop}
+            If ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            If ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            If ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            If ($Folders -and $FoldersNot) {Throw 'Cannot reconcile -Folder and -FolderNot switches. Use zero or one of these, but not both.'}
+            If ($Quarantined -and $QuarantinedNot) {Throw 'Cannot reconcile -Quarantined and -QuarantinedNot switches. Use zero or one of these, but not both.'}
+            If ($Trashed -and $TrashedNot) {Throw 'Cannot reconcile -Trashed and -TrashedNot switches. Use zero or one of these, but not both.'}
             
             # Value-mapped filters
             If ($Filetype)        {$FilterSet += @{'fileType'=@{'eq'= ($Filetype.GetEnumerator()        | ForEach-Object {$FileTypeValueMap.Get_Item($_)})}}}
@@ -1325,37 +1320,22 @@ function Get-CASFile
             If ($TrashedNot)           {$FilterSet += @{'trashed'=     @{'eq'=$false}}}
            
             # Add filter set to request body as the 'filter' property            
-            If ($FilterSet) {$Body.Add('filters',(ConvertTo-CASJsonFilterString $FilterSet))}
+            If ($FilterSet) {$Body.Add('filters',(ConvertTo-MCASJsonFilterString $FilterSet))}
 
             #endregion ----------------------------FILTERING----------------------------
 
-            # Get the matching alerts and handle errors
+            # Get the matching items and handle errors
             Try 
             {
-                $ListResponse = (Invoke-RestMethod -Uri "https://$TenantUri/api/v1/files/" -Body $Body -Headers @{Authorization = "Token $Token"} -Method Post -ErrorAction Stop).data              
+                $ListResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token                    
             }
                 Catch 
                 { 
-                    If ($_ -like 'The remote server returned an error: (404) Not Found.') 
-                    {
-                        Write-Error "404 - Not Found: Check to ensure the -TenantUri parameter is valid."
-                    }
-                    ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
-                    {
-                        Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is authorized to perform the requested action.'
-                    }
-                    ElseIf ($_ -match "The remote name could not be resolved: ")
-                    {
-                        Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
-                    }
-                    Else 
-                    {
-                        Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
-                    }
+                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-            If ($ListResponse) {Write-Output $ListResponse | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
+            $ListResponse
         }
-    }
+}
 
 <#
 .Synopsis
@@ -1401,7 +1381,7 @@ function Send-CASDiscoveryLog
 
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
-        [ValidateScript({(($_.StartsWith('https://') -eq $false) -and ($_.EndsWith('.adallom.com') -or $_.EndsWith('.cloudappsecurity.com')))})]
+        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
         [string]$TenantUri,
 
         # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
@@ -1411,16 +1391,11 @@ function Send-CASDiscoveryLog
     )
     Begin
     {
-        If (!$TenantUri) # If -TenantUri specified, use it and skip these
-        {
-            If ($CASCredential) {$TenantUri = $CASCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
-            If ($Credential)                          {$TenantUri = $Credential.GetNetworkCredential().username} # If -Credential specfied, use it over the well-known cred session var
-        }
-        If (!$TenantUri) {Write-Error 'No tenant URI available. Please check the -TenantUri parameter or username of the supplied credential' -ErrorAction Stop}
-      
-        If ($CASCredential) {$Token = $CASCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
-        If ($Credential)                          {$Token = $Credential.GetNetworkCredential().Password.ToLower()} # If -Credential specfied, use it over the well-known cred session var
-        If (!$Token) {Write-Error 'No token available. Please check the OAuth token (password) of the supplied credential' -ErrorAction Stop}
+        Try {$TenantUri = Select-MCASTenantUri}
+            Catch {Throw $_}
+
+        Try {$Token = Select-MCASToken}
+            Catch {Throw $_}
     }
     Process
     {   
@@ -1431,14 +1406,14 @@ function Send-CASDiscoveryLog
         }
             Catch
             {
-                Write-Error "Could not get $LogFile : $_" -ErrorAction Stop    
+                Throw "Could not get $LogFile : $_"    
             }
 
         #region GET UPLOAD URL
         Try 
         {       
             # Get an upload URL for the file
-            $GetUploadUrlResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/discovery/upload_url/?filename=$FileName&source=$LogType" -Headers @{Authorization = "Token $Token"} -Method Get -ErrorAction Stop  
+            $GetUploadUrlResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/discovery/upload_url/?filename=$FileName&source=$LogType" -Headers @{Authorization = "Token $Token"} -Method Get  
 
             $UploadUrl = $GetUploadUrlResponse.url           
         }
@@ -1446,19 +1421,19 @@ function Send-CASDiscoveryLog
             { 
                 If ($_ -like 'The remote server returned an error: (404) Not Found.') 
                 {
-                    Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
+                    Throw "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
                 }
                 ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
                 {
-                    Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified credential is authorized to perform the requested action.'
+                    Throw '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified credential is authorized to perform the requested action.'
                 }
                 ElseIf ($_ -match "The remote name could not be resolved: ")
                 {
-                    Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
+                    Throw "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
                 }
                 Else 
                 {
-                    Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
+                    Throw "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
                 }
             }            
         #endregion GET UPLOAD URL
@@ -1491,19 +1466,19 @@ function Send-CASDiscoveryLog
             { 
                 If ($_ -like 'The remote server returned an error: (404) Not Found.') 
                 {
-                    Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
+                    Throw "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
                 }
                 ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
                 {
-                    Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified credential is authorized to perform the requested action.'
+                    Throw '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified credential is authorized to perform the requested action.'
                 }
                 ElseIf ($_ -match "The remote name could not be resolved: ")
                 {
-                    Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
+                    Throw "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
                 }
                 Else 
                 {
-                    Write-Error "File upload failed: $_"
+                    Throw "File upload failed: $_"
                 }
             }
         #endregion UPLOAD LOG FILE
@@ -1518,23 +1493,23 @@ function Send-CASDiscoveryLog
             { 
                 If ($_ -like 'The remote server returned an error: (404) Not Found.') 
                 {
-                    Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
+                    Throw "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
                 }
                 ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
                 {
-                    Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified credential is authorized to perform the requested action.'
+                    Throw '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified credential is authorized to perform the requested action.'
                 }
                 ElseIf ($_ -match "The remote name could not be resolved: ")
                 {
-                    Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
+                    Throw "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
                 }
                 ElseIf ($_ -match "The remote server returned an error: (400) Bad Request.")
                 {
-                    Write-Error "400 - Bad Request: Ensure the -DiscoveryDataSource parameter specifies a valid data source name that you have created in the CAS web console."
+                    Throw "400 - Bad Request: Ensure the -DiscoveryDataSource parameter specifies a valid data source name that you have created in the CAS web console."
                 }
                 Else 
                 {
-                    Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
+                    Throw "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
                 }
             }
         #endregion FINALIZE UPLOAD
@@ -1546,7 +1521,7 @@ function Send-CASDiscoveryLog
         }
             Catch
             {
-                Write-Error "Could not delete $LogFile : $_" -ErrorAction Stop
+                Throw "Could not delete $LogFile : $_"
             }
     }
     End
@@ -1607,7 +1582,7 @@ function Set-CASAlert
 
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
-        [ValidateScript({(($_.StartsWith('https://') -eq $false) -and ($_.EndsWith('.adallom.com') -or $_.EndsWith('.cloudappsecurity.com')))})]
+        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
         [string]$TenantUri,
 
         # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
@@ -1619,16 +1594,11 @@ function Set-CASAlert
     {
         $Endpoint = 'alerts'
 
-        If (!$TenantUri) # If -TenantUri specified, use it and skip these
-        {
-            If ($CASCredential) {$TenantUri = $CASCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
-            If ($Credential)                          {$TenantUri = $Credential.GetNetworkCredential().username} # If -Credential specfied, use it over the well-known cred session var
-        }
-        If (!$TenantUri) {Write-Error 'No tenant URI available. Please check the -TenantUri parameter or username of the supplied credential' -ErrorAction Stop}
-      
-        If ($CASCredential) {$Token = $CASCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
-        If ($Credential)                          {$Token = $Credential.GetNetworkCredential().Password.ToLower()} # If -Credential specfied, use it over the well-known cred session var
-        If (!$Token) {Write-Error 'No token available. Please check the OAuth token (password) of the supplied credential' -ErrorAction Stop}
+        Try {$TenantUri = Select-MCASTenantUri}
+            Catch {Throw $_}
+
+        Try {$Token = Select-MCASToken}
+            Catch {Throw $_}
     }
     Process
     {
@@ -1638,7 +1608,7 @@ function Set-CASAlert
         Try 
             {
                 # Set the alert's state by its id
-                $SetResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix $Identity/$Action -Method Post -Token $Token -ErrorAction Stop
+                $SetResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix $Identity/$Action -Method Post -Token $Token
             }
             Catch
                 { 
@@ -1650,6 +1620,11 @@ function Set-CASAlert
     {
     }
 }
+
+#endregion -----------------------------Cmdlets-----------------------------
+
+
+#region ------------------------------Export------------------------------
 
 # Vars to export
 Export-ModuleMember -Variable CASCredential
@@ -1664,5 +1639,7 @@ Export-ModuleMember -Function Send-CASDiscoveryLog
 Export-ModuleMember -Function Set-CASAlert
 
 # Items to only export during dev/testing only
-Export-ModuleMember -Function ConvertTo-CASJsonFilterString
-Export-ModuleMember -Function Invoke-MCASRestMethod
+#Export-ModuleMember -Function ConvertTo-MCASJsonFilterString
+#Export-ModuleMember -Function Invoke-MCASRestMethod
+
+#endregion ------------------------------Export------------------------------
