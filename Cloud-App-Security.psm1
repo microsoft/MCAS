@@ -1367,7 +1367,7 @@ function Send-CASDiscoveryLog
         
         # Specifies the source device type of the log file. Possible Values: 'BLUECOAT','CISCO_ASA','ZSCALER','FORTIGATE','PALO_ALTO','PALO_ALTO_SYSLOG','MCAFEE_SWG','CHECKPOINT','CISCO_SCAN_SAFE','CISCO_IRONPORT_PROXY','CHECKPOINT_OPSEC_LEA','SQUID','JUNIPER_SRX','SOPHOS_SG','MICROSOFT_ISA','WEBSENSE'.
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=1)]
-        [ValidateSet('BLUECOAT','CISCO_ASA','ZSCALER','FORTIGATE','PALO_ALTO','PALO_ALTO_SYSLOG','MCAFEE_SWG','CHECKPOINT','CISCO_SCAN_SAFE','CISCO_IRONPORT_PROXY','CHECKPOINT_OPSEC_LEA','SQUID','JUNIPER_SRX','SOPHOS_SG','MICROSOFT_ISA','WEBSENSE')]
+        [ValidateSet('BLUECOAT','CISCO_ASA','ZSCALER','FORTIGATE','PALO_ALTO','PALO_ALTO_SYSLOG','MCAFEE_SWG','CHECKPOINT','CISCO_SCAN_SAFE','CISCO_IRONPORT_PROXY','SQUID','SQUID_NATIVE','JUNIPER_SRX','SOPHOS_SG','MICROSOFT_ISA_W3C','WEBSENSE_SIEM_CEF','WEBSENSE_V7_5','MACHINE_ZONE_MERAKI','SONICWALL_SYSLOG')]
         [string]$LogType,
         
         # Specifies the discovery data source name as reflected in your CAS console, such as 'US West Microsoft ASA'.
