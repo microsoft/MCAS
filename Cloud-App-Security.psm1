@@ -93,9 +93,7 @@ function ConvertTo-MCASJsonFilterString {
     ForEach ($Filter in $FilterSet) {
         $Temp += ((($Filter | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{')) 
         }
-    
     $RawJsonFilter = ('{'+($Temp -join '},')+'}}')
-
     Write-Verbose "ConvertTo-MCASJsonFilterString: Converted filter set $FilterSet to JSON filter $RawJsonFilter"
     
     Write-Output $RawJsonFilter
@@ -583,7 +581,17 @@ function Get-CASActivity
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateLength(1,45)]
         [string]$IpDoesNotStartWith,
+        
+        # Limits the results to items found before specified date. [int](Get-Date -UFormat %s)*1000
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [long]$DateBefore,
 
+        # Limits the results to items found after specified date. [int](Get-Date -UFormat %s)*1000
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [long]$DateAfter,
+        
         # Limits the results by device type. Possible Values: 'Desktop','Mobile','Tablet','Other'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('Desktop','Mobile','Tablet','Other')]
@@ -680,6 +688,7 @@ function Get-CASActivity
             If ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
             If ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
             If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            If ($DateBefore -and $DateAfter){Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
             
             # Value-mapped filters
             If ($IpCategory) {$FilterSet += @{'ip.category'=@{'eq'=($IpCategory.GetEnumerator() | ForEach-Object {$IpCategoryValueMap.Get_Item($_)})}}}
@@ -699,6 +708,8 @@ function Get-CASActivity
             If ($IpDoesNotStartWith)   {$FilterSet += @{'ip.address'=          @{'doesnotstartwith'=$IpStartsWith}}} 
             If ($Text)                 {$FilterSet += @{'text'=                @{'text'=$Text}}} 
             If ($DaysAgo)              {$FilterSet += @{'date'=                @{'gte_ndays'=$DaysAgo}}} 
+            If ($DateBefore -and (-not $DateAfter)) {$FilterSet += @{'date'= @{'lte'=$DateBefore}}}
+            If ($DateAfter -and (-not $DateBefore)) {$FilterSet += @{'date'= @{'gte'=$DateAfter}}}
 
             # boolean filters
             If ($AdminEvents -ne $null) {$FilterSet += @{'activity.type'= @{'eq'=$AdminEvents}}}
