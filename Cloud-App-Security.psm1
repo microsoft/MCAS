@@ -1099,15 +1099,15 @@ function Get-CASFile
         [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential,
 
-        # Limits the results to items of the specified file type. Possible Values: 'Other','Document','Spreadsheet', 'Presentation', 'Text', 'Image', 'Folder'.
+        # Limits the results to items of the specified file type. Value Map: 0 = Other,1 = Document,2 = Spreadsheet, 3 = Presentation, 4 = Text, 5 = Image, 6 = Folder.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Other','Document','Spreadsheet', 'Presentation', 'Text', 'Image', 'Folder')]
-        [string]$Filetype,
+        [ValidateRange(0,6)]
+        [array]$Filetype,
 
-        # Limits the results to items not of the specified file type. Possible Values: 'Other','Document','Spreadsheet', 'Presentation', 'Text', 'Image', 'Folder'.
+        # Limits the results to items not of the specified file type. Value Map: 0 = Other,1 = Document,2 = Spreadsheet, 3 = Presentation, 4 = Text, 5 = Image, 6 = Folder.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Other','Document','Spreadsheet', 'Presentation', 'Text', 'Image', 'Folder')]
-        [string]$FiletypeNot,
+        [ValidateRange(0,6)]
+        [array]$FiletypeNot,
         
         # Limits the results to items of the specified sharing access level. Possible Values: 'Private','Internal','External','Public', 'PublicInternet'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -1292,6 +1292,17 @@ function Get-CASFile
             #region ----------------------------FILTERING----------------------------
             $FilterSet = @() # Filter set array
 
+            # Additional Hash Tables for Filetype & FiletypeNot Filters
+            If ($Filetype){
+                $Filetypehashtable = @{}
+                $Filetype | ForEach {$Filetypehashtable.Add($_,$_)}
+                }
+            If ($FiletypeNot){
+                $Filetypehashtable = @{}
+                $FiletypeNot | ForEach {$Filetypehashtable.Add($_,$_)}
+                }
+                
+
             # Additional parameter validations and mutual exclusions
             If ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
             If ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
@@ -1302,8 +1313,8 @@ function Get-CASFile
             If ($Trashed -and $TrashedNot) {Throw 'Cannot reconcile -Trashed and -TrashedNot switches. Use zero or one of these, but not both.'}
             
             # Value-mapped filters
-            If ($Filetype)        {$FilterSet += @{'fileType'=@{'eq'= ($Filetype.GetEnumerator()        | ForEach-Object {$FileTypeValueMap.Get_Item($_)})}}}
-            If ($FiletypeNot)     {$FilterSet += @{'fileType'=@{'neq'=($FiletypeNot.GetEnumerator()     | ForEach-Object {$FileTypeValueMap.Get_Item($_)})}}}
+            If ($Filetype)        {$FilterSet += @{'fileType'=@{'eq'= ($Filetypehashtable.Values)}}}
+            If ($FiletypeNot)     {$FilterSet += @{'fileType'=@{'neq'=($Filetypehashtable.Values)}}}
             If ($FileAccessLevel) {$FilterSet += @{'sharing'= @{'eq'= ($FileAccessLevel.GetEnumerator() | ForEach-Object {$FileAccessLevelValueMap.Get_Item($_)})}}}
             If ($AppName)         {$FilterSet += @{'service'= @{'eq'= ($AppName.GetEnumerator()         | ForEach-Object {$AppValueMap.Get_Item($_)})}}}  
             If ($AppNameNot)      {$FilterSet += @{'service'= @{'neq'=($AppNameNot.GetEnumerator()      | ForEach-Object {$AppValueMap.Get_Item($_)})}}}  
