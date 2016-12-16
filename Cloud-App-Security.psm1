@@ -1,82 +1,89 @@
 ﻿#$ErrorActionPreference = 'Stop'
 
 
-#region ----------------------------Value Maps----------------------------
+#region ----------------------------Enum Types----------------------------
 
-$AppValueMap = @{
-    'Box' = 10489
-    'Okta' = 10980
-    'Salesforce' = 11114
-    'Office 365' = 11161
-    'Amazon Web Services' = 11599
-    'Dropbox' = 11627
-    'Google Apps' = 11770
-    'ServiceNow' = 14509
-    'Microsoft OneDrive for Business' = 15600
-    'Microsoft Cloud App Security' = 20595
-    'Microsoft Sharepoint Online' = 20892
-    'Microsoft Exchange Online' = 20893
+enum mcas_app
+    {
+    Box = 10489
+    Okta = 10980
+    Salesforce = 11114
+    Office_365 = 11161
+    Amazon_Web_Services = 11599
+    Dropbox = 11627
+    Google_Apps = 11770
+    ServiceNow = 14509
+    Microsoft_OneDrive_for_Business = 15600
+    Microsoft_Cloud_App_Security = 20595
+    Microsoft_Sharepoint_Online = 20892
+    Microsoft_Exchange_Online = 20893
     }
 
-$IpCategoryValueMap = @{
-    'None' = 0
-    'Internal' = 1
-    'Administrative' = 2
-    'Risky' = 3
-    'VPN' = 4
-    'Cloud Provider' = 5
+enum ip_category
+    {
+    None = 0
+    Internal = 1
+    Administrative = 2
+    Risky = 3
+    VPN = 4
+    Cloud_Provider = 5
     }
 
-$SeverityValueMap = @{
-    'High' = 2
-    'Medium' = 1
-    'Low' = 0
+enum severity_level
+    {
+    High = 2
+    Medium = 1
+    Low = 0
     }
 
-$ResolutionStatusValueMap = @{
-    'Resolved' = 2
-    'Dismissed' = 1
-    'Open' = 0
+enum resolution_status
+    {
+    Resolved = 2
+    Dismissed = 1
+    Open = 0
     }
 
-$FileTypeValueMap = @{
-    'Other' = 0
-    'Document' = 1
-    'Spreadsheet' = 2
-    'Presentation' = 3
-    'Text' = 4
-    'Image' = 5
-    'Folder' = 6
+enum file_type
+    {
+    Other = 0
+    Document = 1
+    Spreadsheet = 2
+    Presentation = 3
+    Text = 4
+    Image = 5
+    Folder = 6
     }
 
-$FileAccessLevelValueMap = @{
-    'Private' = 0
-    'Internal' = 1
-    'External' = 2
-    'Public' = 3
-    'PublicInternet' = 4
+enum file_access_level
+    {
+    Private = 0
+    Internal = 1
+    External = 2
+    Public = 3
+    PublicInternet = 4
     }
 
 <#
-$AlertIDValueMap = @{
-    'ALERT_ADMIN_USER' = 14680070
-    'ALERT_CABINET_EVENT_MATCH_AUDIT' = 15728641
-    'ALERT_CABINET_EVENT_MATCH_FILE' = 15728642
-    'ALERT_GEOLOCATION_NEW_COUNTRY' = 196608
-    'ALERT_MANAGEMENT_DISCONNECTED_API' = 15794945
-    'ALERT_SUSPICIOUS_ACTIVITY' = 14680083   
-    #'ALERT_COMPROMISED_ACCOUNT' = 
-    #'ALERT_DISCOVERY_ANOMALY_DETECTION' = 
-    #'ALERT_CABINET_INLINE_EVENT_MATCH' = 
-    #'ALERT_CABINET_EVENT_MATCH_OBJECT' = 
-    #'ALERT_CABINET_DISCOVERY_NEW_SERVICE' = 
-    #'ALERT_NEW_ADMIN_LOCATION' = 
-    #'ALERT_PERSONAL_USER_SAGE' = 
-    #'ALERT_ZOMBIE_USER' = 
+enum alert_type
+    {
+    ALERT_ADMIN_USER = 14680070
+    ALERT_CABINET_EVENT_MATCH_AUDIT = 15728641
+    ALERT_CABINET_EVENT_MATCH_FILE = 15728642
+    ALERT_GEOLOCATION_NEW_COUNTRY = 196608
+    ALERT_MANAGEMENT_DISCONNECTED_API = 15794945
+    ALERT_SUSPICIOUS_ACTIVITY = 14680083   
+    ALERT_COMPROMISED_ACCOUNT = 
+    ALERT_DISCOVERY_ANOMALY_DETECTION = 
+    ALERT_CABINET_INLINE_EVENT_MATCH = 
+    ALERT_CABINET_EVENT_MATCH_OBJECT = 
+    ALERT_CABINET_DISCOVERY_NEW_SERVICE = 
+    ALERT_NEW_ADMIN_LOCATION = 
+    ALERT_PERSONAL_USER_SAGE = 
+    ALERT_ZOMBIE_USER = 
     }
 #>
 
-#endregion ----------------------------Value Maps----------------------------
+#endregion ----------------------------Enum Types----------------------------
 
 
 #region ------------------------Internal Functions------------------------
@@ -340,9 +347,9 @@ function Get-CASAccount
 
         # Limits the results to items related to the specified service names, such as 'Office 365' and 'Google Apps'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
         [alias("AppName")]
-        [string[]]$ServiceNames,
+        [ValidateNotNullOrEmpty()]
+        [mcas_app[]]$ServiceNames,
 
         # Limits the results to items not related to the specified service ids, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -352,9 +359,9 @@ function Get-CASAccount
 
         # Limits the results to items not related to the specified service names, such as 'Office 365' and 'Google Apps'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
         [alias("AppNameNot")]
-        [string[]]$ServiceNamesNot,
+        [ValidateNotNullOrEmpty()]
+        [mcas_app[]]$ServiceNamesNot,
 
         # Limits the results to items found in the specified user domains, such as 'contoso.com'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -448,8 +455,8 @@ function Get-CASAccount
             If ($External -and $Internal) {Throw 'Cannot reconcile -External and -Internal switches. Use zero or one of these, but not both.'}
 
             # Value-mapped filters
-            If ($ServiceNames)    {$FilterSet += @{'service'=@{'eq'=($ServiceNames.GetEnumerator() | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
-            If ($ServiceNamesNot) {$FilterSet += @{'service'=@{'neq'=($ServiceNamesNot.GetEnumerator() | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
+            If ($ServiceNames)    {$FilterSet += @{'service'=@{'eq'=($ServiceNames | ForEach {$_ -as [int]})}}}
+            If ($ServiceNamesNot) {$FilterSet += @{'service'=@{'neq'=($ServiceNamesNot | ForEach {$_ -as [int]})}}}
 
             # Simple filters
             If ($Internal)    {$FilterSet += @{'affiliation'=   @{'eq'=$false}}}
@@ -546,9 +553,9 @@ function Get-CASActivity
 
         # Limits the results to items related to the specified app names, such as 'Office 365' and 'Google Apps'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
-        [string[]]$AppName,
-
+        [ValidateNotNullOrEmpty()]
+        [mcas_app[]]$AppName,
+        
         # Limits the results to items not related to the specified service ID's, for example 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -556,8 +563,8 @@ function Get-CASActivity
         
         # Limits the results to items not related to the specified app names, such as 'Office 365' and 'Google Apps'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
-        [string[]]$AppNameNot,
+        [ValidateNotNullOrEmpty()]
+        [mcas_app[]]$AppNameNot,
 
         # Limits the results to items of specified event type name, such as EVENT_CATEGORY_LOGIN,EVENT_CATEGORY_DOWNLOAD_FILE.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -569,10 +576,10 @@ function Get-CASActivity
         [ValidateNotNullOrEmpty()]
         [string[]]$EventTypeNameNot,
 
-        # Limits the results by ip category. Possible Values: 'None','Internal','Administrative','Risky','VPN','Cloud Provider'. 
+        # Limits the results by ip category. Possible Values: 'None','Internal','Administrative','Risky','VPN','Cloud_Provider'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('None','Internal','Administrative','Risky','VPN','Cloud Provider')]
-        [string[]]$IpCategory,
+        [ValidateNotNullOrEmpty()]
+        [ip_category[]]$IpCategory,
 
         # Limits the results to items with the specified IP leading digits, such as 10.0.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -599,9 +606,13 @@ function Get-CASActivity
         [ValidateRange(1,180)] 
         [int]$DaysAgo,
 
-        # Limits the results to admin events if true, non-admin events, if false.
+        # Limits the results to admin events if specified.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [bool]$AdminEvents,
+        [switch]$AdminEvents,
+
+        # Limits the results to non-admin events if specified.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [switch]$NonAdminEvents,
 
         # Specifies the property by which to sort the results. Possible Values: 'Date','Created'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -682,9 +693,9 @@ function Get-CASActivity
             If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
             
             # Value-mapped filters
-            If ($IpCategory) {$FilterSet += @{'ip.category'=@{'eq'=($IpCategory.GetEnumerator() | ForEach-Object {$IpCategoryValueMap.Get_Item($_)})}}}
-            If ($AppName)    {$FilterSet += @{'service'=    @{'eq'=($AppName.GetEnumerator() | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
-            If ($AppNameNot) {$FilterSet += @{'service'=    @{'neq'=($AppNameNot.GetEnumerator() | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
+            If ($IpCategory) {$FilterSet += @{'ip.category'=@{'eq'=($IpCategory | ForEach {$_ -as [int]})}}}
+            If ($AppName)    {$FilterSet += @{'service'=    @{'eq'=($AppName | ForEach {$_ -as [int]})}}}
+            If ($AppNameNot) {$FilterSet += @{'service'=    @{'neq'=($AppNameNot | ForEach {$_ -as [int]})}}}
             
             # Simple filters
             If ($User)                 {$FilterSet += @{'user.username'=       @{'eq'=$User}}}
@@ -701,7 +712,8 @@ function Get-CASActivity
             If ($DaysAgo)              {$FilterSet += @{'date'=                @{'gte_ndays'=$DaysAgo}}} 
 
             # boolean filters
-            If ($AdminEvents -ne $null) {$FilterSet += @{'activity.type'= @{'eq'=$AdminEvents}}}
+            If ($AdminEvents)    {$FilterSet += @{'activity.type'= @{'eq'=$true}}}
+            If ($NonAdminEvents) {$FilterSet += @{'activity.type'= @{'eq'=$false}}}
 
             # Add filter set to request body as the 'filter' property            
             If ($FilterSet) {$Body.Add('filters',(ConvertTo-MCASJsonFilterString $FilterSet))}
@@ -775,13 +787,13 @@ function Get-CASAlert
 
         # Limits the results by severity. Possible Values: 'High','Medium','Low'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('High','Medium','Low')]
-        [string[]]$Severity,
+        [ValidateNotNullOrEmpty()]
+        [severity_level[]]$Severity,
         
         # Limits the results to items with a specific resolution status. Possible Values: 'Open','Dismissed','Resolved'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Open','Dismissed','Resolved')]
-        [string[]]$ResolutionStatus,
+        [ValidateNotNullOrEmpty()]
+        [resolution_status[]]$ResolutionStatus,
 
         # Limits the results to items related to the specified user/users, such as 'alice@contoso.com','bob@contoso.com'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -796,9 +808,9 @@ function Get-CASAlert
 
         # Limits the results to items related to the specified service names, such as 'Office 365' and 'Google Apps'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
         [alias("AppName")]
-        [string[]]$ServiceName,
+        [ValidateNotNullOrEmpty()]
+        [mcas_app[]]$ServiceName,
 
         # Limits the results to items not related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -808,9 +820,9 @@ function Get-CASAlert
 
         # Limits the results to items not related to the specified service names, such as 'Office 365' and 'Google Apps'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Box','Okta','Salesforce','Office 365','Amazon Web Services','Dropbox','Google Apps','ServiceNow','Microsoft OneDrive for Business','Microsoft Cloud App Security','Microsoft Sharepoint Online','Microsoft Exchange Online')]
         [alias("AppNameNot")]
-        [string[]]$ServiceNameNot,
+        [ValidateNotNullOrEmpty()]
+        [mcas_app[]]$ServiceNameNot,
 
         # Limits the results to items related to the specified policy ID, such as 57595d0ba6b5d8cd76d6be8c.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -922,10 +934,10 @@ function Get-CASAlert
             If ($Read -and $Unread) {Throw 'Cannot reconcile -Read and -Unread parameters. Only use one of them at a time.'}
 
             # Value-mapped filters
-            If ($ServiceName)      {$FilterSet += @{'entity.service'=         @{'eq'=($ServiceName.GetEnumerator()      | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
-            If ($ServiceNameNot)   {$FilterSet += @{'entity.service'=         @{'neq'=($ServiceNameNot.GetEnumerator()  | ForEach-Object {$AppValueMap.Get_Item($_)})}}}
-            If ($Severity)         {$FilterSet += @{'severity'=        @{'eq'=($Severity.GetEnumerator()         | ForEach-Object {$SeverityValueMap.Get_Item($_)})}}}
-            If ($ResolutionStatus) {$FilterSet += @{'resolutionStatus'=@{'eq'=($ResolutionStatus.GetEnumerator() | ForEach-Object {$ResolutionStatusValueMap.Get_Item($_)})}}}
+            If ($ServiceName)      {$FilterSet += @{'entity.service'=         @{'eq'=($ServiceName | ForEach {$_ -as [int]})}}}
+            If ($ServiceNameNot)   {$FilterSet += @{'entity.service'=         @{'neq'=($ServiceNameNot | ForEach {$_ -as [int]})}}}
+            If ($Severity)         {$FilterSet += @{'severity'=        @{'eq'=($Severity | ForEach {$_ -as [int]})}}}
+            If ($ResolutionStatus) {$FilterSet += @{'resolutionStatus'=@{'eq'=($ResolutionStatus | ForEach {$_ -as [int]})}}}
 
             # Simple filters
             If ($User)       {$FilterSet += @{'entity.user'=    @{'eq'=$User}}}
@@ -1090,18 +1102,18 @@ function Get-CASFile
 
         # Limits the results to items of the specified file type. Possible Values: 'Other','Document','Spreadsheet', 'Presentation', 'Text', 'Image', 'Folder'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Other','Document','Spreadsheet', 'Presentation', 'Text', 'Image', 'Folder')]
-        [string]$Filetype,
+        [ValidateNotNullOrEmpty()]
+        [file_type[]]$Filetype,
 
         # Limits the results to items not of the specified file type. Possible Values: 'Other','Document','Spreadsheet', 'Presentation', 'Text', 'Image', 'Folder'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Other','Document','Spreadsheet', 'Presentation', 'Text', 'Image', 'Folder')]
-        [string]$FiletypeNot,
+        [ValidateNotNullOrEmpty()]
+        [file_type[]]$FiletypeNot,
         
         # Limits the results to items of the specified sharing access level. Possible Values: 'Private','Internal','External','Public', 'PublicInternet'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Private','Internal','External','Public', 'PublicInternet')]
-        [string[]]$FileAccessLevel,
+        [ValidateNotNullOrEmpty()]
+        [file_access_level[]]$FileAccessLevel,
 
         # Limits the results to items with the specified collaborator usernames, such as 'alice@contoso.com', 'bob@microsoft.com'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -1155,13 +1167,13 @@ function Get-CASFile
 
         # Limits the results to items related to the specified service names, such as Microsoft OneDrive or Box. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Box', 'Salesforce', 'Dropbox', 'Google Apps', 'ServiceNow', 'Microsoft OneDrive for Business', 'Microsoft Sharepoint Online')]
-        [string[]]$AppName,
+        [ValidateNotNullOrEmpty()]
+        [mcas_app[]]$AppName,
 
         # Limits the results to items not related to the specified service names, such as Microsoft OneDrive or Box. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Box', 'Salesforce', 'Dropbox', 'Google Apps', 'ServiceNow', 'Microsoft OneDrive for Business', 'Microsoft Sharepoint Online')]
-        [string[]]$AppNameNot,
+        [ValidateNotNullOrEmpty()]
+        [mcas_app[]]$AppNameNot,
 
         # Limits the results to items with the specified file name with extension, such as 'My Microsoft File.txt'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -1291,11 +1303,11 @@ function Get-CASFile
             If ($Trashed -and $TrashedNot) {Throw 'Cannot reconcile -Trashed and -TrashedNot switches. Use zero or one of these, but not both.'}
             
             # Value-mapped filters
-            If ($Filetype)        {$FilterSet += @{'fileType'=@{'eq'= ($Filetype.GetEnumerator()        | ForEach-Object {$FileTypeValueMap.Get_Item($_)})}}}
-            If ($FiletypeNot)     {$FilterSet += @{'fileType'=@{'neq'=($FiletypeNot.GetEnumerator()     | ForEach-Object {$FileTypeValueMap.Get_Item($_)})}}}
-            If ($FileAccessLevel) {$FilterSet += @{'sharing'= @{'eq'= ($FileAccessLevel.GetEnumerator() | ForEach-Object {$FileAccessLevelValueMap.Get_Item($_)})}}}
-            If ($AppName)         {$FilterSet += @{'service'= @{'eq'= ($AppName.GetEnumerator()         | ForEach-Object {$AppValueMap.Get_Item($_)})}}}  
-            If ($AppNameNot)      {$FilterSet += @{'service'= @{'neq'=($AppNameNot.GetEnumerator()      | ForEach-Object {$AppValueMap.Get_Item($_)})}}}  
+            If ($Filetype)        {$FilterSet += @{'fileType'=@{'eq'= ($Filetype | ForEach {$_ -as [int]})}}}
+            If ($FiletypeNot)     {$FilterSet += @{'fileType'=@{'neq'=($FiletypeNot | ForEach {$_ -as [int]})}}}
+            If ($FileAccessLevel) {$FilterSet += @{'sharing'= @{'eq'= ($FileAccessLevel | ForEach {$_ -as [int]})}}}
+            If ($AppName)         {$FilterSet += @{'service'= @{'eq'= ($AppName | ForEach {$_ -as [int]})}}}  
+            If ($AppNameNot)      {$FilterSet += @{'service'= @{'neq'=($AppNameNot | ForEach {$_ -as [int]})}}}  
 
             # Simple filters
             If ($AppId)                {$FilterSet += @{'service'=                  @{'eq'=$AppId}}}
