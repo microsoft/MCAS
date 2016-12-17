@@ -589,15 +589,15 @@ function Get-CASActivity
         [ValidateLength(1,45)]
         [string]$IpDoesNotStartWith,
         
-        # Limits the results to items found before specified date. [int](Get-Date -UFormat %s)*1000
+        # Limits the results to items found before specified date. Use Get-Date.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [long]$DateBefore,
+        [datetime]$DateBefore,
 
-        # Limits the results to items found after specified date. [int](Get-Date -UFormat %s)*1000
+        # Limits the results to items found after specified date. Use Get-Date.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [long]$DateAfter,
+        [datetime]$DateAfter,
         
         # Limits the results by device type. Possible Values: 'Desktop','Mobile','Tablet','Other'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -694,12 +694,16 @@ function Get-CASActivity
             #region ----------------------------FILTERING----------------------------
             $FilterSet = @() # Filter set array
 
+            # Additional function for date conversion to unix format.
+            If ($DateBefore) {$DateBefore2 = ([int](Get-Date -Date $DateBefore -UFormat %s)*1000)}
+            If ($DateAfter) {$DateAfter2 = ([int](Get-Date -Date $DateAfter -UFormat %s)*1000)}
+
             # Additional parameter validations and mutual exclusions
             If ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
             If ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
             If ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
             If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
-            If ($DateBefore -and $DateAfter){Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            If (($DateBefore -and $DateAfter) -or ($DateBefore -and $DaysAgo) -or ($DateAfter -and $DaysAgo)){Throw 'Cannot reconcile app parameters. Only use one date parameter.'}
             
             # Value-mapped filters
             If ($IpCategory) {$FilterSet += @{'ip.category'=@{'eq'=($IpCategory | ForEach {$_ -as [int]})}}}
@@ -719,8 +723,8 @@ function Get-CASActivity
             If ($IpDoesNotStartWith)   {$FilterSet += @{'ip.address'=          @{'doesnotstartwith'=$IpStartsWith}}} 
             If ($Text)                 {$FilterSet += @{'text'=                @{'text'=$Text}}} 
             If ($DaysAgo)              {$FilterSet += @{'date'=                @{'gte_ndays'=$DaysAgo}}} 
-            If ($DateBefore -and (-not $DateAfter)) {$FilterSet += @{'date'= @{'lte'=$DateBefore}}}
-            If ($DateAfter -and (-not $DateBefore)) {$FilterSet += @{'date'= @{'gte'=$DateAfter}}}
+            If ($DateBefore -and (-not $DateAfter)) {$FilterSet += @{'date'= @{'lte'=$DateBefore2}}}
+            If ($DateAfter -and (-not $DateBefore)) {$FilterSet += @{'date'= @{'gte'=$DateAfter2}}}
 
             # boolean filters
             If ($AdminEvents)    {$FilterSet += @{'activity.type'= @{'eq'=$true}}}
