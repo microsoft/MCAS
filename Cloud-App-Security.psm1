@@ -19,6 +19,29 @@ enum mcas_app
     Microsoft_Exchange_Online = 20893
     }
 
+enum device_type
+    {
+    BLUECOAT
+    CHECKPOINT
+    CISCO_ASA
+    CISCO_IRONPORT_PROXY
+    CISCO_SCAN_SAFE
+    FORTIGATE
+    JUNIPER_SRX
+    MACHINE_ZONE_MERAKI
+    MCAFEE_SWG
+    MICROSOFT_ISA_W3C
+    PALO_ALTO
+    PALO_ALTO_SYSLOG
+    SONICWALL_SYSLOG
+    SOPHOS_SG
+    SQUID
+    SQUID_NATIVE
+    WEBSENSE_SIEM_CEF
+    WEBSENSE_V7_5
+    ZSCALER
+    }
+
 enum ip_category
     {
     None = 0
@@ -1403,10 +1426,10 @@ function Send-CASDiscoveryLog
         [Validatescript({Test-Path $_})]
         [string]$LogFile,
         
-        # Specifies the source device type of the log file. Possible Values: 'BLUECOAT','CISCO_ASA','ZSCALER','FORTIGATE','PALO_ALTO','PALO_ALTO_SYSLOG','MCAFEE_SWG','CHECKPOINT','CISCO_SCAN_SAFE','CISCO_IRONPORT_PROXY','CHECKPOINT_OPSEC_LEA','SQUID','JUNIPER_SRX','SOPHOS_SG','MICROSOFT_ISA','WEBSENSE'.
+        # Specifies the source device type of the log file.
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=1)]
-        [ValidateSet('BLUECOAT','CISCO_ASA','ZSCALER','FORTIGATE','PALO_ALTO','PALO_ALTO_SYSLOG','MCAFEE_SWG','CHECKPOINT','CISCO_SCAN_SAFE','CISCO_IRONPORT_PROXY','SQUID','SQUID_NATIVE','JUNIPER_SRX','SOPHOS_SG','MICROSOFT_ISA_W3C','WEBSENSE_SIEM_CEF','WEBSENSE_V7_5','MACHINE_ZONE_MERAKI','SONICWALL_SYSLOG')]
-        [string]$LogType,
+        [ValidateNotNullOrEmpty()]
+        [device_type[]]$LogType,
         
         # Specifies the discovery data source name as reflected in your CAS console, such as 'US West Microsoft ASA'.
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=2)]
