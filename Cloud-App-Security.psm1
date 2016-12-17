@@ -1113,23 +1113,13 @@ function Get-CASFile
 
         # Limits the results to items of the specified file type. Value Map: 0 = Other,1 = Document,2 = Spreadsheet, 3 = Presentation, 4 = Text, 5 = Image, 6 = Folder.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-<<<<<<< HEAD
         [ValidateNotNullOrEmpty()]
         [file_type[]]$Filetype,
-=======
-        [ValidateRange(0,6)]
-        [array]$Filetype,
->>>>>>> origin/v2-dev
 
         # Limits the results to items not of the specified file type. Value Map: 0 = Other,1 = Document,2 = Spreadsheet, 3 = Presentation, 4 = Text, 5 = Image, 6 = Folder.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-<<<<<<< HEAD
         [ValidateNotNullOrEmpty()]
         [file_type[]]$FiletypeNot,
-=======
-        [ValidateRange(0,6)]
-        [array]$FiletypeNot,
->>>>>>> origin/v2-dev
         
         # Limits the results to items of the specified sharing access level. Possible Values: 'Private','Internal','External','Public', 'PublicInternet'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -1335,19 +1325,11 @@ function Get-CASFile
             If ($Trashed -and $TrashedNot) {Throw 'Cannot reconcile -Trashed and -TrashedNot switches. Use zero or one of these, but not both.'}
             
             # Value-mapped filters
-<<<<<<< HEAD
             If ($Filetype)        {$FilterSet += @{'fileType'=@{'eq'= ($Filetype | ForEach {$_ -as [int]})}}}
             If ($FiletypeNot)     {$FilterSet += @{'fileType'=@{'neq'=($FiletypeNot | ForEach {$_ -as [int]})}}}
             If ($FileAccessLevel) {$FilterSet += @{'sharing'= @{'eq'= ($FileAccessLevel | ForEach {$_ -as [int]})}}}
             If ($AppName)         {$FilterSet += @{'service'= @{'eq'= ($AppName | ForEach {$_ -as [int]})}}}  
             If ($AppNameNot)      {$FilterSet += @{'service'= @{'neq'=($AppNameNot | ForEach {$_ -as [int]})}}}  
-=======
-            If ($Filetype)        {$FilterSet += @{'fileType'=@{'eq'= ($Filetypehashtable.Values)}}}
-            If ($FiletypeNot)     {$FilterSet += @{'fileType'=@{'neq'=($Filetypehashtable.Values)}}}
-            If ($FileAccessLevel) {$FilterSet += @{'sharing'= @{'eq'= ($FileAccessLevel.GetEnumerator() | ForEach-Object {$FileAccessLevelValueMap.Get_Item($_)})}}}
-            If ($AppName)         {$FilterSet += @{'service'= @{'eq'= ($AppName.GetEnumerator()         | ForEach-Object {$AppValueMap.Get_Item($_)})}}}  
-            If ($AppNameNot)      {$FilterSet += @{'service'= @{'neq'=($AppNameNot.GetEnumerator()      | ForEach-Object {$AppValueMap.Get_Item($_)})}}}  
->>>>>>> origin/v2-dev
 
             # Simple filters
             If ($AppId)                {$FilterSet += @{'service'=                  @{'eq'=$AppId}}}
