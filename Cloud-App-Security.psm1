@@ -100,9 +100,7 @@ function ConvertTo-MCASJsonFilterString {
     ForEach ($Filter in $FilterSet) {
         $Temp += ((($Filter | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{')) 
         }
-    
     $RawJsonFilter = ('{'+($Temp -join '},')+'}}')
-
     Write-Verbose "ConvertTo-MCASJsonFilterString: Converted filter set $FilterSet to JSON filter $RawJsonFilter"
     
     Write-Output $RawJsonFilter
@@ -590,7 +588,17 @@ function Get-CASActivity
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateLength(1,45)]
         [string]$IpDoesNotStartWith,
+        
+        # Limits the results to items found before specified date. [int](Get-Date -UFormat %s)*1000
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [long]$DateBefore,
 
+        # Limits the results to items found after specified date. [int](Get-Date -UFormat %s)*1000
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [long]$DateAfter,
+        
         # Limits the results by device type. Possible Values: 'Desktop','Mobile','Tablet','Other'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('Desktop','Mobile','Tablet','Other')]
@@ -691,6 +699,7 @@ function Get-CASActivity
             If ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
             If ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
             If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            If ($DateBefore -and $DateAfter){Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
             
             # Value-mapped filters
             If ($IpCategory) {$FilterSet += @{'ip.category'=@{'eq'=($IpCategory | ForEach {$_ -as [int]})}}}
@@ -710,6 +719,8 @@ function Get-CASActivity
             If ($IpDoesNotStartWith)   {$FilterSet += @{'ip.address'=          @{'doesnotstartwith'=$IpStartsWith}}} 
             If ($Text)                 {$FilterSet += @{'text'=                @{'text'=$Text}}} 
             If ($DaysAgo)              {$FilterSet += @{'date'=                @{'gte_ndays'=$DaysAgo}}} 
+            If ($DateBefore -and (-not $DateAfter)) {$FilterSet += @{'date'= @{'lte'=$DateBefore}}}
+            If ($DateAfter -and (-not $DateBefore)) {$FilterSet += @{'date'= @{'gte'=$DateAfter}}}
 
             # boolean filters
             If ($AdminEvents)    {$FilterSet += @{'activity.type'= @{'eq'=$true}}}
@@ -1100,15 +1111,25 @@ function Get-CASFile
         [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential,
 
-        # Limits the results to items of the specified file type. Possible Values: 'Other','Document','Spreadsheet', 'Presentation', 'Text', 'Image', 'Folder'.
+        # Limits the results to items of the specified file type. Value Map: 0 = Other,1 = Document,2 = Spreadsheet, 3 = Presentation, 4 = Text, 5 = Image, 6 = Folder.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+<<<<<<< HEAD
         [ValidateNotNullOrEmpty()]
         [file_type[]]$Filetype,
+=======
+        [ValidateRange(0,6)]
+        [array]$Filetype,
+>>>>>>> origin/v2-dev
 
-        # Limits the results to items not of the specified file type. Possible Values: 'Other','Document','Spreadsheet', 'Presentation', 'Text', 'Image', 'Folder'.
+        # Limits the results to items not of the specified file type. Value Map: 0 = Other,1 = Document,2 = Spreadsheet, 3 = Presentation, 4 = Text, 5 = Image, 6 = Folder.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+<<<<<<< HEAD
         [ValidateNotNullOrEmpty()]
         [file_type[]]$FiletypeNot,
+=======
+        [ValidateRange(0,6)]
+        [array]$FiletypeNot,
+>>>>>>> origin/v2-dev
         
         # Limits the results to items of the specified sharing access level. Possible Values: 'Private','Internal','External','Public', 'PublicInternet'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -1293,6 +1314,17 @@ function Get-CASFile
             #region ----------------------------FILTERING----------------------------
             $FilterSet = @() # Filter set array
 
+            # Additional Hash Tables for Filetype & FiletypeNot Filters
+            If ($Filetype){
+                $Filetypehashtable = @{}
+                $Filetype | ForEach {$Filetypehashtable.Add($_,$_)}
+                }
+            If ($FiletypeNot){
+                $Filetypehashtable = @{}
+                $FiletypeNot | ForEach {$Filetypehashtable.Add($_,$_)}
+                }
+                
+
             # Additional parameter validations and mutual exclusions
             If ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
             If ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
@@ -1303,11 +1335,19 @@ function Get-CASFile
             If ($Trashed -and $TrashedNot) {Throw 'Cannot reconcile -Trashed and -TrashedNot switches. Use zero or one of these, but not both.'}
             
             # Value-mapped filters
+<<<<<<< HEAD
             If ($Filetype)        {$FilterSet += @{'fileType'=@{'eq'= ($Filetype | ForEach {$_ -as [int]})}}}
             If ($FiletypeNot)     {$FilterSet += @{'fileType'=@{'neq'=($FiletypeNot | ForEach {$_ -as [int]})}}}
             If ($FileAccessLevel) {$FilterSet += @{'sharing'= @{'eq'= ($FileAccessLevel | ForEach {$_ -as [int]})}}}
             If ($AppName)         {$FilterSet += @{'service'= @{'eq'= ($AppName | ForEach {$_ -as [int]})}}}  
             If ($AppNameNot)      {$FilterSet += @{'service'= @{'neq'=($AppNameNot | ForEach {$_ -as [int]})}}}  
+=======
+            If ($Filetype)        {$FilterSet += @{'fileType'=@{'eq'= ($Filetypehashtable.Values)}}}
+            If ($FiletypeNot)     {$FilterSet += @{'fileType'=@{'neq'=($Filetypehashtable.Values)}}}
+            If ($FileAccessLevel) {$FilterSet += @{'sharing'= @{'eq'= ($FileAccessLevel.GetEnumerator() | ForEach-Object {$FileAccessLevelValueMap.Get_Item($_)})}}}
+            If ($AppName)         {$FilterSet += @{'service'= @{'eq'= ($AppName.GetEnumerator()         | ForEach-Object {$AppValueMap.Get_Item($_)})}}}  
+            If ($AppNameNot)      {$FilterSet += @{'service'= @{'neq'=($AppNameNot.GetEnumerator()      | ForEach-Object {$AppValueMap.Get_Item($_)})}}}  
+>>>>>>> origin/v2-dev
 
             # Simple filters
             If ($AppId)                {$FilterSet += @{'service'=                  @{'eq'=$AppId}}}
