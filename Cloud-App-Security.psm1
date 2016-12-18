@@ -638,6 +638,11 @@ function Get-CASActivity
         [ValidatePattern("\b[A-Za-z0-9]{24}\b")] 
         [string]$FileID,
 
+        # Limits the results to events listed for the specified API classification label. Use ^ when denoting (external) labels. Example: @("^Private")
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()] 
+        [array]$FileLabel,
+
         # Limits the results to items occuring in the last x number of days.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateRange(1,180)] 
@@ -657,7 +662,7 @@ function Get-CASActivity
 
         # Limits the results to non-impersonated events if specified.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$NotImpersonated,
+        [switch]$ImpersonatedNot,
 
         # Specifies the property by which to sort the results. Possible Values: 'Date','Created'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -741,7 +746,7 @@ function Get-CASActivity
             If ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
             If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
             If (($DateBefore -and $DateAfter) -or ($DateBefore -and $DaysAgo) -or ($DateAfter -and $DaysAgo)){Throw 'Cannot reconcile app parameters. Only use one date parameter.'}
-            If ($Impersonated -and $NotImpersonated){Throw 'Cannot reconcile app parameters. Do not combine Impersonated and NotImpersonated parameters.'}
+            If ($Impersonated -and $ImpersonatedNot){Throw 'Cannot reconcile app parameters. Do not combine Impersonated and ImpersonatedNot parameters.'}
 
             # Value-mapped filters
             If ($IpCategory) {$FilterSet += @{'ip.category'=@{'eq'=($IpCategory | ForEach {$_ -as [int]})}}}
@@ -762,8 +767,9 @@ function Get-CASActivity
             If ($Text)                 {$FilterSet += @{'text'=                @{'text'=$Text}}} 
             If ($DaysAgo)              {$FilterSet += @{'date'=                @{'gte_ndays'=$DaysAgo}}} 
             If ($Impersonated)         {$FilterSet += @{'activity.impersonated' = @{'eq'=$true}}}
-            If ($NotImpersonated)      {$FilterSet += @{'activity.impersonated' = @{'eq'=$false}}}
+            If ($ImpersonatedNot)      {$FilterSet += @{'activity.impersonated' = @{'eq'=$false}}}
             If ($FileID)               {$FilterSet += @{'fileSelector'=        @{'eq'=$FileID}}}
+            If ($FileLabel)            {$FilterSet += @{'fileLabels'=          @{'eq'=$FileLabel}}}
             If ($DateBefore -and (-not $DateAfter)) {$FilterSet += @{'date'= @{'lte'=$DateBefore2}}}
             If ($DateAfter -and (-not $DateBefore)) {$FilterSet += @{'date'= @{'gte'=$DateAfter2}}}
 
