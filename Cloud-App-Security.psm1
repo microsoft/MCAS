@@ -632,6 +632,12 @@ function Get-CASActivity
         [ValidateNotNullOrEmpty()] 
         [string]$Text,
 
+        # Limits the results to events listed for the specified File ID.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [ValidatePattern("\b[A-Za-z0-9]{24}\b")] 
+        [string]$FileID,
+
         # Limits the results to items occuring in the last x number of days.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateRange(1,180)] 
@@ -757,6 +763,7 @@ function Get-CASActivity
             If ($DaysAgo)              {$FilterSet += @{'date'=                @{'gte_ndays'=$DaysAgo}}} 
             If ($Impersonated)         {$FilterSet += @{'activity.impersonated' = @{'eq'=$true}}}
             If ($NotImpersonated)      {$FilterSet += @{'activity.impersonated' = @{'eq'=$false}}}
+            If ($FileID)               {$FilterSet += @{'fileSelector'=        @{'eq'=$FileID}}}
             If ($DateBefore -and (-not $DateAfter)) {$FilterSet += @{'date'= @{'lte'=$DateBefore2}}}
             If ($DateAfter -and (-not $DateBefore)) {$FilterSet += @{'date'= @{'gte'=$DateAfter2}}}
 
