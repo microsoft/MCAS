@@ -86,6 +86,74 @@ enum file_access_level
     PublicInternet = 4
     }
 
+enum app_category
+    {
+    ACCOUNTING_AND_FINANCE
+    ADVERTISING
+    BUSINESS_MANAGEMENT
+    CLOUD_STORAGE
+    CODE_HOSTING
+    COLLABORATION
+    COMMUNICATIONS
+    CONTENT_MANAGEMENT
+    CONTENT_SHARING
+    CRM
+    CUSTOMER_SUPPORT
+    DATA_ANALYTICS
+    DEVELOPMENT_TOOLS
+    ECOMMERCE
+    EDUCATION
+    FORUMS
+    HEALTH
+    HOSTING_SERVICES
+    HUMAN_RESOURCE_MANAGEMENT
+    IT_SERVICES
+    MARKETING
+    MEDIA
+    NEWS_AND_ENTERTAINMENT
+    ONLINE_MEETINGS
+    OPERATIONS_MANAGEMENT
+    PRODUCT_DESIGN
+    PRODUCTIVITY
+    PROJECT_MANAGEMENT
+    PROPERTY_MANAGEMENT
+    SALES
+    SECURITY
+    SOCIAL_NETWORK
+    SUPLLY_CHAIN_AND_LOGISTICS
+    TRANSPORTATION_AND_TRAVEL
+    VENDOR_MANAGEMENT_SYSTEM
+    WEB_ANALYTICS
+    WEBMAIL
+    WEBSITE_MONITORING
+    }
+
+$IPTagsList = @{
+    Anonymous_Proxy = '000000030000000000000000'
+    Botnet = '0000000c0000000000000000'
+    Darknet_Scanning_IP = '0000001f0000000000000000'
+    Exchange_Online = '0000000e0000000000000000'
+    Exchange_Online_Protection = '000000150000000000000000'
+    Malware_CnC_Server = '0000000d0000000000000000'
+    Microsoft_Cloud = '0000001e0000000000000000'
+    Microsoft_Authentication_and_Identity = '000000100000000000000000'
+    Office_365 = '000000170000000000000000'
+    Office_365_Planner = '000000190000000000000000'
+    Office_365_ProPlus = '000000120000000000000000'
+    Office_Online = '000000140000000000000000'
+    Office_Sway = '0000001d0000000000000000'
+    Office_Web_Access_Companion = '0000001a0000000000000000'
+    OneNote = '000000130000000000000000'
+    Remote_Connectivity_Analyzer = '0000001c0000000000000000'
+    Satellite_Provider = '000000040000000000000000'
+    SharePoint_Online = '0000000f0000000000000000'
+    Skype_for_Business_Online = '000000180000000000000000'
+    Smart_Proxy_and_Access_Proxy_Network = '000000050000000000000000'
+    Tor = '2dfa95cd7922d979d66fcff5'
+    Yammer = '0000001b0000000000000000'
+    Zscaler = '000000160000000000000000'
+    }
+
 <#
 enum alert_type
     {
@@ -643,6 +711,12 @@ function Get-CASActivity
         [ValidateNotNullOrEmpty()] 
         [array]$FileLabel,
 
+        # Limits the results to events listed for the specified IP Tags.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()] 
+        [validateset("Anonymous_Proxy","Botnet","Darknet_Scanning_IP","Exchange_Online","Exchangnline_Protection","Malware_CnC_Server","Microsoft_Cloud","Microsoft_Authentication_and_Identity","Office_365","Office_365_Planner","Office_365_ProPlus","Office_Online","Office_Sway","Office_Web_Access_Companion","OneNote","Remote_Connectivity_Analyzer","Satellite_Provider","SharePoint_Online","Skype_for_Business_Online","Smart_Proxy_and_Access_Proxy_Network","Tor","Yammer","Zscaler")]
+        [string[]]$IPTag,
+
         # Limits the results to items occuring in the last x number of days.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateRange(1,180)] 
@@ -752,7 +826,8 @@ function Get-CASActivity
             If ($IpCategory) {$FilterSet += @{'ip.category'=@{'eq'=($IpCategory | ForEach {$_ -as [int]})}}}
             If ($AppName)    {$FilterSet += @{'service'=    @{'eq'=($AppName | ForEach {$_ -as [int]})}}}
             If ($AppNameNot) {$FilterSet += @{'service'=    @{'neq'=($AppNameNot | ForEach {$_ -as [int]})}}}
-            
+            If ($IPTag)      {$FilterSet += @{'ip.tags'=    @{'eq'=($IPTag.GetEnumerator() | ForEach {$IPTagsList.$_ -join ','})}}}
+
             # Simple filters
             If ($User)                 {$FilterSet += @{'user.username'=       @{'eq'=$User}}}
             If ($AppId)                {$FilterSet += @{'service'=             @{'eq'=$AppId}}}
@@ -1700,6 +1775,292 @@ function Set-CASAlert
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
             $SetResponse
+    }
+    End
+    {
+    }
+}
+
+<#
+.Synopsis
+    Gets a list of discovered apps based on uploaded log files.
+.DESCRIPTION
+    This function retrives traffic and usage information about discovered apps.
+.EXAMPLE
+    Get-MCASDiscoveredApp -StreamId $streamid | select name -First 5
+
+    name         
+    ----         
+    1ShoppingCart
+    ABC News     
+    ACTIVE       
+    AIM          
+    AT&T  
+
+    Retrieves the first 5 app names sorted alphabetically.
+.EXAMPLE
+    Get-MCASDiscoveredApp -StreamId $streamid -Category SECURITY | select name,@{N='Total (MB)';E={"{0:N2}" -f ($_.trafficTotalBytes/1MB)}}
+
+    name                   Total (MB)
+    ----                   ----------
+    Blue Coat              19.12     
+    Globalscape            0.00      
+    McAfee Control Console 1.28      
+    Symantec               0.20      
+    Websense               0.06      
+
+    In this example we pull back only discovered apps in the security category and display a table of names and Total traffic which we format to 2 decimal places and divide the totalTrafficBytes property by 1MB to show the traffic in MB.
+
+#>
+function Get-CASDiscoveredApp
+{
+    [CmdletBinding()]
+    Param
+    (   
+        # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
+        [Parameter(Mandatory=$false)]
+        [ValidateScript({(($_.StartsWith('https://') -eq $false) -and ($_.EndsWith('.adallom.com') -or $_.EndsWith('.cloudappsecurity.com')))})]
+        [string]$TenantUri,
+
+        # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [System.Management.Automation.PSCredential]$Credential,
+        
+        # Limits results by category type. A preset list of categories are included.
+        [Parameter(ParameterSetName='List', Mandatory=$false, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
+        [ValidateNotNullOrEmpty()]
+        [app_category[]]$Category,
+
+        # Limits the results by risk score range, for example '3-9'. Set to '1-10' by default. 
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidatePattern('^([1-9]0?)-([1-9]0?)$')]
+        [ValidateNotNullOrEmpty()]
+        [string]$ScoreRange='1-10',
+
+        # Limits the results by stream ID, for example '577d49d72b1c51a0762c61b0'. The stream ID can be found in the URL bar of the console when looking at the Discovery dashboard.
+        [Parameter(ParameterSetName='List', Mandatory=$true, Position=0)]
+        [ValidatePattern('^[A-Fa-f0-9]{24}$')] 
+        [ValidateNotNullOrEmpty()]
+        [string]$StreamId,
+
+        # Limits the results by time frame in days. Set to 90 days by default. (Options: 7, 30, or 90)
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('7','30','90')]
+        [ValidateNotNullOrEmpty()]
+        [int]$TimeFrame=90,
+
+        # Specifies the property by which to sort the results. Set to 'Name' by default. Possible Values: 'UserName','LastSeen'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('IpCount','LastUsed','Name','Transactions','Upload','UserCount')]
+        [ValidateNotNullOrEmpty()]
+        [string]$SortBy='Name',
+                
+        # Specifies the direction in which to sort the results. Set to 'Ascending' by default. Possible Values: 'Ascending','Descending'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Ascending','Descending')]
+        [ValidateNotNullOrEmpty()]
+        [string]$SortDirection='Ascending',
+
+        # Specifies the maximum number of results (up to 5000) to retrieve when listing items matching the specified filter criteria. Set to 100 by default.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateRange(1,5000)]
+        [ValidateNotNullOrEmpty()]
+        [int]$ResultSetSize = 100,
+
+        # Specifies the number of records, from the beginning of the result set, to skip. Set to 0 by default.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [int]$Skip = 0
+    )
+    Begin
+    {
+        If (!$TenantUri) # If -TenantUri specified, use it and skip these
+        {
+            If ($CASCredential) {$TenantUri = $CASCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
+            If ($Credential)                          {$TenantUri = $Credential.GetNetworkCredential().username} # If -Credential specfied, use it over the well-known cred session var
+        }
+        If (!$TenantUri) {Write-Error 'No tenant URI available. Please check the -TenantUri parameter or username of the supplied credential' -ErrorAction Stop}
+      
+        If ($CASCredential) {$Token = $CASCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
+        If ($Credential)                          {$Token = $Credential.GetNetworkCredential().Password.ToLower()} # If -Credential specfied, use it over the well-known cred session var
+        If (!$Token) {Write-Error 'No token available. Please check the OAuth token (password) of the supplied credential' -ErrorAction Stop}
+    }
+    Process
+    {        
+    }
+    End
+    {
+        If ($PSCmdlet.ParameterSetName -eq  'List') # Only run remainder of this end block if not in fetch mode
+        {
+            # List mode logic only needs to happen once, so it goes in the 'End' block for efficiency
+            
+            $Body = @{
+                'skip'=$Skip;
+                'limit'=$ResultSetSize; 
+                'score'=$ScoreRange; 
+                'timeframe'=$TimeFrame;
+                'streamId'=$StreamId
+                } # Base request body
+            
+            If ($Category){
+                $Body += @{'category'="SAASDB_CATEGORY_$Category"}
+            }
+                 
+            If ($SortBy -xor $SortDirection) {Write-Error 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.' -ErrorAction Stop}
+
+            # Add sort direction to request body, if specified
+            If ($SortDirection -eq 'Ascending')  {$Body.Add('sortDirection','asc')}
+            If ($SortDirection -eq 'Descending') {$Body.Add('sortDirection','desc')}
+
+            # Add sort field to request body, if specified
+            Switch ($SortBy) {
+                'Name'         {$Body.Add('sortField','name')}
+                'UserCount'    {$Body.Add('sortField','usersCount')}
+                'IpCount'      {$Body.Add('sortField','ipAddressesCount')}
+                'LastUsed'     {$Body.Add('sortField','lastUsed')}
+                'Upload'       {$Body.Add('sortField','trafficUploadedBytes')}
+                'Transactions' {$Body.Add('sortField','trafficTotalEvents')}
+                }
+  
+            Try 
+            {
+                $ListResponse = (Invoke-Restmethod -Uri "https://$TenantUri/cas/api/discovery/" -Body $Body -Headers @{Authorization = "Token $Token"} -ErrorAction Stop -Method Get).data            
+            }
+            Catch 
+            { 
+                If ($_ -like 'The remote server returned an error: (404) Not Found.') 
+                {
+                    Write-Error "404 - Not Found: Check to ensure the -TenantUri parameter is valid."
+                }
+                ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
+                {
+                    Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is authorized to perform the requested action.'
+                }
+                ElseIf ($_ -match "The remote name could not be resolved: ")
+                {
+                    Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
+                }
+                Else 
+                {
+                    Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
+                }
+            }
+            If ($ListResponse) {Write-Output $ListResponse | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
+        }
+    }
+}
+
+<#
+.Synopsis
+   Gets all General, Security, and Compliance info for a provided app ID.
+
+.DESCRIPTION
+    This is a special function for MS IT. By passing in App Id's, the user can retrive information about those apps straight from the SaaS DB. This information is returned in an object format that can be formatted for the user's needs.
+
+.EXAMPLE
+    (Get-CASDiscoveredApp -Category SECURITY -StreamId $streamid -ScoreRange 1-10 -TimeFrame 90).appId | Get-CASAppInfo
+
+    This example uses the Get-MCASDiscoveredApp function to retrieve all discovered apps from the Security category, extract their ID's, and pass them to Get-MCASAppInfo.
+
+.EXAMPLE
+    Get-CASAppInfo -AppId 11114 | select name, category
+
+    name       category           
+    ----       --------           
+    Salesforce SAASDB_CATEGORY_CRM
+
+.EXAMPLE
+    Get-DevAppInfo -AppId 18394 | select name, @{N='Compliance';E={"{0:N0}" -f $_.revised_score.compliance}}, @{N='Security';E={"{0:N0}" -f $_.revised_score.security}}, @{N='Provider';E={"{0:N0}" -f $_.revised_score.provider}}, @{N='Total';E={"{0:N0}" -f $_.revised_score.total}} | ft
+
+    name        Compliance Security Provider Total
+    ----        ---------- -------- -------- -----
+    Blue Coat   4          8        6        6      
+
+    This example creates a table with just the app name and high level scores.
+
+.FUNCTIONALITY
+       Get-MCASAppInfo is a special function created for MS IT to query the SaaS DB. This is not to be shared outside of MS IT.
+#>
+function Get-CASAppInfo
+{
+    [CmdletBinding()]
+    Param
+    (   
+        # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
+        [Parameter(Mandatory=$false)]
+        [ValidateScript({(($_.StartsWith('https://') -eq $false) -and ($_.EndsWith('.adallom.com') -or $_.EndsWith('.cloudappsecurity.com')))})]
+        [string]$TenantUri,
+
+        # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [System.Management.Automation.PSCredential]$Credential,
+
+        # Limits the results to items related to the specified service IDs, such as 11161,11770 (for Office 365 and Google Apps, respectively).
+        [Parameter(ParameterSetName='List', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
+        [ValidateNotNullOrEmpty()]
+        [ValidatePattern('\b\d{5}\b')]
+        [int]$AppId
+    )
+    Begin
+    {
+        If (!$TenantUri) # If -TenantUri specified, use it and skip these
+        {
+            If ($CASCredential) {$TenantUri = $CASCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
+            If ($Credential)                          {$TenantUri = $Credential.GetNetworkCredential().username} # If -Credential specfied, use it over the well-known cred session var
+        }
+        If (!$TenantUri) {Write-Error 'No tenant URI available. Please check the -TenantUri parameter or username of the supplied credential' -ErrorAction Stop}
+      
+        If ($CASCredential) {$Token = $CASCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
+        If ($Credential)                          {$Token = $Credential.GetNetworkCredential().Password.ToLower()} # If -Credential specfied, use it over the well-known cred session var
+        If (!$Token) {Write-Error 'No token available. Please check the OAuth token (password) of the supplied credential' -ErrorAction Stop}
+    }
+    Process
+    { 
+            If ($PSCmdlet.ParameterSetName -eq  'List') # Only run remainder of this end block if not in fetch mode
+        {
+            # List mode logic only needs to happen once, so it goes in the 'End' block for efficiency
+            
+            $Body = @{'skip'=0;'limit'=1} # Base request body
+
+            #region ----------------------------FILTERING----------------------------
+            $FilterSet = @() # Filter set array
+ 
+            # Simple filters
+            If ($AppId) {$FilterSet += @{'appId'= @{'eq'=$AppId}}}
+
+            # Add filter set to request body as the 'filter' property            
+            If ($FilterSet) {$Body.Add('filters',(ConvertTo-MCASJsonFilterString $FilterSet))}
+
+            #endregion -------------------------FILTERING----------------------------
+
+            # Get the matching alerts and handle errors
+            Try 
+            {
+                $ListResponse = ((Invoke-WebRequest -Uri "https://$TenantUri/api/v1/saasdb/" -Body $Body -Headers @{Authorization = "Token $Token"} -Method Get -ErrorAction Stop) | ConvertFrom-Json).data              
+            }
+            Catch 
+            { 
+                If ($_ -like 'The remote server returned an error: (404) Not Found.') 
+                {
+                    Write-Error "404 - Not Found: Check to ensure the -TenantUri parameter is valid."
+                }
+                ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
+                {
+                    Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is authorized to perform the requested action.'
+                }
+                ElseIf ($_ -match "The remote name could not be resolved: ")
+                {
+                    Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
+                }
+                Else 
+                {
+                    Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
+                }
+            }
+            If ($ListResponse) {Write-Output $ListResponse | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
+        }       
     }
     End
     {
