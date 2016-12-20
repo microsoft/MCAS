@@ -1787,7 +1787,7 @@ function Set-CASAlert
 .DESCRIPTION
     This function retrives traffic and usage information about discovered apps.
 .EXAMPLE
-    Get-MCASDiscoveredApp -StreamId $streamid | select name -First 5
+    Get-CASDiscoveredApp -StreamId $streamid | select name -First 5
 
     name         
     ----         
@@ -1799,7 +1799,7 @@ function Set-CASAlert
 
     Retrieves the first 5 app names sorted alphabetically.
 .EXAMPLE
-    Get-MCASDiscoveredApp -StreamId $streamid -Category SECURITY | select name,@{N='Total (MB)';E={"{0:N2}" -f ($_.trafficTotalBytes/1MB)}}
+    Get-CASDiscoveredApp -StreamId $streamid -Category SECURITY | select name,@{N='Total (MB)';E={"{0:N2}" -f ($_.trafficTotalBytes/1MB)}}
 
     name                   Total (MB)
     ----                   ----------
@@ -1956,12 +1956,7 @@ function Get-CASDiscoveredApp
    Gets all General, Security, and Compliance info for a provided app ID.
 
 .DESCRIPTION
-    This is a special function for MS IT. By passing in App Id's, the user can retrive information about those apps straight from the SaaS DB. This information is returned in an object format that can be formatted for the user's needs.
-
-.EXAMPLE
-    (Get-CASDiscoveredApp -Category SECURITY -StreamId $streamid -ScoreRange 1-10 -TimeFrame 90).appId | Get-CASAppInfo
-
-    This example uses the Get-MCASDiscoveredApp function to retrieve all discovered apps from the Security category, extract their ID's, and pass them to Get-MCASAppInfo.
+    By passing in an App Id, the user can retrive information about those apps straight from the SaaS DB. This information is returned in an object format that can be formatted for the user's needs.
 
 .EXAMPLE
     Get-CASAppInfo -AppId 11114 | select name, category
@@ -1971,7 +1966,7 @@ function Get-CASDiscoveredApp
     Salesforce SAASDB_CATEGORY_CRM
 
 .EXAMPLE
-    Get-DevAppInfo -AppId 18394 | select name, @{N='Compliance';E={"{0:N0}" -f $_.revised_score.compliance}}, @{N='Security';E={"{0:N0}" -f $_.revised_score.security}}, @{N='Provider';E={"{0:N0}" -f $_.revised_score.provider}}, @{N='Total';E={"{0:N0}" -f $_.revised_score.total}} | ft
+    Get-CASAppInfo -AppId 18394 | select name, @{N='Compliance';E={"{0:N0}" -f $_.revised_score.compliance}}, @{N='Security';E={"{0:N0}" -f $_.revised_score.security}}, @{N='Provider';E={"{0:N0}" -f $_.revised_score.provider}}, @{N='Total';E={"{0:N0}" -f $_.revised_score.total}} | ft
 
     name        Compliance Security Provider Total
     ----        ---------- -------- -------- -----
@@ -1980,7 +1975,7 @@ function Get-CASDiscoveredApp
     This example creates a table with just the app name and high level scores.
 
 .FUNCTIONALITY
-       Get-MCASAppInfo is a special function created for MS IT to query the SaaS DB. This is not to be shared outside of MS IT.
+       Get-CASAppInfo is designed to query the saasdb one service at a time, not in bulk fashion.
 #>
 function Get-CASAppInfo
 {
