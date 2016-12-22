@@ -128,6 +128,29 @@ enum app_category
     WEBSITE_MONITORING
     }
 
+<#
+enum alert_type
+    {
+    ALERT_ADMIN_USER = 14680070
+    ALERT_CABINET_EVENT_MATCH_AUDIT = 15728641
+    ALERT_CABINET_EVENT_MATCH_FILE = 15728642
+    ALERT_GEOLOCATION_NEW_COUNTRY = 196608
+    ALERT_MANAGEMENT_DISCONNECTED_API = 15794945
+    ALERT_SUSPICIOUS_ACTIVITY = 14680083   
+    ALERT_COMPROMISED_ACCOUNT = 
+    ALERT_DISCOVERY_ANOMALY_DETECTION = 
+    ALERT_CABINET_INLINE_EVENT_MATCH = 
+    ALERT_CABINET_EVENT_MATCH_OBJECT = 
+    ALERT_CABINET_DISCOVERY_NEW_SERVICE = 
+    ALERT_NEW_ADMIN_LOCATION = 
+    ALERT_PERSONAL_USER_SAGE = 
+    ALERT_ZOMBIE_USER = 
+    }
+#>
+
+#endregion ----------------------------Enum Types----------------------------
+
+#region ----------------------------Hash Tables---------------------------
 $IPTagsList = @{
     Anonymous_Proxy = '000000030000000000000000'
     Botnet = '0000000c0000000000000000'
@@ -174,28 +197,19 @@ $ReportsList = @{
 	'Personal User Accounts' = 'personal_users/'
 	'Sensitive File Names' = 'file_name_dlp/'
 }
-<#
-enum alert_type
-    {
-    ALERT_ADMIN_USER = 14680070
-    ALERT_CABINET_EVENT_MATCH_AUDIT = 15728641
-    ALERT_CABINET_EVENT_MATCH_FILE = 15728642
-    ALERT_GEOLOCATION_NEW_COUNTRY = 196608
-    ALERT_MANAGEMENT_DISCONNECTED_API = 15794945
-    ALERT_SUSPICIOUS_ACTIVITY = 14680083   
-    ALERT_COMPROMISED_ACCOUNT = 
-    ALERT_DISCOVERY_ANOMALY_DETECTION = 
-    ALERT_CABINET_INLINE_EVENT_MATCH = 
-    ALERT_CABINET_EVENT_MATCH_OBJECT = 
-    ALERT_CABINET_DISCOVERY_NEW_SERVICE = 
-    ALERT_NEW_ADMIN_LOCATION = 
-    ALERT_PERSONAL_USER_SAGE = 
-    ALERT_ZOMBIE_USER = 
-    }
-#>
 
-#endregion ----------------------------Enum Types----------------------------
+$GovernanceStatus = @{
+    'Failed' = $false
+    'Pending' = $null
+    'Successful' = $true
+}
 
+$ActionList = @{
+    
+}
+
+
+#endregion -------------------------Hash Tables---------------------------
 
 #region ------------------------Internal Functions------------------------
 
@@ -225,7 +239,7 @@ function Invoke-MCASRestMethod
         [string]$TenantUri,
 
         [Parameter(Mandatory=$true)]
-        [ValidateSet('accounts','activities','alerts','discovery','files')]
+        [ValidateSet('accounts','activities','alerts','discovery','files','governance')]
         [string]$Endpoint,
 
         [Parameter(Mandatory=$true)]
@@ -336,7 +350,6 @@ function Select-MCASToken
 }
 
 #endregion ------------------------Internal Functions------------------------
-
 
 #region ------------------------------Cmdlets-----------------------------
 
@@ -2222,8 +2235,193 @@ function Get-CASStream
     
 }
 
-#endregion -----------------------------Cmdlets-----------------------------
+<#
+.Synopsis
+    Get-CASGovernanceLog retrives governance log entries.
+.DESCRIPTION
+    The MCAS governance log contains entries for when the product performs an action such as parsing log files or quarantining files. This function retrives those entries.
+.EXAMPLE
+    Get-CASGovernanceLog -ResultSetSize 10 -Status Successful,Failed -AppName Microsoft_Cloud_App_Security | select taskname, @{N='Status';E={$_.status.isSuccess}}
 
+    taskName                  Status
+    --------                  ------
+    DiscoveryParseLogTask      False
+    DiscoveryAggregationsTask   True
+    DiscoveryParseLogTask       True
+    DiscoveryParseLogTask      False
+    DiscoveryParseLogTask      False
+    DiscoveryParseLogTask      False
+    DiscoveryParseLogTask      False
+    DiscoveryParseLogTask       True
+    DiscoveryParseLogTask       True
+    DiscoveryParseLogTask       True
+
+      This example retrives the last 10 actions for CAS that were both successful and failed and displays their task name and status.
+.FUNCTIONALITY
+
+#>
+function Get-CASGovernanceLog
+{
+    [CmdletBinding()]
+    Param
+    (   
+        # Fetches an activity object by its unique identifier.
+        [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
+        [ValidatePattern("((\d{8}_\d{5}_[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12})|([A-Za-z0-9]{20}))")]
+        [alias("_id")]
+        [string]$Identity,
+        
+        # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
+        [Parameter(Mandatory=$false)]
+        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
+        [string]$TenantUri,
+
+        # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [System.Management.Automation.PSCredential]$Credential,
+
+        # Limits the results to items related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [int[]]$AppId,
+
+        # Limits the results to items related to the specified app names, such as 'Office 365' and 'Google Apps'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [mcas_app[]]$AppName,
+        
+        # Limits the results to items not related to the specified service ID's, for example 11161,11770 (for Office 365 and Google Apps, respectively).
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [int[]]$AppIdNot,
+        
+        # Limits the results to items not related to the specified app names, such as 'Office 365' and 'Google Apps'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [mcas_app[]]$AppNameNot,
+
+        # Limits the results to events listed for the specified File ID.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [ValidateSet("UserSettingsLink","ActiveDirectoryAutoImportTask","ActiveDirectoryImportTask","AddRemoveFileToFolder","WritersCanShare","DiscoveryCreateSnapshotStreamTask","DiscoveryDeletionTask","DisableAppTask","EnableAppTask","EncryptFileTask","DiscoveryEntitiesExport","DiscoveryAggregationsTask","GrantReadForDomainPermissionFileTask","GrantUserReadPermissionFileTask","RemoveEveryoneFileTask","NotifyUserOnTokenTask","DeleteFileTask","DiscoveryParseLogTask","AdminQuarantineTask","QuarantineTask","DiscoveryCalculateTask","RescanFileTask","RemoveCollaboratorPermissionFileTask","RemoveSharedLinkFileTask","RemoveExternalFileTask","OnlyOwnersShare","RemovePublicFileTask","RemoveExternalUserCollaborations","Require2StepAuthTask","RevokePasswordUserTask","AdminUnquarantineTask","UnQuarantineTask","BoxCollaboratorsOnly","RevokeSuperadmin","RevokeAccessTokenTask","RevokeUserAccessTokenTask","RevokeUserReadPermissionFileTask","GenerateBoxSharingNotificationsTask","OwnershipNotificationTask","DetonateFileTask","SuspendUserTask","TransferOwnership","TransferOwnershipFileTask","TrashFileTask","UnsuspendUserTask")]
+        [string[]]$Action,
+
+        # Limits the results to events listed for the specified IP Tags.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [validateset('Failed','Pending','Successful')]
+        [string[]]$Status,
+
+        # Specifies the property by which to sort the results. Possible Values: 'Date','Created'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('timestamp')]
+        [string]$SortBy,
+                
+        # Specifies the direction in which to sort the results. Possible Values: 'Ascending','Descending'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Ascending','Descending')]
+        [string]$SortDirection,
+
+        # Specifies the maximum number of results (up to 10000) to retrieve when listing items matching the specified filter criteria.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateRange(1,10000)]
+        [int]$ResultSetSize = 5000,
+
+        # Specifies the number of records, from the beginning of the result set, to skip.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [int]$Skip = 0
+    )
+    Begin
+    {
+        $Endpoint = 'governance'
+
+        Try {$TenantUri = Select-MCASTenantUri}
+            Catch {Throw $_}
+
+        Try {$Token = Select-MCASToken}
+            Catch {Throw $_}
+    }
+    Process
+    {        
+        # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
+        If ($PSCmdlet.ParameterSetName -eq 'Fetch')
+        {        
+            Try 
+            {
+                # Fetch the item by its id
+                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix $Identity -Method Post -Token $Token
+            }
+                Catch
+                { 
+                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+                }
+            $FetchResponse
+        }
+    }
+    End
+    {
+        If ($PSCmdlet.ParameterSetName -eq  'List') # Only run remainder of this end block if not in fetch mode
+        {
+            # List mode logic only needs to happen once, so it goes in the 'End' block for efficiency
+            
+            $Body = @{'skip'=$Skip;'limit'=$ResultSetSize} # Base request body
+
+            #region ----------------------------SORTING----------------------------
+        
+            If ($SortBy -xor $SortDirection) {Throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'}
+
+            # Add sort direction to request body, if specified
+            If ($SortDirection -eq 'Ascending')  {$Body.Add('sortDirection','asc')}
+            If ($SortDirection -eq 'Descending') {$Body.Add('sortDirection','desc')}
+
+            # Add sort field to request body, if specified
+            If ($SortBy) 
+            {
+                $Body.Add('sortField',$SortBy.ToLower())
+            }  
+            #endregion ----------------------------SORTING----------------------------
+
+            #region ----------------------------FILTERING----------------------------
+            $FilterSet = @() # Filter set array
+
+            # Additional parameter validations and mutual exclusions
+            If ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            If ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            If ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+
+            # Value-mapped filters
+            If ($AppName)    {$FilterSet += @{'appId'=     @{'eq'= ($AppName | ForEach {$_ -as [int]})}}}
+            If ($AppNameNot) {$FilterSet += @{'appId'=     @{'neq'=($AppNameNot | ForEach {$_ -as [int]})}}}
+            If ($Status)     {$FilterSet += @{'status'=    @{'eq'= ($Status | foreach {$GovernanceStatus.$_})}}}
+            If ($Action)     {$FilterSet += @{'type'=      @{'eq'= ($Action | foreach {$_})}}}
+
+            # Simple filters
+            If ($AppId)                {$FilterSet += @{'appId'=             @{'eq'=$AppId}}}
+            If ($AppIdNot)             {$FilterSet += @{'appId'=             @{'neq'=$AppIdNot}}}
+
+            # Add filter set to request body as the 'filter' property            
+            If ($FilterSet) {$Body.Add('filters',(ConvertTo-MCASJsonFilterString $FilterSet))}
+
+            #endregion ----------------------------FILTERING----------------------------
+
+            # Get the matching items and handle errors
+            Try 
+            {
+                $ListResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token                    
+            }
+                Catch 
+                { 
+                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+                }
+            If ($ListResponse.total -eq 0){Write-Verbose 'No governance log entries found for specified filters.'}
+            Else {$ListResponse}
+            
+        }
+    }
+}
+
+#endregion -----------------------------Cmdlets-----------------------------
 
 #region ------------------------------Export------------------------------
 
@@ -2238,6 +2436,11 @@ Export-ModuleMember -Function Get-CASCredential
 Export-ModuleMember -Function Get-CASFile
 Export-ModuleMember -Function Send-CASDiscoveryLog
 Export-ModuleMember -Function Set-CASAlert
+Export-ModuleMember -Function Get-CASDiscoveredApp
+Export-ModuleMember -Function Get-CASAppInfo
+Export-ModuleMember -Function Get-CASReport
+Export-ModuleMember -Function Get-CASStream
+Export-ModuleMember -Function Get-CASGovernanceLog
 
 # Items to only export during dev/testing only
 #Export-ModuleMember -Function ConvertTo-MCASJsonFilterString
