@@ -2109,18 +2109,14 @@ function Get-CASAppInfo
     chrome_54.0.2840.87                            1
     microsoft excel_1.26.1007                      1
     microsoft skydrivesync_17.3.6517.0809          1
+
+    This example retrives the Browser Use report, shows the browser name and user count columns, and sorts by user count descending.
 #>
 function Get-CASReport
 {
     [CmdletBinding()]
     Param
     (   
-        # Fetches an activity object by its unique identifier.
-        [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
-        [ValidatePattern("((\d{8}_\d{5}_[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12})|([A-Za-z0-9]{20}))")]
-        [alias("_id")]
-        [string]$Identity,
-        
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
         [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
@@ -2164,6 +2160,63 @@ function Get-CASReport
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
                 $ListResponse.data
+               
+    }
+    
+}
+
+<#
+.Synopsis
+    Get-CASStream retrieves a list of available discovery streams.
+.DESCRIPTION
+    Discovery streams are used to separate or aggregate discovery data. Stream ID's are needed when pulling discovered app data.
+.EXAMPLE
+    (Get-CASStream | ?{$_.displayName -match 'Global'})._id
+
+    57869aceb4b3d5154f095af7
+
+    This example retrives the global stream ID.
+#>
+function Get-CASStream
+{
+    [CmdletBinding()]
+    Param
+    (   
+        # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
+        [Parameter(Mandatory=$false)]
+        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
+        [string]$TenantUri,
+
+        # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [System.Management.Automation.PSCredential]$Credential
+    )
+    Begin
+    {
+        Try {$TenantUri = Select-MCASTenantUri}
+            Catch {Throw $_}
+
+        Try {$Token = Select-MCASToken}
+            Catch {Throw $_}
+    }
+    Process
+    {        
+    }
+    
+    End
+    {
+
+            # Get the matching items and handle errors
+            Try 
+            {                  
+                $ListResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/discovery/streams/" -Headers @{Authorization = "Token $Token"}
+            }
+                Catch
+                { 
+                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+                }
+                $ListResponse.streams
                
     }
     
