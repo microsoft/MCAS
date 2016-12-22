@@ -154,6 +154,26 @@ $IPTagsList = @{
     Zscaler = '000000160000000000000000'
     }
 
+$ReportsList = @{
+	'Activity by Location' = 'geolocation_summary/'
+	'Browser Use' = 'browser_usage/'
+	'IP Addresses' = 'ip_usage/'
+	'IP Addresses for Admins' = 'ip_admin_usage/'
+	'OS Use' = 'os_usage/'
+	'Strictly Remote Users' = 'standalone_users/'
+	'Cloud App Overview' = 'app_summary/'
+	'Inactive Accounts' = 'zombie_users/'
+	'Privileged Users' = 'admins/'
+	'Salesforce Special Privileged Accounts' = 'sf_permissions/'
+	'User Logon' = 'logins_rate/'
+	'Data Sharing Overview' = 'files_summary/'
+	'File Extensions' = 'file_extensions/'
+	'Orphan Files' = 'orphan_files/'
+	'Outbound Sharing by Domain' = 'external_domains/'
+	'Owners of Shared Files' = 'shared_files_owners/'
+	'Personal User Accounts' = 'personal_users/'
+	'Sensitive File Names' = 'file_name_dlp/'
+}
 <#
 enum alert_type
     {
@@ -2060,6 +2080,93 @@ function Get-CASAppInfo
     End
     {
     }
+}
+
+<#
+.Synopsis
+    Get-CASReport retrieves built-in reports from Cloud App Security.
+.DESCRIPTION
+    Retrieves data based on the built-in reports.
+.EXAMPLE
+    Get-CASReport -ReportName 'Browser Use' | select @{N='Browser';E={$_.unique_identifier}}, @{N='User Count';E={$_.record_data.users.count}} | sort -Property 'User Count' -Descending
+
+    Browser                               User Count
+    -------                               ----------
+    chrome_53.0.2785.143                           4
+    chrome_54.0.2840.71                            4
+    unknown_                                       4
+    microsoft bits_7.8                             3
+    microsoft exchange_                            3
+    microsoft exchange rpc_                        2
+    edge_14.14393                                  2
+    ie_11.0                                        2
+    microsoft onenote_16.0.7369.5783               1
+    apache-httpclient_4.3.5                        1
+    ie_9                                           1
+    skype for business_16.0.7369.2038              1
+    mobile safari_10.0                             1
+    microsoft web application companion_           1
+    chrome_54.0.2840.87                            1
+    microsoft excel_1.26.1007                      1
+    microsoft skydrivesync_17.3.6517.0809          1
+#>
+function Get-CASReport
+{
+    [CmdletBinding()]
+    Param
+    (   
+        # Fetches an activity object by its unique identifier.
+        [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
+        [ValidatePattern("((\d{8}_\d{5}_[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12})|([A-Za-z0-9]{20}))")]
+        [alias("_id")]
+        [string]$Identity,
+        
+        # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
+        [Parameter(Mandatory=$false)]
+        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
+        [string]$TenantUri,
+
+        # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [System.Management.Automation.PSCredential]$Credential,
+
+        # -User limits the results to items related to the specified user/users, for example 'alice@contoso.com','bob@contoso.com'. 
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [ValidateSet('Activity by Location','Browser Use','IP Addresses','IP Addresses for Admins','OS Use','Strictly Remote Users','Cloud App Overview','Inactive Accounts','Privileged Users','Salesforce Special Privileged Accounts','User Logon','Data Sharing Overview','File Extensions','Orphan Files','Outbound Sharing by Domain','Owners of Shared Files','Personal User Accounts','Sensitive File Names')]
+        [string]$ReportName
+    )
+    Begin
+    {
+        $Endpoint = $ReportsList.$ReportName
+
+        Try {$TenantUri = Select-MCASTenantUri}
+            Catch {Throw $_}
+
+        Try {$Token = Select-MCASToken}
+            Catch {Throw $_}
+    }
+    Process
+    {        
+    }
+    
+    End
+    {
+
+            # Get the matching items and handle errors
+            Try 
+            {                  
+                $ListResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/reports/$Endpoint" -Headers @{Authorization = "Token $Token"}
+            }
+                Catch
+                { 
+                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+                }
+                $ListResponse.data
+               
+    }
+    
 }
 
 #endregion -----------------------------Cmdlets-----------------------------
