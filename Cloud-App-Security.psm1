@@ -359,11 +359,11 @@ function Select-MCASToken
 .DESCRIPTION
    Gets user account information from your Cloud App Security tenant and requires a credential be provided.
 
-   Without parameters, Get-CASAccount gets 100 account records and associated properties. You can specify a particular account GUID to fetch a single account's information or you can pull a list of accounts based on the provided filters.
+   Without parameters, Get-MCASAccount gets 100 account records and associated properties. You can specify a particular account GUID to fetch a single account's information or you can pull a list of accounts based on the provided filters.
 
-   Get-CASAccount returns a single custom PS Object or multiple PS Objects with all of the account properties. Methods available are only those available to custom objects by default. 
+   Get-MCASAccount returns a single custom PS Object or multiple PS Objects with all of the account properties. Methods available are only those available to custom objects by default. 
 .EXAMPLE
-   Get-CASAccount -ResultSetSize 1
+   Get-MCASAccount -ResultSetSize 1
 
     username         : alice@contoso.com
     consolidatedTags : {}
@@ -380,7 +380,7 @@ function Select-MCASToken
     This pulls back a single user record and is part of the 'List' parameter set.
 
 .EXAMPLE
-   Get-CASAccount -Identity 572caf4588011e452ec18ef0
+   Get-MCASAccount -Identity 572caf4588011e452ec18ef0
 
     username         : alice@contoso.com
     consolidatedTags : {}
@@ -398,14 +398,14 @@ function Select-MCASToken
     This pulls back a single user record using the GUID and is part of the 'Fetch' parameter set.
 
 .EXAMPLE
-   (Get-CASAccount -UserDomain contoso.com).count
+   (Get-MCASAccount -UserDomain contoso.com).count
 
     2
 
     This pulls back all accounts from the specified domain and returns a count of the returned objects.
 
 .EXAMPLE
-   Get-CASAccount -Affiliation External | select @{N='Unique Domains'; E={$_.userDomain}} -Unique 
+   Get-MCASAccount -Affiliation External | select @{N='Unique Domains'; E={$_.userDomain}} -Unique 
 
     Unique Domains
     --------------
@@ -416,7 +416,7 @@ function Select-MCASToken
     This pulls back all accounts flagged as external to the domain and displays only unique records in a new property called 'Unique Domains'.
 
 .EXAMPLE
-   (Get-CASAccount -ServiceNames 'Microsoft Cloud App Security').serviceData.20595
+   (Get-MCASAccount -ServiceNames 'Microsoft Cloud App Security').serviceData.20595
 
     email                              lastLogin                   lastSeen
     -----                              ---------                   --------
@@ -425,11 +425,12 @@ function Select-MCASToken
     This queries for any Cloud App Security accounts and displays the serviceData table containing the email, last login, and last seen properties. 20595 is the Service ID for Cloud App Security.
 
     .FUNCTIONALITY
-       Get-CASAccount is intended to function as a query mechanism for obtaining account information from Cloud App Security.
+       Get-MCASAccount is intended to function as a query mechanism for obtaining account information from Cloud App Security.
 #>
-function Get-CASAccount
+function Get-MCASAccount
 {
     [CmdletBinding()]
+    [Alias('Get-CASAccount')]
     Param
     (   
         # Fetches an account object by its unique identifier.
@@ -616,21 +617,21 @@ function Get-CASAccount
 .DESCRIPTION
    Gets user activity information from your Cloud App Security tenant and requires a credential be provided.
 
-   Without parameters, Get-CASActivity gets 100 activity records and associated properties. You can specify a particular activity GUID to fetch a single activity's information or you can pull a list of activities based on the provided filters.
+   Without parameters, Get-MCASActivity gets 100 activity records and associated properties. You can specify a particular activity GUID to fetch a single activity's information or you can pull a list of activities based on the provided filters.
 
-   Get-CASActivity returns a single custom PS Object or multiple PS Objects with all of the activity properties. Methods available are only those available to custom objects by default. 
+   Get-MCASActivity returns a single custom PS Object or multiple PS Objects with all of the activity properties. Methods available are only those available to custom objects by default. 
 .EXAMPLE
-   Get-CASActivity -ResultSetSize 1
+   Get-MCASActivity -ResultSetSize 1
 
     This pulls back a single activity record and is part of the 'List' parameter set.
 
 .EXAMPLE
-   Get-CASActivity -Identity 572caf4588011e452ec18ef0
+   Get-MCASActivity -Identity 572caf4588011e452ec18ef0
 
     This pulls back a single activity record using the GUID and is part of the 'Fetch' parameter set.
 
 .EXAMPLE
-   (Get-CASActivity -AppName Box).rawJson | ?{$_.event_type -match "upload"} | select ip_address -Unique
+   (Get-MCASActivity -AppName Box).rawJson | ?{$_.event_type -match "upload"} | select ip_address -Unique
 
     ip_address
     ----------
@@ -640,11 +641,12 @@ function Get-CASAccount
     This grabs the last 100 Box activities, searches for an event type called "upload" in the rawJson table, and returns a list of unique IP addresses.
 
 .FUNCTIONALITY
-   Get-CASActivity is intended to function as a query mechanism for obtaining activity information from Cloud App Security.
+   Get-MCASActivity is intended to function as a query mechanism for obtaining activity information from Cloud App Security.
 #>
-function Get-CASActivity
+function Get-MCASActivity
 {
     [CmdletBinding()]
+    [Alias('Get-CASActivity')]
     Param
     (   
         # Fetches an activity object by its unique identifier.
@@ -910,21 +912,21 @@ function Get-CASActivity
 .DESCRIPTION
    Gets alert information from your Cloud App Security tenant and requires a credential be provided.
 
-   Without parameters, Get-CASAlert gets 100 alert records and associated properties. You can specify a particular alert GUID to fetch a single alert's information or you can pull a list of activities based on the provided filters.
+   Without parameters, Get-MCASAlert gets 100 alert records and associated properties. You can specify a particular alert GUID to fetch a single alert's information or you can pull a list of activities based on the provided filters.
 
-   Get-CASAlert returns a single custom PS Object or multiple PS Objects with all of the alert properties. Methods available are only those available to custom objects by default. 
+   Get-MCASAlert returns a single custom PS Object or multiple PS Objects with all of the alert properties. Methods available are only those available to custom objects by default. 
 .EXAMPLE
-   Get-CASAlert -ResultSetSize 1
+   Get-MCASAlert -ResultSetSize 1
 
     This pulls back a single alert record and is part of the 'List' parameter set.
 
 .EXAMPLE
-   Get-CASAlert -Identity 572caf4588011e452ec18ef0
+   Get-MCASAlert -Identity 572caf4588011e452ec18ef0
 
     This pulls back a single alert record using the GUID and is part of the 'Fetch' parameter set.
 
 .EXAMPLE
-   (Get-CASAlert -ResolutionStatus Open -Severity High | where{$_.title -match "system alert"}).descriptionTemplate.parameters.LOGRABBER_SYSTEM_ALERT_MESSAGE_BASE.functionObject.parameters.appName
+   (Get-MCASAlert -ResolutionStatus Open -Severity High | where{$_.title -match "system alert"}).descriptionTemplate.parameters.LOGRABBER_SYSTEM_ALERT_MESSAGE_BASE.functionObject.parameters.appName
 
     ServiceNow
     Box
@@ -932,11 +934,12 @@ function Get-CASActivity
     This command showcases the ability to expand nested tables of alerts. First, we pull back only Open alerts marked as High severity and filter down to only those with a title that matches "system alert". By wrapping the initial call in parentheses you can now extract the names of the affected services by drilling into the nested tables and referencing the appName property.
 
 .FUNCTIONALITY
-   Get-CASAlert is intended to function as a query mechanism for obtaining alert information from Cloud App Security.
+   Get-MCASAlert is intended to function as a query mechanism for obtaining alert information from Cloud App Security.
 #>
-function Get-CASAlert
+function Get-MCASAlert
 {
     [CmdletBinding()]
+    [Alias('Get-CASAlert')]
     Param
     (   
         # Fetches an alert object by its unique identifier.
@@ -1144,18 +1147,18 @@ function Get-CASAlert
 .Synopsis
    Gets a credential to be used by other Cloud App Security module cmdlets.
 .DESCRIPTION
-   Get-CASCredential imports a set of credentials to be used by other Cloud App Security module cmdlets.
+   Get-MCASCredential imports a set of credentials to be used by other Cloud App Security module cmdlets.
 
-   When using Get-CASCredential you will be prompted to provide your Cloud App Security tenant URL as well as an OAuth Token that must be created manually in the console.
+   When using Get-MCASCredential you will be prompted to provide your Cloud App Security tenant URL as well as an OAuth Token that must be created manually in the console.
 
-   Get-CASCredential takes the tenant URL and OAuth token and stores them in a special global session variable called $CASCredential and converts the OAuth token to a 64bit secure string while in memory.
+   Get-MCASCredential takes the tenant URL and OAuth token and stores them in a special global session variable called $CASCredential and converts the OAuth token to a 64bit secure string while in memory.
 
    All CAS Module cmdlets reference that special global variable to pass requests to your Cloud App Security tenant.
 
    See the examples section for ways to automate setting your CAS credentials for the session.
 
 .EXAMPLE
-   Get-CASCredential
+   Get-MCASCredential
 
     This prompts the user to enter both their tenant URL as well as their OAuth token. 
 
@@ -1171,7 +1174,7 @@ function Get-CASAlert
     contoso.portal.cloudappsecurity.com    System.Security.SecureString
 
 .EXAMPLE
-    Get-CASCredential -PassThru | Export-CliXml C:\Users\Alice\MyCASCred.credential -Force
+    Get-MCASCredential -PassThru | Export-CliXml C:\Users\Alice\MyCASCred.credential -Force
 
     By specifying the -PassThru switch parameter, this will put the $CASCredential into the pipeline which can be exported to a .credential file that will store the tenant URL and encrypted version of the token in a file.
 
@@ -1183,14 +1186,15 @@ function Get-CASAlert
 
     $CASCredential = Import-Clixml "C:\Users\Alice\MyCASCred.credential"
 
-    By adding the above line to our profile and save, the next time we open a new PowerShell session, the credential file will automatically be imported into the $CASCredential which allows us to use other CAS cmdlets without running Get-CASCredential at the start of the session.
+    By adding the above line to our profile and save, the next time we open a new PowerShell session, the credential file will automatically be imported into the $CASCredential which allows us to use other CAS cmdlets without running Get-MCASCredential at the start of the session.
 
 .FUNCTIONALITY
-   Get-CASCredential is intended to import the CAS tenant URL and OAuth Token into a global session variable to allow other CAS cmdlets to authenticate when passing requests.
+   Get-MCASCredential is intended to import the CAS tenant URL and OAuth Token into a global session variable to allow other CAS cmdlets to authenticate when passing requests.
 #>
-function Get-CASCredential
+function Get-MCASCredential
 {
     [CmdletBinding()]
+    [Alias('Get-CASCredential')]
     Param
     (
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
@@ -1221,21 +1225,21 @@ function Get-CASCredential
 .DESCRIPTION
    Gets file information from your Cloud App Security tenant and requires a credential be provided.
 
-   Without parameters, Get-CASFile gets 100 file records and associated properties. You can specify a particular file GUID to fetch a single file's information or you can pull a list of activities based on the provided filters.
+   Without parameters, Get-MCASFile gets 100 file records and associated properties. You can specify a particular file GUID to fetch a single file's information or you can pull a list of activities based on the provided filters.
 
-   Get-CASFile returns a single custom PS Object or multiple PS Objects with all of the file properties. Methods available are only those available to custom objects by default. 
+   Get-MCASFile returns a single custom PS Object or multiple PS Objects with all of the file properties. Methods available are only those available to custom objects by default. 
 .EXAMPLE
-   Get-CASFile -ResultSetSize 1
+   Get-MCASFile -ResultSetSize 1
 
     This pulls back a single file record and is part of the 'List' parameter set.
 
 .EXAMPLE
-   Get-CASFile -Identity 572caf4588011e452ec18ef0
+   Get-MCASFile -Identity 572caf4588011e452ec18ef0
 
     This pulls back a single file record using the GUID and is part of the 'Fetch' parameter set.
 
 .EXAMPLE
-   Get-CASFile -AppName Box -Extension pdf -Domains 'microsoft.com' | select name
+   Get-MCASFile -AppName Box -Extension pdf -Domains 'microsoft.com' | select name
 
     name                      dlpScanTime
     ----                      -----------
@@ -1246,11 +1250,12 @@ function Get-CASCredential
     This searches Box files for any PDF documents owned by any user in the microsoft.com domain and returns the names of those documents and the last time they were scanned for DLP violations.
 
 .FUNCTIONALITY
-   Get-CASFile is intended to function as a query mechanism for obtaining file information from Cloud App Security.
+   Get-MCASFile is intended to function as a query mechanism for obtaining file information from Cloud App Security.
 #>
-function Get-CASFile
+function Get-MCASFile
 {
     [CmdletBinding()]
+    [Alias('Get-CASFile')]
     Param
     (   
         <# Fetches a file object by its unique identifier. 
@@ -1534,23 +1539,24 @@ function Get-CASFile
 .Synopsis
    Uploads a proxy/firewall log file to a Cloud App Security tenant for discovery.
 .DESCRIPTION
-   Send-CASDiscoveryLog uploads an edge device log file to be analyzed for SaaS discovery by Cloud App Security.
+   Send-MCASDiscoveryLog uploads an edge device log file to be analyzed for SaaS discovery by Cloud App Security.
 
-   When using Send-CASDiscoveryLog, you must provide a log file by name/path and a log file type, which represents the source firewall or proxy device type. Also required is the name of the discovery data source with which the uploaded log should be associated; this can be created in the console.
+   When using Send-MCASDiscoveryLog, you must provide a log file by name/path and a log file type, which represents the source firewall or proxy device type. Also required is the name of the discovery data source with which the uploaded log should be associated; this can be created in the console.
 
-   Send-CASDiscoveryLog does not return any value
+   Send-MCASDiscoveryLog does not return any value
 
 .EXAMPLE
-   Send-CASDiscoveryLog -LogFile C:\Users\Alice\MyFirewallLog.log -LogType CISCO_IRONPORT_PROXY -DiscoveryDataSource 'My CAS Discovery Data Source'
+   Send-MCASDiscoveryLog -LogFile C:\Users\Alice\MyFirewallLog.log -LogType CISCO_IRONPORT_PROXY -DiscoveryDataSource 'My CAS Discovery Data Source'
 
    This uploads the MyFirewallLog.log file to CAS for discovery, indicating that it is of the CISCO_IRONPORT_PROXY log format, and associates it with the data source name called 'My CAS Discovery Data Source'
 
 .FUNCTIONALITY
    Uploads a proxy/firewall log file to a Cloud App Security tenant for discovery.
 #>
-function Send-CASDiscoveryLog
+function Send-MCASDiscoveryLog
 {
     [CmdletBinding()]
+    [Alias('Send-CASDiscoveryLog')]
     Param
     (
         # The full path of the Log File to be uploaded, such as 'C:\mylogfile.log'.
@@ -1737,25 +1743,27 @@ function Send-CASDiscoveryLog
    An alert identity is always required to be specified either explicity or implicitly from the pipeline.
 
 .EXAMPLE
-   Set-CASAlert -Identity cac1d0ec5734e596e6d785cc -MarkAs Read
+   Set-MCASAlert -Identity cac1d0ec5734e596e6d785cc -MarkAs Read
 
     This marks a single specified alert as 'Read'. 
 
 .EXAMPLE
-   Set-CASAlert -Identity cac1d0ec5734e596e6d785cc -Dismiss
+   Set-MCASAlert -Identity cac1d0ec5734e596e6d785cc -Dismiss
 
     This will set the status of the specified alert as "Dismissed".
 
 .EXAMPLE
-   Get-CASAlert -Unread -SortBy Date -SortDirection Descending -ResultSetSize 10 | Set-CASAlert -MarkAs Read
+   Get-MCASAlert -Unread -SortBy Date -SortDirection Descending -ResultSetSize 10 | Set-MCASAlert -MarkAs Read
 
     This will pull the last 10 alerts that were generated with a status of 'Unread' and will mark them all as 'Read'.
 
 .FUNCTIONALITY
-   Set-CASAlert is intended to function as a mechanism for setting the status of alerts Cloud App Security.
+   Set-MCASAlert is intended to function as a mechanism for setting the status of alerts Cloud App Security.
 #>
-function Set-CASAlert
+function Set-MCASAlert
 {
+    [CmdletBinding()]
+    [Alias('Set-CASAlert')]
     Param
     (
         # Specifies an alert object by its unique identifier.
@@ -1820,7 +1828,7 @@ function Set-CASAlert
 .DESCRIPTION
     This function retrives traffic and usage information about discovered apps.
 .EXAMPLE
-    Get-CASDiscoveredApp -StreamId $streamid | select name -First 5
+    Get-MCASDiscoveredApp -StreamId $streamid | select name -First 5
 
     name         
     ----         
@@ -1832,7 +1840,7 @@ function Set-CASAlert
 
     Retrieves the first 5 app names sorted alphabetically.
 .EXAMPLE
-    Get-CASDiscoveredApp -StreamId $streamid -Category SECURITY | select name,@{N='Total (MB)';E={"{0:N2}" -f ($_.trafficTotalBytes/1MB)}}
+    Get-MCASDiscoveredApp -StreamId $streamid -Category SECURITY | select name,@{N='Total (MB)';E={"{0:N2}" -f ($_.trafficTotalBytes/1MB)}}
 
     name                   Total (MB)
     ----                   ----------
@@ -1845,9 +1853,10 @@ function Set-CASAlert
     In this example we pull back only discovered apps in the security category and display a table of names and Total traffic which we format to 2 decimal places and divide the totalTrafficBytes property by 1MB to show the traffic in MB.
 
 #>
-function Get-CASDiscoveredApp
+function Get-MCASDiscoveredApp
 {
     [CmdletBinding()]
+    [Alias('Get-CASDiscoveredApp')]
     Param
     (   
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
@@ -1992,14 +2001,14 @@ function Get-CASDiscoveredApp
     By passing in an App Id, the user can retrive information about those apps straight from the SaaS DB. This information is returned in an object format that can be formatted for the user's needs.
 
 .EXAMPLE
-    Get-CASAppInfo -AppId 11114 | select name, category
+    Get-MCASAppInfo -AppId 11114 | select name, category
 
     name       category           
     ----       --------           
     Salesforce SAASDB_CATEGORY_CRM
 
 .EXAMPLE
-    Get-CASAppInfo -AppId 18394 | select name, @{N='Compliance';E={"{0:N0}" -f $_.revised_score.compliance}}, @{N='Security';E={"{0:N0}" -f $_.revised_score.security}}, @{N='Provider';E={"{0:N0}" -f $_.revised_score.provider}}, @{N='Total';E={"{0:N0}" -f $_.revised_score.total}} | ft
+    Get-MCASAppInfo -AppId 18394 | select name, @{N='Compliance';E={"{0:N0}" -f $_.revised_score.compliance}}, @{N='Security';E={"{0:N0}" -f $_.revised_score.security}}, @{N='Provider';E={"{0:N0}" -f $_.revised_score.provider}}, @{N='Total';E={"{0:N0}" -f $_.revised_score.total}} | ft
 
     name        Compliance Security Provider Total
     ----        ---------- -------- -------- -----
@@ -2008,11 +2017,12 @@ function Get-CASDiscoveredApp
     This example creates a table with just the app name and high level scores.
 
 .FUNCTIONALITY
-       Get-CASAppInfo is designed to query the saasdb one service at a time, not in bulk fashion.
+       Get-MCASAppInfo is designed to query the saasdb one service at a time, not in bulk fashion.
 #>
-function Get-CASAppInfo
+function Get-MCASAppInfo
 {
     [CmdletBinding()]
+    [Alias('Get-CASAppInfo')]
     Param
     (   
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
@@ -2097,11 +2107,11 @@ function Get-CASAppInfo
 
 <#
 .Synopsis
-    Get-CASReport retrieves built-in reports from Cloud App Security.
+    Get-MCASReport retrieves built-in reports from Cloud App Security.
 .DESCRIPTION
     Retrieves data based on the built-in reports.
 .EXAMPLE
-    Get-CASReport -ReportName 'Browser Use' | select @{N='Browser';E={$_.unique_identifier}}, @{N='User Count';E={$_.record_data.users.count}} | sort -Property 'User Count' -Descending
+    Get-MCASReport -ReportName 'Browser Use' | select @{N='Browser';E={$_.unique_identifier}}, @{N='User Count';E={$_.record_data.users.count}} | sort -Property 'User Count' -Descending
 
     Browser                               User Count
     -------                               ----------
@@ -2125,9 +2135,10 @@ function Get-CASAppInfo
 
     This example retrives the Browser Use report, shows the browser name and user count columns, and sorts by user count descending.
 #>
-function Get-CASReport
+function Get-MCASReport
 {
     [CmdletBinding()]
+    [Alias('Get-CASReport')]
     Param
     (   
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
@@ -2180,19 +2191,20 @@ function Get-CASReport
 
 <#
 .Synopsis
-    Get-CASStream retrieves a list of available discovery streams.
+    Get-MCASStream retrieves a list of available discovery streams.
 .DESCRIPTION
     Discovery streams are used to separate or aggregate discovery data. Stream ID's are needed when pulling discovered app data.
 .EXAMPLE
-    (Get-CASStream | ?{$_.displayName -match 'Global'})._id
+    (Get-MCASStream | ?{$_.displayName -match 'Global'})._id
 
     57869aceb4b3d5154f095af7
 
     This example retrives the global stream ID.
 #>
-function Get-CASStream
+function Get-MCASStream
 {
     [CmdletBinding()]
+    [Alias('Get-CASStream')]
     Param
     (   
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
@@ -2237,11 +2249,11 @@ function Get-CASStream
 
 <#
 .Synopsis
-    Get-CASGovernanceLog retrives governance log entries.
+    Get-MCASGovernanceLog retrives governance log entries.
 .DESCRIPTION
     The MCAS governance log contains entries for when the product performs an action such as parsing log files or quarantining files. This function retrives those entries.
 .EXAMPLE
-    Get-CASGovernanceLog -ResultSetSize 10 -Status Successful,Failed -AppName Microsoft_Cloud_App_Security | select taskname, @{N='Status';E={$_.status.isSuccess}}
+    Get-MCASGovernanceLog -ResultSetSize 10 -Status Successful,Failed -AppName Microsoft_Cloud_App_Security | select taskname, @{N='Status';E={$_.status.isSuccess}}
 
     taskName                  Status
     --------                  ------
@@ -2260,9 +2272,10 @@ function Get-CASStream
 .FUNCTIONALITY
 
 #>
-function Get-CASGovernanceLog
+function Get-MCASGovernanceLog
 {
     [CmdletBinding()]
+    [Alias('Get-CASGovernanceLog')]
     Param
     (   
         # Fetches an activity object by its unique identifier.
@@ -2429,21 +2442,23 @@ function Get-CASGovernanceLog
 Export-ModuleMember -Variable CASCredential
 
 # Cmdlets to export
-Export-ModuleMember -Function Get-CASAccount
-Export-ModuleMember -Function Get-CASActivity
-Export-ModuleMember -Function Get-CASAlert
-Export-ModuleMember -Function Get-CASCredential
-Export-ModuleMember -Function Get-CASFile
-Export-ModuleMember -Function Send-CASDiscoveryLog
-Export-ModuleMember -Function Set-CASAlert
-Export-ModuleMember -Function Get-CASDiscoveredApp
-Export-ModuleMember -Function Get-CASAppInfo
-Export-ModuleMember -Function Get-CASReport
-Export-ModuleMember -Function Get-CASStream
-Export-ModuleMember -Function Get-CASGovernanceLog
+Export-ModuleMember -Function Get-MCASAccount
+Export-ModuleMember -Function Get-MCASActivity
+Export-ModuleMember -Function Get-MCASAlert
+Export-ModuleMember -Function Get-MCASCredential
+Export-ModuleMember -Function Get-MCASFile
+Export-ModuleMember -Function Send-MCASDiscoveryLog
+Export-ModuleMember -Function Set-MCASAlert
+Export-ModuleMember -Function Get-MCASDiscoveredApp
+Export-ModuleMember -Function Get-MCASAppInfo
+Export-ModuleMember -Function Get-MCASReport
+Export-ModuleMember -Function Get-MCASStream
+Export-ModuleMember -Function Get-MCASGovernanceLog
 
 # Items to only export during dev/testing only
 #Export-ModuleMember -Function ConvertTo-MCASJsonFilterString
 #Export-ModuleMember -Function Invoke-MCASRestMethod
+#Export-ModuleMember -Function Select-MCASTenantUri
+#Export-ModuleMember -Function Select-MCASToken
 
 #endregion ------------------------------Export------------------------------
