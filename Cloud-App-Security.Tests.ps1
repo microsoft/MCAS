@@ -1,103 +1,227 @@
 ﻿Import-Module $PSScriptRoot\Cloud-App-Security.psm1 -Force
 
-Stop-Job -Name MCASTest1 -ErrorAction SilentlyContinue
-Remove-Job -Name MCASTest1 -Force -ErrorAction SilentlyContinue
+#Stop-Job -Name MCASTest1 -ErrorAction SilentlyContinue
+#Remove-Job -Name MCASTest1 -Force -ErrorAction SilentlyContinue
+
+
+
+$CmdletsToTest = @()
+
+
+# Get-MCASAccount
+$ThisCmdlet = @{}
+$ThisCmdlet.CmdletName = 'Get-MCASAccount'
+$ThisCmdlet.ResultSetSizeValidRange = @(1,5000) 
+$ThisCmdlet.ValidSortBy = @('Username','LastSeen') 
+$ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 
+$ThisCmdlet.SupportsSkip = $true
+$CmdletsToTest += $ThisCmdlet
+
+
+# Get-MCASActivity
+$ThisCmdlet = @{}
+$ThisCmdlet.CmdletName = 'Get-MCASActivity'
+$ThisCmdlet.ResultSetSizeValidRange = @(1,10000) 
+$ThisCmdlet.ValidSortBy = @('Date','Created') 
+$ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 
+$ThisCmdlet.SupportsSkip = $true
+$CmdletsToTest += $ThisCmdlet
+
+
+# Get-MCASAlert
+$ThisCmdlet = @{}
+$ThisCmdlet.CmdletName = 'Get-MCASAlert'
+$ThisCmdlet.ResultSetSizeValidRange = @(1,10000) 
+$ThisCmdlet.ValidSortBy = @('Date','Severity','ResolutionStatus') 
+$ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 
+$ThisCmdlet.SupportsSkip = $true
+$CmdletsToTest += $ThisCmdlet
+
+
+# Get-MCASFile
+$ThisCmdlet = @{}
+$ThisCmdlet.CmdletName = 'Get-MCASFile'
+$ThisCmdlet.ResultSetSizeValidRange = @(1,5000) 
+$ThisCmdlet.ValidSortBy = @('DateModified') 
+$ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 
+$ThisCmdlet.SupportsSkip = $true
+$CmdletsToTest += $ThisCmdlet
+
+
+# Get-MCASDiscoveredApp
+$ThisCmdlet = @{}
+$ThisCmdlet.CmdletName = 'MCASDiscoveredApp'
+$ThisCmdlet.ResultSetSizeValidRange = @(1,5000) 
+#$ThisCmdlet.ValidSortBy = @('IpCount','LastUsed','Name','Transactions','Upload','UserCount') 
+#$ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 
+$ThisCmdlet.SupportsSkip = $true
+$CmdletsToTest += $ThisCmdlet
+
+
+# Get-MCASGovernanceLog
+$ThisCmdlet = @{}
+$ThisCmdlet.CmdletName = 'Get-MCASGovernanceLog'
+$ThisCmdlet.ResultSetSizeValidRange = @(1,10000) 
+$ThisCmdlet.ValidSortBy = @('timestamp') 
+$ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 
+$ThisCmdlet.SupportsSkip = $true
+$CmdletsToTest += $ThisCmdlet
 
 
 
 
 <#
 
+# Get-MCASCredential
+$ThisCmdlet = @{}
+$ThisCmdlet.CmdletName = 'Get-MCASCredential'
+$CmdletsToTest += $ThisCmdlet
 
-Describe 'Send-SyslogMessage' {
-    Mock -ModuleName Cloud-App-Security Get-Date { return (New-Object datetime(2000,1,1)) }
 
-    Mock -ModuleName Cloud-App-Security Get-NetIPAddress {return $null}
+# Get-MCASAppInfo
+$ThisCmdlet = @{}
+$ThisCmdlet.CmdletName = 'Get-MCASAppInfo'
+$CmdletsToTest += $ThisCmdlet
 
-    Mock -ModuleName Cloud-App-Security Test-NetConnection {
-        $Connection = New-Object PSCustomObject
-        $Connection | Add-Member -MemberType NoteProperty -Name 'SourceAddress' -Value (New-Object PSCustomObject) -Force
-        $Connection.SourceAddress | Add-Member -MemberType NoteProperty -Name 'IPAddress' -Value ('123.123.123.123') -Force
-        $Connection.SourceAddress | Add-Member -MemberType NoteProperty -Name 'PrefixOrigin' -Value ('Manual') -Force
-        return $Connection
-    }
 
-    $ENV:Computername = 'TestHostname'
-    $ENV:userdnsdomain = $null
+# Get-MCASReport
+$ThisCmdlet = @{}
+$ThisCmdlet.CmdletName = 'Get-MCASReport'
+$CmdletsToTest += $ThisCmdlet
+
+
+# Get-MCASStream
+$ThisCmdlet = @{}
+$ThisCmdlet.CmdletName = 'Get-MCASStream'
+$CmdletsToTest += $ThisCmdlet
+
+
+# Send-MCASDiscoveryLog
+$ThisCmdlet = @{}
+$ThisCmdlet.CmdletName = 'Send-MCASDiscoveryLog'
+$CmdletsToTest += $ThisCmdlet
+
+
+# Set-MCASAlert
+$ThisCmdlet = @{}
+$ThisCmdlet.CmdletName = 'Set-MCASAlert'
+$CmdletsToTest += $ThisCmdlet
+
+#>
+
+
+
+
+
+
+ForEach ($this in $CmdletsToTest) {
+    Describe $this.CmdletName {
+        Mock -ModuleName Cloud-App-Security Get-Date { return (New-Object datetime(2000,1,1)) }
     
-    $ExpectedTimeStamp = (New-Object datetime(2000,1,1)).ToString('yyyy-MM-ddTHH:mm:ss.ffffffzzz')
-    function Test-Message ($SendSyslogMessage)
-    {
-        $GetSyslogPacket = {
-            $endpoint = New-Object System.Net.IPEndPoint ([IPAddress]::Any,514)
-            $udpclient= New-Object System.Net.Sockets.UdpClient 514
-            $content=$udpclient.Receive([ref]$endpoint)
-            [Text.Encoding]::ASCII.GetString($content)
+        Context 'Parameter Validation' {
+
+
+
+            
+            # Test out of range result set sizes
+            If ($this.ResultSetSizeValidRange) {
+                $OutOfRangeResultSetSizes = @(($this.ResultSetSizeValidRange[0] - 2),($this.ResultSetSizeValidRange[0] - 1),($this.ResultSetSizeValidRange[1] + 1),($this.ResultSetSizeValidRange[1] + 2))
+
+                ForEach ($i in $OutOfRangeResultSetSizes) {
+                    It "Should not accept $i for -ResultSetSize" {
+                        {&($this.CmdletName) -ResultSetSize $i} | Should Throw 'Cannot validate argument on parameter'
+                        }
+                    }
+                }
+
+
+
+
+            # Test invalid values and combinations of -SortBy and -SortDirection
+            If ($this.ValidSortBy -and $this.ValidSortDirection) {
+                
+                ForEach ($i in $this.ValidSortBy) {
+                    It "Should not accept 'invalid' for -SortDirection with -SortBy $i" {
+                        {&($this.CmdletName) -SortBy $i -SortDirection 'invalid'} | Should Throw 'Cannot validate argument on parameter'
+                        }
+                    It "Should not accept -SortBy $i without -SortDirection" {
+                        {&($this.CmdletName) -SortBy $i} | Should Throw 'When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters'
+                        }
+                    }
+                ForEach ($i in $this.ValidSortDirection) {
+                    It "Should not accept 'invalid' for -SortBy with -SortDirection $i" {
+                        {&($this.CmdletName) -SortDirection $i -SortBy 'invalid'} | Should Throw 'Cannot validate argument on parameter'
+                        }
+                    It "Should not accept -SortDirection $i without -SortBy" {
+                        {&($this.CmdletName) -SortDirection $i} | Should Throw 'When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters'
+                        }
+                    }
+                }
+
+
+
+            # Test -Skip -1
+            If ($this.SupportsSkip) {
+                
+                It "Should not accept -Skip -1" {
+                    {&($c.CmdletName) -Skip -1} | Should Throw 'Cannot validate argument on parameter'
+                    }
+                  
+                }
+
+            
+        #Context 'Scrypt Analyzer' {
+        #    It 'Does not have any issues with the Script Analyzer' {
+        #        Invoke-ScriptAnalyzer .\Cloud-App-Security.psm1 | Should be $null
+        #    }
+        #}
+
+
+
+
+
+
+
+
+            }
         }
 
-        $null = start-job -Name MCASTest1 -ScriptBlock $GetSyslogPacket
-        Start-Sleep 2
-        Invoke-Expression $SendSyslogMessage
-        do
-        {
-            Start-Sleep 1
-        }          
-        until ((Get-Job -Name MCASTest1 | Select-Object -ExpandProperty State) -eq 'Completed')
-        $UDPResult = Receive-Job MCASTest1
-        Remove-Job MCASTest1
-        return $UDPResult
-    }
 
+<#
+Describe 'Get-MCASAccount' {
+    Mock -ModuleName Cloud-App-Security Get-Date { return (New-Object datetime(2000,1,1)) }
+    
     Context 'Parameter Validation' {
-        It 'Should not accept a null value for the server' {
-            {Send-SyslogMessage -Server $null -Message 'Test Syslog Message' -Severity 'Alert' -Facility 'auth'} | Should Throw 'The argument is null or empty'
+
+    #region -----------Standard params----------
+    $OutOfRangeResultSetSizes = @(-1,0,5001)
+
+    ForEach ($i in $OutOfRangeResultSetSizes) {
+        It "Should not accept $i for -ResultSetSize" {
+            {Get-MCASAccount -ResultSetSize $i} | Should Throw 'Cannot validate argument on parameter'
+            }
         }
 
-        It 'Should not accept a null value for the message' {
-            {Send-SyslogMessage -Server '127.0.0.1' -Message $null -Severity 'Alert' -Facility 'auth'} | Should Throw 'The argument is null or empty'
-        }
+   #> 
 
-        It 'Should not accept a null value for the severity' {
-            {Send-SyslogMessage -Server '127.0.0.1' -Message 'Test Syslog Message' -Severity $null -Facility 'auth'} | Should Throw 'Cannot convert null to type "Syslog_Severity"'
-        }
 
-        It 'Should not accept a null value for the facility' {
-            {Send-SyslogMessage -Server '127.0.0.1' -Message 'Test Syslog Message' -Severity 'Alert' -Facility $null} | Should Throw 'Cannot convert null to type "Syslog_Facility"'
-        }
 
-        It 'Should not accept a null value for the hostname' {
-            {Send-SyslogMessage -Server '127.0.0.1' -Message 'Test Syslog Message' -Severity 'Alert' -Facility 'auth' -Hostname $null} | Should Throw 'The argument is null or empty'
-        }
 
-        It 'Should not accept a null value for the application name' {
-            {Send-SyslogMessage -Server '127.0.0.1' -Message 'Test Syslog Message' -Severity 'Alert' -Facility 'auth' -ApplicationName $null} | Should Throw 'The argument is null or empty'
-        }
 
-        It 'Should not accept a null value for the timestamp' {
-            {Send-SyslogMessage -Server '127.0.0.1' -Message 'Test Syslog Message' -Severity 'Alert' -Facility 'auth' -Timestamp $null} | Should Throw 'Cannot convert null to type "System.DateTime"'
-        }
+    #endregion---------------------------------
+    
+    
 
-        It 'Should not accept a null value for the UDP port' {
-            {Send-SyslogMessage -Server '127.0.0.1' -Message 'Test Syslog Message' -Severity 'Alert' -Facility 'auth' -UDPPort $null} | Should Throw 'Cannot validate argument on parameter'
-        }
+    #region -----------Filter params-----------
 
-        It 'Should not accept an invalid value for the UDP port' {
-            {Send-SyslogMessage -Server '127.0.0.1' -Message 'Test Syslog Message' -Severity 'Alert' -Facility 'auth' -UDPPort 456789789789} | Should Throw 'Error: "Value was either too large or too small for a UInt16.'
-        }
+        #It 'Should not accept a null value for the server' {
+            #{Send-SyslogMessage -Server $null -Message 'Test Syslog Message' -Severity 'Alert' -Facility 'auth'} | Should Throw 'The argument is null or empty'
+        #}
 
-        It 'Should reject ProcessID parameter if -RFC3164 is specified' {
-            {Send-SyslogMessage -Server '127.0.0.1' -Message 'Test Syslog Message' -Severity 'Alert' -Facility 'auth' -RFC3164 -ProcessID 1} | Should Throw 'Parameter set cannot be resolved using the specified named parameters'
-        }
+    #endregion---------------------------------
+   
 
-        It 'Should reject MessageID parameter if -RFC3164 is specified' {
-            {Send-SyslogMessage -Server '127.0.0.1' -Message 'Test Syslog Message' -Severity 'Alert' -Facility 'auth' -RFC3164 -MessageID 1} | Should Throw 'Parameter set cannot be resolved using the specified named parameters'
-        }
-
-        It 'Should reject StructuredData parameter if -RFC3164 is specified' {
-            {Send-SyslogMessage -Server '127.0.0.1' -Message 'Test Syslog Message' -Severity 'Alert' -Facility 'auth' -RFC3164 -StructuredData 1} | Should Throw 'Parameter set cannot be resolved using the specified named parameters'
-        }
-    }
-
+    <#
     Context 'Severity Level Calculations' {
         It 'Calculates the correct priority of 0 if Facility is Kern and Severity is Emergency' {
             $TestCase = "Send-SyslogMessage -Server '127.0.0.1' -Message 'Test Syslog Message' -Severity 'Emergency' -Facility 'kern'"
@@ -106,90 +230,7 @@ Describe 'Send-SyslogMessage' {
             $TestResult | Should Be $ExpectedResult
         }
 
-        It 'Calculates the correct priority of 7 if Facility is Kern and Severity is Debug' {
-            $TestCase = "Send-SyslogMessage -Server '127.0.0.1' -Message 'Test Syslog Message' -Severity 'Debug' -Facility 'kern'"
-            $ExpectedResult = '<7>1 {0} TestHostname PowerShell {1} - - Test Syslog Message' -f $ExpectedTimeStamp, $PID
-            $TestResult = Test-Message $TestCase
-            $TestResult | Should Be $ExpectedResult
-        }   
 
-        It 'Calculates the correct priority of 24 if Facility is daemon and Severity is Emergency' {
-            $TestCase = "Send-SyslogMessage -Server '127.0.0.1' -Message 'Test Syslog Message' -Severity 'Emergency' -Facility 'daemon'"
-            $ExpectedResult = '<24>1 {0} TestHostname PowerShell {1} - - Test Syslog Message' -f $ExpectedTimeStamp, $PID
-            $TestResult = Test-Message $TestCase
-            $TestResult | Should Be $ExpectedResult
-        }
-
-        It 'Calculates the correct priority of 31 if Facility is daemon and Severity is Debug' {
-            $TestCase = "Send-SyslogMessage -Server '127.0.0.1' -Message 'Test Syslog Message' -Severity 'Debug' -Facility 'daemon'"
-            $ExpectedResult = '<31>1 {0} TestHostname PowerShell {1} - - Test Syslog Message' -f $ExpectedTimeStamp, $PID
-            $TestResult = Test-Message $TestCase
-            $TestResult | Should Be $ExpectedResult
-        }
-    }
-
-    Context 'RFC 3164 Message Format' {
-        It 'Should send RFC5424 formatted message' {
-            $TestCase = "Send-SyslogMessage -Server '127.0.0.1' -Message 'Test Syslog Message' -Severity 'Alert' -Facility 'auth' -RFC3164"
-            $ExpectedResult = '<33>Jan 01 00:00:00 TestHostname PowerShell Test Syslog Message' -f $ExpectedTimeStamp, $PID
-            $TestResult = Test-Message $TestCase
-            $TestResult | Should Be $ExpectedResult
-        }
-    }
-
-    Context 'RFC 5424 message format' {
-        It 'Should send RFC5424 formatted message' {
-            $TestCase = "Send-SyslogMessage -Server '127.0.0.1' -Message 'Test Syslog Message' -Severity 'Alert' -Facility 'auth'"
-            $ExpectedResult = '<33>1 {0} TestHostname PowerShell {1} - - Test Syslog Message' -f $ExpectedTimeStamp, $PID
-            $TestResult = Test-Message $TestCase
-            $TestResult | Should Be $ExpectedResult
-        }
-    }
-
-    Context 'Hostname determination' {              
-        It 'Uses any hostname it is given' {
-            $TestCase = "Send-SyslogMessage -Server '127.0.0.1' -Message 'Test Syslog Message' -Severity 'Alert' -Facility 'auth' -Hostname 'SomeRandomHostNameDude'"
-            $ExpectedResult = '<33>1 {0} SomeRandomHostNameDude PowerShell {1} - - Test Syslog Message' -f $ExpectedTimeStamp, $PID
-            $TestResult = Test-Message $TestCase
-            $TestResult | Should Be $ExpectedResult
-        }
-
-        It 'Uses the FQDN if the computer is domain joined' {
-            $ENV:userdnsdomain = 'contoso.com'
-            $TestCase = "Send-SyslogMessage -Server '127.0.0.1' -Message 'Test Syslog Message' -Severity 'Alert' -Facility 'auth'"
-            $ExpectedResult = '<33>1 {0} TestHostname.contoso.com PowerShell {1} - - Test Syslog Message' -f $ExpectedTimeStamp, $PID
-            $TestResult = Test-Message $TestCase
-            $ENV:userdnsdomain = ''
-            $TestResult | Should Be $ExpectedResult
-        }
-
-        It 'Uses a Static IP address, on the correct interface that the server is reached on, if no FQDN and not hostname specified' {
-            Mock -ModuleName Cloud-App-Security Get-NetIPAddress {return 'value'}          
-
-            $TestCase = "Send-SyslogMessage -Server '127.0.0.1' -Message 'Test Syslog Message' -Severity 'Alert' -Facility 'auth'"
-            $ExpectedResult = '<33>1 {0} 123.123.123.123 PowerShell {1} - - Test Syslog Message' -f $ExpectedTimeStamp, $PID
-            $TestResult = Test-Message $TestCase
-            $TestResult | Should Be $ExpectedResult
-        }
-
-        It 'Uses the Windows computer name, if no static ip or FQDN' {
-            Mock -ModuleName Cloud-App-Security Get-NetIPAddress {return $null} 
-
-            $TestCase = "Send-SyslogMessage -Server '127.0.0.1' -Message 'Test Syslog Message' -Severity 'Alert' -Facility 'auth'"
-            $ExpectedResult = '<33>1 {0} TestHostname PowerShell {1} - - Test Syslog Message' -f $ExpectedTimeStamp, $PID
-            $TestResult = Test-Message $TestCase
-            $TestResult | Should Be $ExpectedResult
-        }
-    }
-
-    Context 'Log Message tests' {
-        It 'truncates long messages correctly' {
-            $TestCase = "Send-SyslogMessage -Server '127.0.0.1' -Message 'This is a very long syslog message. 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890' -Severity 'Alert' -Facility 'auth'"
-            $ExpectedResult = '<33>1 {0} TestHostname PowerShell {1} - - This is a very long syslog message. 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 12' -f $ExpectedTimeStamp, $PID
-            $TestResult = Test-Message $TestCase
-            $TestResult | Should Be $ExpectedResult
-        }
-    }
 
     Context 'Function tests' {
         It 'does not return any values' {
@@ -200,11 +241,11 @@ Describe 'Send-SyslogMessage' {
 
     Context 'Scrypt Analyzer' {
         It 'Does not have any issues with the Script Analyser' {
-            Invoke-ScriptAnalyzer .\Functions\Send-SyslogMessage.ps1 | Should be $null
+            Invoke-ScriptAnalyzer .\Cloud-App-Security.psm1 | Should be $null
         }
     }
+    #>
 
 }
 
 
-#>
