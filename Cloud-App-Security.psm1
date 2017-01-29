@@ -508,6 +508,7 @@ function Get-MCASAccount
 
         # Specifies the number of records, from the beginning of the result set, to skip.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateScript({$_ -gt -1})]
         [int]$Skip = 0
     )
     Begin
@@ -790,6 +791,7 @@ function Get-MCASActivity
 
         # Specifies the number of records, from the beginning of the result set, to skip.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateScript({$_ -gt -1})]
         [int]$Skip = 0
     )
     Begin
@@ -1037,6 +1039,7 @@ function Get-MCASAlert
 
         # Specifies the number of records, from the beginning of the result set, to skip.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateScript({$_ -gt -1})]
         [int]$Skip = 0
     )
     Begin
@@ -1411,6 +1414,7 @@ function Get-MCASFile
 
         # Specifies the number of records, from the beginning of the result set, to skip.  
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateScript({$_ -gt -1})]
         [int]$Skip = 0
     )
     Begin
@@ -1912,7 +1916,7 @@ function Get-MCASDiscoveredApp
 
         # Specifies the number of records, from the beginning of the result set, to skip. Set to 0 by default.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateNotNullOrEmpty()]
+        [ValidateScript({$_ -gt -1})]
         [int]$Skip = 0
     )
     Begin
@@ -2342,6 +2346,7 @@ function Get-MCASGovernanceLog
 
         # Specifies the number of records, from the beginning of the result set, to skip.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateScript({$_ -gt -1})]
         [int]$Skip = 0
     )
     Begin

@@ -120,7 +120,14 @@ ForEach ($this in $CmdletsToTest) {
     
         Context 'Parameter Validation' {
 
-
+            # Test null credential (all cmdlets except Get-MCASCredential)
+            If ($this.CmdletName -ne 'Get-MCASCredential' -and $this.ResultSetSizeValidRang) {  
+                It "Should not accept a null credential" {
+                    {&($this.CmdletName) -Credential $null -ResultSetSize 1} | Should Throw 'Cannot validate argument on parameter'
+                    }
+                  
+                }
+            
 
             
             # Test out of range result set sizes
@@ -164,10 +171,13 @@ ForEach ($this in $CmdletsToTest) {
             If ($this.SupportsSkip) {
                 
                 It "Should not accept -Skip -1" {
-                    {&($c.CmdletName) -Skip -1} | Should Throw 'Cannot validate argument on parameter'
+                    {&($this.CmdletName) -Skip -1} | Should Throw 'Cannot validate argument on parameter'
                     }
                   
                 }
+
+
+
 
             
         #Context 'Scrypt Analyzer' {
