@@ -448,6 +448,30 @@ function Get-MCASAccount
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential,
+
+        # Specifies the property by which to sort the results. Possible Values: 'UserName','LastSeen'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Username','LastSeen')]
+        [string]$SortBy,
+                
+        # Specifies the direction in which to sort the results. Possible Values: 'Ascending','Descending'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Ascending','Descending')]
+        [string]$SortDirection,
+
+        # Specifies the maximum number of results (up to 5000) to retrieve when listing items matching the specified filter criteria.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateRange(1,5000)]
+        [int]$ResultSetSize = 5000,
+
+        # Specifies the number of records, from the beginning of the result set, to skip.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateScript({$_ -gt -1})]
+        [int]$Skip = 0,
+
+
+
+        ##### FILTER PARAMS #####
  
         # Limits the results to external users
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -489,27 +513,7 @@ function Get-MCASAccount
         # Limits the results to items found in the specified user domains, such as 'contoso.com'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [string[]]$UserDomain,
-
-        # Specifies the property by which to sort the results. Possible Values: 'UserName','LastSeen'.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Username','LastSeen')]
-        [string]$SortBy,
-                
-        # Specifies the direction in which to sort the results. Possible Values: 'Ascending','Descending'.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Ascending','Descending')]
-        [string]$SortDirection,
-
-        # Specifies the maximum number of results (up to 5000) to retrieve when listing items matching the specified filter criteria.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateRange(1,5000)]
-        [int]$ResultSetSize = 5000,
-
-        # Specifies the number of records, from the beginning of the result set, to skip.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateScript({$_ -gt -1})]
-        [int]$Skip = 0
+        [string[]]$UserDomain
     )
     Begin
     {
@@ -666,6 +670,30 @@ function Get-MCASActivity
         [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential,
 
+        # Specifies the property by which to sort the results. Possible Values: 'Date','Created'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Date','Created')]
+        [string]$SortBy,
+                
+        # Specifies the direction in which to sort the results. Possible Values: 'Ascending','Descending'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Ascending','Descending')]
+        [string]$SortDirection,
+
+        # Specifies the maximum number of results (up to 10000) to retrieve when listing items matching the specified filter criteria.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateRange(1,10000)]
+        [int]$ResultSetSize = 10000,
+
+        # Specifies the number of records, from the beginning of the result set, to skip.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateScript({$_ -gt -1})]
+        [int]$Skip = 0,
+        
+
+
+        ##### FILTER PARAMS #####
+ 
         # -User limits the results to items related to the specified user/users, for example 'alice@contoso.com','bob@contoso.com'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -772,27 +800,7 @@ function Get-MCASActivity
 
         # Limits the results to non-impersonated events if specified.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$ImpersonatedNot,
-
-        # Specifies the property by which to sort the results. Possible Values: 'Date','Created'.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Date','Created')]
-        [string]$SortBy,
-                
-        # Specifies the direction in which to sort the results. Possible Values: 'Ascending','Descending'.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Ascending','Descending')]
-        [string]$SortDirection,
-
-        # Specifies the maximum number of results (up to 10000) to retrieve when listing items matching the specified filter criteria.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateRange(1,10000)]
-        [int]$ResultSetSize = 10000,
-
-        # Specifies the number of records, from the beginning of the result set, to skip.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateScript({$_ -gt -1})]
-        [int]$Skip = 0
+        [switch]$ImpersonatedNot
     )
     Begin
     {
@@ -960,6 +968,30 @@ function Get-MCASAlert
         [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential,
 
+        # Specifies the property by which to sort the results. Possible Values: 'Date','Severity', 'ResolutionStatus'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Date','Severity','ResolutionStatus')]
+        [string]$SortBy,
+                
+        # Specifies the direction in which to sort the results. Possible Values: 'Ascending','Descending'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Ascending','Descending')]
+        [string]$SortDirection,
+
+        # Specifies the maximum number of results (up to 10000) to retrieve when listing items matching the specified filter criteria.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateRange(1,10000)]
+        [int]$ResultSetSize = 10000,
+
+        # Specifies the number of records, from the beginning of the result set, to skip.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateScript({$_ -gt -1})]
+        [int]$Skip = 0,
+
+
+
+        ##### FILTER PARAMS #####
+
         # Limits the results by severity. Possible Values: 'High','Medium','Low'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -1020,27 +1052,7 @@ function Get-MCASAlert
 
         # Limits the results to unread items.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$Unread,
-
-        # Specifies the property by which to sort the results. Possible Values: 'Date','Severity', 'ResolutionStatus'.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Date','Severity','ResolutionStatus')]
-        [string]$SortBy,
-                
-        # Specifies the direction in which to sort the results. Possible Values: 'Ascending','Descending'.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Ascending','Descending')]
-        [string]$SortDirection,
-
-        # Specifies the maximum number of results (up to 10000) to retrieve when listing items matching the specified filter criteria.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateRange(1,10000)]
-        [int]$ResultSetSize = 10000,
-
-        # Specifies the number of records, from the beginning of the result set, to skip.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateScript({$_ -gt -1})]
-        [int]$Skip = 0
+        [switch]$Unread
     )
     Begin
     {
@@ -1278,6 +1290,30 @@ function Get-MCASFile
         [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential,
 
+        # Specifies the property by which to sort the results. Possible Value: 'DateModified'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('DateModified')]
+        [string]$SortBy,
+                
+        # Specifies the direction in which to sort the results. Possible Values: 'Ascending','Descending'.  
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Ascending','Descending')]
+        [string]$SortDirection,
+
+        # Specifies the maximum number of results (up to 5000) to retrieve when listing items matching the specified filter criteria.  
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateRange(1,5000)]
+        [int]$ResultSetSize = 5000,
+
+        # Specifies the number of records, from the beginning of the result set, to skip.  
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateScript({$_ -gt -1})]
+        [int]$Skip = 0,
+
+
+
+        ##### FILTER PARAMS #####
+
         # Limits the results to items of the specified file type. Value Map: 0 = Other,1 = Document,2 = Spreadsheet, 3 = Presentation, 4 = Text, 5 = Image, 6 = Folder.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -1395,27 +1431,7 @@ function Get-MCASFile
 
         # Limits the results to items that CAS has marked as not a folder.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$FoldersNot,
-
-        # Specifies the property by which to sort the results. Possible Value: 'DateModified'.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('DateModified')]
-        [string]$SortBy,
-                
-        # Specifies the direction in which to sort the results. Possible Values: 'Ascending','Descending'.  
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Ascending','Descending')]
-        [string]$SortDirection,
-
-        # Specifies the maximum number of results (up to 5000) to retrieve when listing items matching the specified filter criteria.  
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateRange(1,5000)]
-        [int]$ResultSetSize = 5000,
-
-        # Specifies the number of records, from the beginning of the result set, to skip.  
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateScript({$_ -gt -1})]
-        [int]$Skip = 0
+        [switch]$FoldersNot
     )
     Begin
     {
@@ -1872,29 +1888,6 @@ function Get-MCASDiscoveredApp
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential,
-        
-        # Limits results by category type. A preset list of categories are included.
-        [Parameter(ParameterSetName='List', Mandatory=$false, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
-        [ValidateNotNullOrEmpty()]
-        [app_category[]]$Category,
-
-        # Limits the results by risk score range, for example '3-9'. Set to '1-10' by default. 
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidatePattern('^([1-9]0?)-([1-9]0?)$')]
-        [ValidateNotNullOrEmpty()]
-        [string]$ScoreRange='1-10',
-
-        # Limits the results by stream ID, for example '577d49d72b1c51a0762c61b0'. The stream ID can be found in the URL bar of the console when looking at the Discovery dashboard.
-        [Parameter(ParameterSetName='List', Mandatory=$true, Position=0)]
-        [ValidatePattern('^[A-Fa-f0-9]{24}$')] 
-        [ValidateNotNullOrEmpty()]
-        [string]$StreamId,
-
-        # Limits the results by time frame in days. Set to 90 days by default. (Options: 7, 30, or 90)
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('7','30','90')]
-        [ValidateNotNullOrEmpty()]
-        [int]$TimeFrame=90,
 
         # Specifies the property by which to sort the results. Set to 'Name' by default. Possible Values: 'UserName','LastSeen'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -1917,7 +1910,34 @@ function Get-MCASDiscoveredApp
         # Specifies the number of records, from the beginning of the result set, to skip. Set to 0 by default.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateScript({$_ -gt -1})]
-        [int]$Skip = 0
+        [int]$Skip = 0,
+
+
+
+        ##### FILTER PARAMS #####
+        
+        # Limits results by category type. A preset list of categories are included.
+        [Parameter(ParameterSetName='List', Mandatory=$false, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
+        [ValidateNotNullOrEmpty()]
+        [app_category[]]$Category,
+
+        # Limits the results by risk score range, for example '3-9'. Set to '1-10' by default. 
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidatePattern('^([1-9]0?)-([1-9]0?)$')]
+        [ValidateNotNullOrEmpty()]
+        [string]$ScoreRange='1-10',
+
+        # Limits the results by stream ID, for example '577d49d72b1c51a0762c61b0'. The stream ID can be found in the URL bar of the console when looking at the Discovery dashboard.
+        [Parameter(ParameterSetName='List', Mandatory=$true, Position=0)]
+        [ValidatePattern('^[A-Fa-f0-9]{24}$')] 
+        [ValidateNotNullOrEmpty()]
+        [string]$StreamId,
+
+        # Limits the results by time frame in days. Set to 90 days by default. (Options: 7, 30, or 90)
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('7','30','90')]
+        [ValidateNotNullOrEmpty()]
+        [int]$TimeFrame=90
     )
     Begin
     {
@@ -2298,6 +2318,30 @@ function Get-MCASGovernanceLog
         [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential,
 
+        # Specifies the property by which to sort the results. Possible Values: 'Date','Created'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('timestamp')]
+        [string]$SortBy,
+                
+        # Specifies the direction in which to sort the results. Possible Values: 'Ascending','Descending'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Ascending','Descending')]
+        [string]$SortDirection,
+
+        # Specifies the maximum number of results (up to 10000) to retrieve when listing items matching the specified filter criteria.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateRange(1,10000)]
+        [int]$ResultSetSize = 5000,
+
+        # Specifies the number of records, from the beginning of the result set, to skip.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateScript({$_ -gt -1})]
+        [int]$Skip = 0,
+
+
+
+        ##### FILTER PARAMS #####
+
         # Limits the results to items related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -2327,27 +2371,7 @@ function Get-MCASGovernanceLog
         # Limits the results to events listed for the specified IP Tags.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [validateset('Failed','Pending','Successful')]
-        [string[]]$Status,
-
-        # Specifies the property by which to sort the results. Possible Values: 'Date','Created'.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('timestamp')]
-        [string]$SortBy,
-                
-        # Specifies the direction in which to sort the results. Possible Values: 'Ascending','Descending'.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Ascending','Descending')]
-        [string]$SortDirection,
-
-        # Specifies the maximum number of results (up to 10000) to retrieve when listing items matching the specified filter criteria.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateRange(1,10000)]
-        [int]$ResultSetSize = 5000,
-
-        # Specifies the number of records, from the beginning of the result set, to skip.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateScript({$_ -gt -1})]
-        [int]$Skip = 0
+        [string[]]$Status
     )
     Begin
     {

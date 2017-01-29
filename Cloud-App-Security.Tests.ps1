@@ -11,16 +11,19 @@ $CmdletsToTest = @()
 # Get-MCASAccount
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASAccount'
+$ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection')
+
 $ThisCmdlet.ResultSetSizeValidRange = @(1,5000) 
 $ThisCmdlet.ValidSortBy = @('Username','LastSeen') 
 $ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 
-$ThisCmdlet.SupportsSkip = $true
 $CmdletsToTest += $ThisCmdlet
 
 
 # Get-MCASActivity
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASActivity'
+$ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection')
+
 $ThisCmdlet.ResultSetSizeValidRange = @(1,10000) 
 $ThisCmdlet.ValidSortBy = @('Date','Created') 
 $ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 
@@ -31,6 +34,8 @@ $CmdletsToTest += $ThisCmdlet
 # Get-MCASAlert
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASAlert'
+$ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection')
+
 $ThisCmdlet.ResultSetSizeValidRange = @(1,10000) 
 $ThisCmdlet.ValidSortBy = @('Date','Severity','ResolutionStatus') 
 $ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 
@@ -41,32 +46,47 @@ $CmdletsToTest += $ThisCmdlet
 # Get-MCASFile
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASFile'
+$ThisCmdlet.SupportedParams = @('Skip','ResultSetSize','SortBy','SortDirection')
+
 $ThisCmdlet.ResultSetSizeValidRange = @(1,5000) 
 $ThisCmdlet.ValidSortBy = @('DateModified') 
 $ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 
-$ThisCmdlet.SupportsSkip = $true
 $CmdletsToTest += $ThisCmdlet
 
 
 # Get-MCASDiscoveredApp
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'MCASDiscoveredApp'
+$ThisCmdlet.SupportedParams = @('Skip','ResultSetSize') # need to add'SortBy','SortDirection'
+
 $ThisCmdlet.ResultSetSizeValidRange = @(1,5000) 
-#$ThisCmdlet.ValidSortBy = @('IpCount','LastUsed','Name','Transactions','Upload','UserCount') 
-#$ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 
-$ThisCmdlet.SupportsSkip = $true
+$ThisCmdlet.ValidSortBy = @('IpCount','LastUsed','Name','Transactions','Upload','UserCount') 
+$ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 
 $CmdletsToTest += $ThisCmdlet
 
 
 # Get-MCASGovernanceLog
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASGovernanceLog'
+$ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection')
+
 $ThisCmdlet.ResultSetSizeValidRange = @(1,10000) 
 $ThisCmdlet.ValidSortBy = @('timestamp') 
 $ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 
-$ThisCmdlet.SupportsSkip = $true
 $CmdletsToTest += $ThisCmdlet
 
+
+
+
+
+
+
+
+# Set-MCASAlert
+$ThisCmdlet = @{}
+$ThisCmdlet.CmdletName = 'Set-MCASAlert'
+$ThisCmdlet.SupportedParams = @('Identity')
+$CmdletsToTest += $ThisCmdlet
 
 
 
@@ -102,10 +122,6 @@ $ThisCmdlet.CmdletName = 'Send-MCASDiscoveryLog'
 $CmdletsToTest += $ThisCmdlet
 
 
-# Set-MCASAlert
-$ThisCmdlet = @{}
-$ThisCmdlet.CmdletName = 'Set-MCASAlert'
-$CmdletsToTest += $ThisCmdlet
 
 #>
 
@@ -121,17 +137,30 @@ ForEach ($this in $CmdletsToTest) {
         Context 'Parameter Validation' {
 
             # Test null credential (all cmdlets except Get-MCASCredential)
-            If ($this.CmdletName -ne 'Get-MCASCredential' -and $this.ResultSetSizeValidRang) {  
-                It "Should not accept a null credential" {
-                    {&($this.CmdletName) -Credential $null -ResultSetSize 1} | Should Throw 'Cannot validate argument on parameter'
+            #If ($this.CmdletName -ne 'Get-MCASCredential' -and $this.ResultSetSizeValidRange) {  
+            #    It "Should not accept a null credential" {
+            #        {&($this.CmdletName) -Credential $null -ResultSetSize 1} | Should Throw 'Cannot validate argument on parameter'
+            #        }                  
+            #    }
+            
+            # Test null identity
+            If ($this.SupportedParams -contains 'Identity') {      
+                It "Should not accept a null identity" {
+                    {&($this.CmdletName) -Identity $null} | Should Throw 'Cannot validate argument on parameter'
                     }
                   
                 }
             
-
+            # Test negative value for -Skip
+            If ($this.SupportedParams -contains 'Skip') {      
+                It "Should not accept a negative value for -Skip" {
+                    {&($this.CmdletName) -Skip -1} | Should Throw 'Cannot validate argument on parameter'
+                    }
+                  
+                }
             
             # Test out of range result set sizes
-            If ($this.ResultSetSizeValidRange) {
+            If ($this.SupportedParams -contains 'ResultSetSize') {
                 $OutOfRangeResultSetSizes = @(($this.ResultSetSizeValidRange[0] - 2),($this.ResultSetSizeValidRange[0] - 1),($this.ResultSetSizeValidRange[1] + 1),($this.ResultSetSizeValidRange[1] + 2))
 
                 ForEach ($i in $OutOfRangeResultSetSizes) {
@@ -141,11 +170,8 @@ ForEach ($this in $CmdletsToTest) {
                     }
                 }
 
-
-
-
             # Test invalid values and combinations of -SortBy and -SortDirection
-            If ($this.ValidSortBy -and $this.ValidSortDirection) {
+            If ($this.SupportedParams -contains 'SortBy' -and $this.SupportedParams -contains 'SortDirection') {
                 
                 ForEach ($i in $this.ValidSortBy) {
                     It "Should not accept 'invalid' for -SortDirection with -SortBy $i" {
@@ -167,26 +193,6 @@ ForEach ($this in $CmdletsToTest) {
 
 
 
-            # Test -Skip -1
-            If ($this.SupportsSkip) {
-                
-                It "Should not accept -Skip -1" {
-                    {&($this.CmdletName) -Skip -1} | Should Throw 'Cannot validate argument on parameter'
-                    }
-                  
-                }
-
-
-
-
-            
-        #Context 'Scrypt Analyzer' {
-        #    It 'Does not have any issues with the Script Analyzer' {
-        #        Invoke-ScriptAnalyzer .\Cloud-App-Security.psm1 | Should be $null
-        #    }
-        #}
-
-
 
 
 
@@ -194,6 +200,17 @@ ForEach ($this in $CmdletsToTest) {
 
 
             }
+
+           
+            
+        #Context 'Scrypt Analyzer' {
+        #    It 'Does not have any issues with the Script Analyzer' {
+        #        Invoke-ScriptAnalyzer .\Cloud-App-Security.psm1 | Should be $null
+        #    }
+        #}
+
+            
+
         }
 
 
