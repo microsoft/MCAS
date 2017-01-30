@@ -46,7 +46,7 @@ $CmdletsToTest += $ThisCmdlet
 # Get-MCASFile
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASFile'
-$ThisCmdlet.SupportedParams = @('Skip','ResultSetSize','SortBy','SortDirection')
+$ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection')
 
 $ThisCmdlet.ResultSetSizeValidRange = @(1,5000) 
 $ThisCmdlet.ValidSortBy = @('DateModified') 

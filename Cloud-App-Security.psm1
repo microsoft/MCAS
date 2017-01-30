@@ -1273,13 +1273,12 @@ function Get-MCASFile
     [Alias('Get-CASFile')]
     Param
     (   
-        <# Fetches a file object by its unique identifier. 
+        # Fetches a file object by its unique identifier. 
         [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
         [ValidatePattern({^[A-Fa-f0-9]{24}$})]
         [alias("_id")]
         [string]$Identity,
-        #>
-        
+                
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
         [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
@@ -1480,9 +1479,7 @@ function Get-MCASFile
             If ($SortBy -eq 'DateModified') 
             {
                 $Body.Add('sortField','dateModified') # Patch to convert 'DateModified' to 'dateModified' for API compatibility. There is only one Sort Field today.
-            } 
-
-            }  
+            }
             #endregion ----------------------------SORTING----------------------------
 
             #region ----------------------------FILTERING----------------------------
@@ -1553,6 +1550,7 @@ function Get-MCASFile
                 }
             $ListResponse
         }
+    }
 }
 
 <#
@@ -2471,23 +2469,23 @@ function Get-MCASGovernanceLog
 Export-ModuleMember -Variable CASCredential
 
 # Cmdlets to export
-Export-ModuleMember -Function Get-MCASAccount
-Export-ModuleMember -Function Get-MCASActivity
-Export-ModuleMember -Function Get-MCASAlert
-Export-ModuleMember -Function Get-MCASCredential
-Export-ModuleMember -Function Get-MCASFile
-Export-ModuleMember -Function Send-MCASDiscoveryLog
-Export-ModuleMember -Function Set-MCASAlert
-Export-ModuleMember -Function Get-MCASDiscoveredApp
-Export-ModuleMember -Function Get-MCASAppInfo
-Export-ModuleMember -Function Get-MCASReport
-Export-ModuleMember -Function Get-MCASStream
-Export-ModuleMember -Function Get-MCASGovernanceLog
+Export-ModuleMember -Function Get-MCASAccount -Alias *
+Export-ModuleMember -Function Get-MCASActivity -Alias *
+Export-ModuleMember -Function Get-MCASAlert -Alias *
+Export-ModuleMember -Function Get-MCASCredential -Alias *
+Export-ModuleMember -Function Get-MCASFile -Alias *
+Export-ModuleMember -Function Send-MCASDiscoveryLog -Alias *
+Export-ModuleMember -Function Set-MCASAlert -Alias *
+Export-ModuleMember -Function Get-MCASDiscoveredApp -Alias *
+Export-ModuleMember -Function Get-MCASAppInfo -Alias *
+Export-ModuleMember -Function Get-MCASReport -Alias *
+Export-ModuleMember -Function Get-MCASStream -Alias *
+Export-ModuleMember -Function Get-MCASGovernanceLog -Alias *
 
 # Items to only export during dev/testing only
-#Export-ModuleMember -Function ConvertTo-MCASJsonFilterString
-#Export-ModuleMember -Function Invoke-MCASRestMethod
-#Export-ModuleMember -Function Select-MCASTenantUri
-#Export-ModuleMember -Function Select-MCASToken
+#Export-ModuleMember -Function ConvertTo-MCASJsonFilterString -Alias *
+#Export-ModuleMember -Function Invoke-MCASRestMethod -Alias *
+#Export-ModuleMember -Function Select-MCASTenantUri -Alias *
+#Export-ModuleMember -Function Select-MCASToken -Alias *
 
 #endregion ------------------------------Export------------------------------
