@@ -770,10 +770,13 @@ function Get-MCASActivity
         [ValidatePattern("\b[A-Za-z0-9]{24}\b")] 
         [string]$FileID,
 
-        # Limits the results to events listed for the specified API classification label. Use ^ when denoting (external) labels. Example: @("^Private")
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()] 
         [array]$FileLabel,
+
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()] 
+        [array]$FileLabelNot,
 
         # Limits the results to events listed for the specified IP Tags.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -1328,6 +1331,14 @@ function Get-MCASFile
         [ValidateNotNullOrEmpty()]
         [file_access_level[]]$FileAccessLevel,
 
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()] 
+        [array]$FileLabel,
+
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()] 
+        [array]$FileLabelNot,
+
         # Limits the results to items with the specified collaborator usernames, such as 'alice@contoso.com', 'bob@microsoft.com'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -1527,13 +1538,15 @@ function Get-MCASFile
             If ($MIMETypeNot)          {$FilterSet += @{'mimeType'=                 @{'neq'=$MIMETypeNot}}}
             If ($Name)                 {$FilterSet += @{'filename'=                 @{'eq'=$Name}}}
             If ($NameWithoutExtension) {$FilterSet += @{'filename'=                 @{'text'=$NameWithoutExtension}}}
-            If ($Folders)              {$FilterSet += @{'folder'=      @{'eq'=$true}}}
-            If ($FoldersNot)           {$FilterSet += @{'folder'=      @{'eq'=$false}}}
-            If ($Quarantined)          {$FilterSet += @{'quarantined'= @{'eq'=$true}}} 
-            If ($QuarantinedNot)       {$FilterSet += @{'quarantined'= @{'eq'=$false}}} 
-            If ($Trashed)              {$FilterSet += @{'trashed'=     @{'eq'=$true}}}
-            If ($TrashedNot)           {$FilterSet += @{'trashed'=     @{'eq'=$false}}}
-           
+            If ($Folders)              {$FilterSet += @{'folder'=                   @{'eq'=$true}}}
+            If ($FoldersNot)           {$FilterSet += @{'folder'=                   @{'eq'=$false}}}
+            If ($Quarantined)          {$FilterSet += @{'quarantined'=              @{'eq'=$true}}} 
+            If ($QuarantinedNot)       {$FilterSet += @{'quarantined'=              @{'eq'=$false}}} 
+            If ($Trashed)              {$FilterSet += @{'trashed'=                  @{'eq'=$true}}}
+            If ($TrashedNot)           {$FilterSet += @{'trashed'=                  @{'eq'=$false}}}
+            If ($FileLabel)            {$FilterSet += @{'fileLabels'=               @{'eq'=$FileLabel}}}
+            If ($FileLabelNot)         {$FilterSet += @{'fileLabels'=               @{'neq'=$FileLabel}}}
+
             # Add filter set to request body as the 'filter' property            
             If ($FilterSet) {$Body.Add('filters',(ConvertTo-MCASJsonFilterString $FilterSet))}
 
