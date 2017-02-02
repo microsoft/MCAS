@@ -488,27 +488,27 @@ function Get-MCASAccount
 
         # Limits the results to items related to the specified service IDs, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [alias("AppId")]
         [ValidateNotNullOrEmpty()]
-        [int[]]$Services,
+        [Alias("Service","Services")]
+        [int[]]$AppId,
 
-        # Limits the results to items related to the specified service names, such as 'Office 365' and 'Google Apps'.
+        # Limits the results to items related to the specified service names, such as 'Office_365' and 'Google_Apps'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [alias("AppName")]
         [ValidateNotNullOrEmpty()]
-        [mcas_app[]]$ServiceNames,
+        [Alias("ServiceName","ServiceNames")]
+        [mcas_app[]]$AppName,
 
         # Limits the results to items not related to the specified service ids, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [alias("AppIdNot")]
-        [int[]]$ServicesNot,
+        [Alias("ServiceNot","ServicesNot")]
+        [int[]]$AppIdNot,
 
-        # Limits the results to items not related to the specified service names, such as 'Office 365' and 'Google Apps'.
+        # Limits the results to items not related to the specified service names, such as 'Office_365' and 'Google_Apps'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [alias("AppNameNot")]
         [ValidateNotNullOrEmpty()]
-        [mcas_app[]]$ServiceNamesNot,
+        [Alias("ServiceNameNot","ServiceNamesNot")]
+        [mcas_app[]]$AppNameNot,
 
         # Limits the results to items found in the specified user domains, such as 'contoso.com'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -576,26 +576,25 @@ function Get-MCASAccount
             $FilterSet = @() # Filter set array
 
             # Additional parameter validations and mutual exclusions
-            If ($ServiceNames    -and ($Services     -or $ServiceNamesNot -or $ServicesNot))  {Throw 'Cannot reconcile service parameters. Only use one of them at a time.'}
-            If ($Services        -and ($ServiceNames -or $ServiceNamesNot -or $ServicesNot))  {Throw 'Cannot reconcile service parameters. Only use one of them at a time.'}
-            If ($ServiceNamesNot -and ($Services     -or $ServiceNames    -or $ServicesNot))  {Throw 'Cannot reconcile service parameters. Only use one of them at a time.'}
-            If ($ServicesNot     -and ($Services     -or $ServiceNamesNot -or $ServiceNames)) {Throw 'Cannot reconcile service parameters. Only use one of them at a time.'}
+            If ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            If ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            If ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
             If ($External -and $Internal) {Throw 'Cannot reconcile -External and -Internal switches. Use zero or one of these, but not both.'}
 
             # Value-mapped filters
-            If ($ServiceNames)    {$FilterSet += @{'service'=@{'eq'=($ServiceNames | ForEach {$_ -as [int]})}}}
-            If ($ServiceNamesNot) {$FilterSet += @{'service'=@{'neq'=($ServiceNamesNot | ForEach {$_ -as [int]})}}}
+            If ($AppName)    {$FilterSet += @{'service'=@{'eq'=($AppName | ForEach {$_ -as [int]})}}}
+            If ($AppNameNot) {$FilterSet += @{'service'=@{'neq'=($AppNameNot | ForEach {$_ -as [int]})}}}
 
             # Simple filters
-            If ($Internal)    {$FilterSet += @{'affiliation'=   @{'eq'=$false}}}
-            If ($External)    {$FilterSet += @{'affiliation'=   @{'eq'=$true}}}
-            If ($UserName)    {$FilterSet += @{'user.username'= @{'eq'=$UserName}}}
-            If ($Services)    {$FilterSet += @{'service'=       @{'eq'=$Services}}}
-            If ($ServicesNot) {$FilterSet += @{'service'=       @{'neq'=$ServicesNot}}}
-            If ($UserDomain)  {$FilterSet += @{'domain'=        @{'eq'=$UserDomain}}}
+            If ($Internal)   {$FilterSet += @{'affiliation'=   @{'eq'=$false}}}
+            If ($External)   {$FilterSet += @{'affiliation'=   @{'eq'=$true}}}
+            If ($UserName)   {$FilterSet += @{'user.username'= @{'eq'=$UserName}}}
+            If ($AppId)      {$FilterSet += @{'service'=       @{'eq'=$AppId}}}
+            If ($AppIdNot)   {$FilterSet += @{'service'=       @{'neq'=$AppIdNot}}}
+            If ($UserDomain) {$FilterSet += @{'domain'=        @{'eq'=$UserDomain}}}
             
             # boolean filters
-            #If ($External -ne $null) {$FilterSet += @{'affiliation'= @{'eq'=$External}}}
 
             # Add filter set to request body as the 'filter' property            
             If ($FilterSet) {$Body.Add('filters',(ConvertTo-MCASJsonFilterString $FilterSet))}
@@ -697,26 +696,31 @@ function Get-MCASActivity
         # -User limits the results to items related to the specified user/users, for example 'alice@contoso.com','bob@contoso.com'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [string[]]$User,
+        [Alias("User")]
+        [string[]]$UserName,
 
-        # Limits the results to items related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
+        # Limits the results to items related to the specified service IDs, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
+        [Alias("Service","Services")]
         [int[]]$AppId,
 
-        # Limits the results to items related to the specified app names, such as 'Office 365' and 'Google Apps'.
+        # Limits the results to items related to the specified service names, such as 'Office_365' and 'Google_Apps'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
+        [Alias("ServiceName","ServiceNames")]
         [mcas_app[]]$AppName,
-        
-        # Limits the results to items not related to the specified service ID's, for example 11161,11770 (for Office 365 and Google Apps, respectively).
+
+        # Limits the results to items not related to the specified service ids, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
+        [Alias("ServiceNot","ServicesNot")]
         [int[]]$AppIdNot,
-        
-        # Limits the results to items not related to the specified app names, such as 'Office 365' and 'Google Apps'.
+
+        # Limits the results to items not related to the specified service names, such as 'Office_365' and 'Google_Apps'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
+        [Alias("ServiceNameNot","ServiceNamesNot")]
         [mcas_app[]]$AppNameNot,
 
         # Limits the results to items of specified event type name, such as EVENT_CATEGORY_LOGIN,EVENT_CATEGORY_DOWNLOAD_FILE.
@@ -879,7 +883,7 @@ function Get-MCASActivity
             If ($IPTag)      {$FilterSet += @{'ip.tags'=    @{'eq'=($IPTag.GetEnumerator() | ForEach {$IPTagsList.$_ -join ','})}}}
 
             # Simple filters
-            If ($User)                 {$FilterSet += @{'user.username'=       @{'eq'=$User}}}
+            If ($UserName)             {$FilterSet += @{'user.username'=       @{'eq'=$UserName}}}
             If ($AppId)                {$FilterSet += @{'service'=             @{'eq'=$AppId}}}
             If ($AppIdNot)             {$FilterSet += @{'service'=             @{'neq'=$AppIdNot}}}
             If ($EventTypeName)        {$FilterSet += @{'activity.actionType'= @{'eq'=$EventTypeName}}}
@@ -1012,29 +1016,29 @@ function Get-MCASAlert
         [ValidateNotNullOrEmpty()]
         [string[]]$User,
 
-        # Limits the results to items related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
+        # Limits the results to items related to the specified service IDs, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [alias("AppId")]
         [ValidateNotNullOrEmpty()]
-        [int[]]$Service,
+        [Alias("Service","Services")]
+        [int[]]$AppId,
 
-        # Limits the results to items related to the specified service names, such as 'Office 365' and 'Google Apps'.
+        # Limits the results to items related to the specified service names, such as 'Office_365' and 'Google_Apps'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [alias("AppName")]
         [ValidateNotNullOrEmpty()]
-        [mcas_app[]]$ServiceName,
+        [Alias("ServiceName","ServiceNames")]
+        [mcas_app[]]$AppName,
 
-        # Limits the results to items not related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
+        # Limits the results to items not related to the specified service ids, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [alias("AppIdNot")]
-        [int[]]$ServiceNot,
+        [Alias("ServiceNot","ServicesNot")]
+        [int[]]$AppIdNot,
 
-        # Limits the results to items not related to the specified service names, such as 'Office 365' and 'Google Apps'.
+        # Limits the results to items not related to the specified service names, such as 'Office_365' and 'Google_Apps'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [alias("AppNameNot")]
         [ValidateNotNullOrEmpty()]
-        [mcas_app[]]$ServiceNameNot,
+        [Alias("ServiceNameNot","ServiceNamesNot")]
+        [mcas_app[]]$AppNameNot,
 
         # Limits the results to items related to the specified policy ID, such as 57595d0ba6b5d8cd76d6be8c.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -1120,22 +1124,22 @@ function Get-MCASAlert
             $FilterSet = @() # Filter set array
 
             # Additional parameter validations and mutexes
-            If ($ServiceName    -and ($Service     -or $ServiceNameNot -or $ServiceNot))  {Throw 'Cannot reconcile service parameters. Only use one of them at a time.'}
-            If ($Service        -and ($ServiceName -or $ServiceNameNot -or $ServiceNot))  {Throw 'Cannot reconcile service parameters. Only use one of them at a time.'}
-            If ($ServiceNameNot -and ($Service     -or $ServiceName    -or $ServiceNot))  {Throw 'Cannot reconcile service parameters. Only use one of them at a time.'}
-            If ($ServiceNot     -and ($Service     -or $ServiceNameNot -or $ServiceName)) {Throw 'Cannot reconcile service parameters. Only use one of them at a time.'}
+            If ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            If ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            If ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
             If ($Read -and $Unread) {Throw 'Cannot reconcile -Read and -Unread parameters. Only use one of them at a time.'}
 
             # Value-mapped filters
-            If ($ServiceName)      {$FilterSet += @{'entity.service'=         @{'eq'=($ServiceName | ForEach {$_ -as [int]})}}}
-            If ($ServiceNameNot)   {$FilterSet += @{'entity.service'=         @{'neq'=($ServiceNameNot | ForEach {$_ -as [int]})}}}
-            If ($Severity)         {$FilterSet += @{'severity'=        @{'eq'=($Severity | ForEach {$_ -as [int]})}}}
-            If ($ResolutionStatus) {$FilterSet += @{'resolutionStatus'=@{'eq'=($ResolutionStatus | ForEach {$_ -as [int]})}}}
+            If ($AppName)          {$FilterSet += @{'entity.service'=   @{'eq'=($AppName | ForEach {$_ -as [int]})}}}
+            If ($AppNameNot)       {$FilterSet += @{'entity.service'=   @{'neq'=($AppNameNot | ForEach {$_ -as [int]})}}}
+            If ($Severity)         {$FilterSet += @{'severity'=         @{'eq'=($Severity | ForEach {$_ -as [int]})}}}
+            If ($ResolutionStatus) {$FilterSet += @{'resolutionStatus'= @{'eq'=($ResolutionStatus | ForEach {$_ -as [int]})}}}
 
             # Simple filters
             If ($User)       {$FilterSet += @{'entity.user'=    @{'eq'=$User}}}
-            If ($Service)    {$FilterSet += @{'entity.service'= @{'eq'=$Service}}}
-            If ($ServiceNot) {$FilterSet += @{'entity.service'= @{'neq'=$ServiceNot}}}
+            If ($AppId)      {$FilterSet += @{'entity.service'= @{'eq'=$AppId}}}
+            If ($AppIdNot)   {$FilterSet += @{'entity.service'= @{'neq'=$AppIdNot}}}
             If ($Policy)     {$FilterSet += @{'entity.policy'=  @{'eq'=$Policy}}}
             If ($Risk)       {$FilterSet += @{'risk'=           @{'eq'=$Risk}}}
             If ($AlertType)  {$FilterSet += @{'id'=             @{'eq'=$AlertType}}}
@@ -1383,24 +1387,28 @@ function Get-MCASFile
         [ValidateNotNullOrEmpty()]
         [string[]]$DomainsNot,
 
-        # Limits the results to items related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively). 
+        # Limits the results to items related to the specified service IDs, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
+        [Alias("Service","Services")]
         [int[]]$AppId,
 
-        # Limits the results to items not related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
+        # Limits the results to items related to the specified service names, such as 'Office_365' and 'Google_Apps'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [int[]]$AppIdNot,
-
-        # Limits the results to items related to the specified service names, such as Microsoft OneDrive or Box. 
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateNotNullOrEmpty()]
+        [Alias("ServiceName","ServiceNames")]
         [mcas_app[]]$AppName,
 
-        # Limits the results to items not related to the specified service names, such as Microsoft OneDrive or Box. 
+        # Limits the results to items not related to the specified service ids, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
+        [Alias("ServiceNot","ServicesNot")]
+        [int[]]$AppIdNot,
+
+        # Limits the results to items not related to the specified service names, such as 'Office_365' and 'Google_Apps'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [Alias("ServiceNameNot","ServiceNamesNot")]
         [mcas_app[]]$AppNameNot,
 
         # Limits the results to items with the specified file name with extension, such as 'My Microsoft File.txt'.
@@ -2078,6 +2086,7 @@ function Get-MCASAppInfo
         [Parameter(ParameterSetName='List', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
         [ValidateNotNullOrEmpty()]
         [ValidatePattern('\b\d{5}\b')]
+        [Alias("Service","Services")]
         [int]$AppId
     )
     Begin
@@ -2357,24 +2366,28 @@ function Get-MCASGovernanceLog
 
         ##### FILTER PARAMS #####
 
-        # Limits the results to items related to the specified service ID's, such as 11161,11770 (for Office 365 and Google Apps, respectively).
+        # Limits the results to items related to the specified service IDs, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
+        [Alias("Service","Services")]
         [int[]]$AppId,
 
-        # Limits the results to items related to the specified app names, such as 'Office 365' and 'Google Apps'.
+        # Limits the results to items related to the specified service names, such as 'Office_365' and 'Google_Apps'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
+        [Alias("ServiceName","ServiceNames")]
         [mcas_app[]]$AppName,
-        
-        # Limits the results to items not related to the specified service ID's, for example 11161,11770 (for Office 365 and Google Apps, respectively).
+
+        # Limits the results to items not related to the specified service ids, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
+        [Alias("ServiceNot","ServicesNot")]
         [int[]]$AppIdNot,
-        
-        # Limits the results to items not related to the specified app names, such as 'Office 365' and 'Google Apps'.
+
+        # Limits the results to items not related to the specified service names, such as 'Office_365' and 'Google_Apps'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
+        [Alias("ServiceNameNot","ServiceNamesNot")]
         [mcas_app[]]$AppNameNot,
 
         # Limits the results to events listed for the specified File ID.
@@ -2448,14 +2461,14 @@ function Get-MCASGovernanceLog
             If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
 
             # Value-mapped filters
-            If ($AppName)    {$FilterSet += @{'appId'=     @{'eq'= ($AppName | ForEach {$_ -as [int]})}}}
-            If ($AppNameNot) {$FilterSet += @{'appId'=     @{'neq'=($AppNameNot | ForEach {$_ -as [int]})}}}
-            If ($Status)     {$FilterSet += @{'status'=    @{'eq'= ($Status | foreach {$GovernanceStatus.$_})}}}
-            If ($Action)     {$FilterSet += @{'type'=      @{'eq'= ($Action | foreach {$_})}}}
+            If ($AppName)    {$FilterSet += @{'appId'=  @{'eq'= ($AppName | ForEach {$_ -as [int]})}}}
+            If ($AppNameNot) {$FilterSet += @{'appId'=  @{'neq'=($AppNameNot | ForEach {$_ -as [int]})}}}
+            If ($Status)     {$FilterSet += @{'status'= @{'eq'= ($Status | ForEach {$GovernanceStatus.$_})}}}
+            If ($Action)     {$FilterSet += @{'type'=   @{'eq'= ($Action | ForEach {$_})}}}
 
             # Simple filters
-            If ($AppId)                {$FilterSet += @{'appId'=             @{'eq'=$AppId}}}
-            If ($AppIdNot)             {$FilterSet += @{'appId'=             @{'neq'=$AppIdNot}}}
+            If ($AppId)    {$FilterSet += @{'appId'= @{'eq'=$AppId}}}
+            If ($AppIdNot) {$FilterSet += @{'appId'= @{'neq'=$AppIdNot}}}
 
             # Add filter set to request body as the 'filter' property            
             If ($FilterSet) {$Body.Add('filters',(ConvertTo-MCASJsonFilterString $FilterSet))}

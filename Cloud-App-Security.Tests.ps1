@@ -11,7 +11,7 @@ $CmdletsToTest = @()
 # Get-MCASAccount
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASAccount'
-$ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection')
+$ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection','UserName','AppId','AppName','AppIdNot','AppNameNot')
 
 $ThisCmdlet.ResultSetSizeValidRange = @(1,5000) 
 $ThisCmdlet.ValidSortBy = @('Username','LastSeen') 
@@ -22,7 +22,7 @@ $CmdletsToTest += $ThisCmdlet
 # Get-MCASActivity
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASActivity'
-$ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection')
+$ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection','UserName','AppId','AppName','AppIdNot','AppNameNot')
 
 $ThisCmdlet.ResultSetSizeValidRange = @(1,10000) 
 $ThisCmdlet.ValidSortBy = @('Date','Created') 
@@ -34,7 +34,7 @@ $CmdletsToTest += $ThisCmdlet
 # Get-MCASAlert
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASAlert'
-$ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection')
+$ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection','AppId','AppName','AppIdNot','AppNameNot')
 
 $ThisCmdlet.ResultSetSizeValidRange = @(1,10000) 
 $ThisCmdlet.ValidSortBy = @('Date','Severity','ResolutionStatus') 
@@ -46,7 +46,7 @@ $CmdletsToTest += $ThisCmdlet
 # Get-MCASFile
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASFile'
-$ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection')
+$ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection','AppId','AppName','AppIdNot','AppNameNot')
 
 $ThisCmdlet.ResultSetSizeValidRange = @(1,5000) 
 $ThisCmdlet.ValidSortBy = @('DateModified') 
@@ -68,13 +68,12 @@ $CmdletsToTest += $ThisCmdlet
 # Get-MCASGovernanceLog
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASGovernanceLog'
-$ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection')
+$ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection','AppId','AppName','AppIdNot','AppNameNot')
 
 $ThisCmdlet.ResultSetSizeValidRange = @(1,10000) 
 $ThisCmdlet.ValidSortBy = @('timestamp') 
 $ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 
 $CmdletsToTest += $ThisCmdlet
-
 
 
 
@@ -90,6 +89,7 @@ $CmdletsToTest += $ThisCmdlet
 
 
 
+
 <#
 
 # Get-MCASCredential
@@ -97,35 +97,28 @@ $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASCredential'
 $CmdletsToTest += $ThisCmdlet
 
-
 # Get-MCASAppInfo
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASAppInfo'
+$ThisCmdlet.SupportedParams = @('AppId')
 $CmdletsToTest += $ThisCmdlet
-
 
 # Get-MCASReport
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASReport'
 $CmdletsToTest += $ThisCmdlet
 
-
 # Get-MCASStream
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASStream'
 $CmdletsToTest += $ThisCmdlet
-
 
 # Send-MCASDiscoveryLog
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Send-MCASDiscoveryLog'
 $CmdletsToTest += $ThisCmdlet
 
-
-
 #>
-
-
 
 
 
@@ -136,7 +129,7 @@ ForEach ($this in $CmdletsToTest) {
     
         Context 'Parameter Validation' {
 
-            # Test null credential (all cmdlets except Get-MCASCredential)
+            ## Test null credential (all cmdlets except Get-MCASCredential)
             #If ($this.CmdletName -ne 'Get-MCASCredential' -and $this.ResultSetSizeValidRange) {  
             #    It "Should not accept a null credential" {
             #        {&($this.CmdletName) -Credential $null -ResultSetSize 1} | Should Throw 'Cannot validate argument on parameter'
@@ -172,7 +165,6 @@ ForEach ($this in $CmdletsToTest) {
 
             # Test invalid values and combinations of -SortBy and -SortDirection
             If ($this.SupportedParams -contains 'SortBy' -and $this.SupportedParams -contains 'SortDirection') {
-                
                 ForEach ($i in $this.ValidSortBy) {
                     It "Should not accept 'invalid' for -SortDirection with -SortBy $i" {
                         {&($this.CmdletName) -SortBy $i -SortDirection 'invalid'} | Should Throw 'Cannot validate argument on parameter'
@@ -191,6 +183,66 @@ ForEach ($this in $CmdletsToTest) {
                     }
                 }
 
+            ########## FILTER PARAM VALIDATIONS ##########
+
+            # Test null values and empty collections
+                
+            # -UserName
+            If ($this.SupportedParams -contains 'UserName') {      
+                It "Should not accept a null value for -UserName" {
+                    {&($this.CmdletName) -UserName $null} | Should Throw 'Cannot validate argument on parameter'
+                    }
+                It "Should not accept an empty collection for -UserName" {
+                    {&($this.CmdletName) -UserName @()} | Should Throw 'Cannot validate argument on parameter'
+                    }
+                }
+            # -AppId
+            If ($this.SupportedParams -contains 'AppId') {      
+                It "Should not accept a null value for -AppId" {
+                    {&($this.CmdletName) -AppId $null} | Should Throw 'Cannot validate argument on parameter'
+                    }
+                It "Should not accept an empty collection for -AppId" {
+                    {&($this.CmdletName) -AppId @()} | Should Throw 'Cannot validate argument on parameter'
+                    }
+                }
+            # -AppName
+            If ($this.SupportedParams -contains 'AppName') {      
+                It "Should not accept a null value for -AppName" {
+                    {&($this.CmdletName) -AppName $null} | Should Throw 'Cannot validate argument on parameter'
+                    }
+                It "Should not accept an empty collection for -AppName" {
+                    {&($this.CmdletName) -AppName @()} | Should Throw 'Cannot validate argument on parameter'
+                    }
+                }
+            # -AppIdNot
+            If ($this.SupportedParams -contains 'AppIdNot') {      
+                It "Should not accept a null value for -AppIdNot" {
+                    {&($this.CmdletName) -AppIdNot $null} | Should Throw 'Cannot validate argument on parameter'
+                    }
+                It "Should not accept an empty collection for -ServicesNot" {
+                    {&($this.CmdletName) -AppIdNot @()} | Should Throw 'Cannot validate argument on parameter'
+                    }
+                }
+            # -AppNameNot
+            If ($this.SupportedParams -contains 'AppNameNot') {      
+                It "Should not accept a null value for -AppNameNot" {
+                    {&($this.CmdletName) -AppNameNot $null} | Should Throw 'Cannot validate argument on parameter'
+                    }
+                It "Should not accept an empty collection for -AppNameNot" {
+                    {&($this.CmdletName) -AppNameNot @()} | Should Throw 'Cannot validate argument on parameter'
+                    }
+                }
+            # -UserDomain
+            If ($this.SupportedParams -contains 'UserDomain') {      
+                It "Should not accept a null value for -UserDomain" {
+                    {&($this.CmdletName) -UserDomain $null} | Should Throw 'Cannot validate argument on parameter'
+                    }
+                It "Should not accept an empty collection for -UserDomain" {
+                    {&($this.CmdletName) -UserDomain @()} | Should Throw 'Cannot validate argument on parameter'
+                }
+            
+
+
 
 
 
@@ -201,7 +253,7 @@ ForEach ($this in $CmdletsToTest) {
 
             }
 
-           
+
             
         #Context 'Scrypt Analyzer' {
         #    It 'Does not have any issues with the Script Analyzer' {
@@ -212,6 +264,7 @@ ForEach ($this in $CmdletsToTest) {
             
 
         }
+    }
 
 
 <#
