@@ -100,7 +100,7 @@ $CmdletsToTest += $ThisCmdlet
 # Get-MCASAppInfo
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASAppInfo'
-$ThisCmdlet.SupportedParams = @('AppId')
+$ThisCmdlet.SupportedParams = @('AppId') #need to make a custom test for -AppId for just one value here
 $CmdletsToTest += $ThisCmdlet
 
 # Get-MCASReport
