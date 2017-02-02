@@ -770,10 +770,12 @@ function Get-MCASActivity
         [ValidatePattern("\b[A-Za-z0-9]{24}\b")] 
         [string]$FileID,
 
+        # Limits the results to events listed for the specified AIP classification labels. Use ^ when denoting (external) labels. Example: @("^Private")
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()] 
         [array]$FileLabel,
 
+        # Limits the results to events excluded by the specified AIP classification labels. Use ^ when denoting (external) labels. Example: @("^Private")
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()] 
         [array]$FileLabelNot,
@@ -1331,10 +1333,12 @@ function Get-MCASFile
         [ValidateNotNullOrEmpty()]
         [file_access_level[]]$FileAccessLevel,
 
+        # Limits the results to files listed for the specified AIP classification labels. Use ^ when denoting (external) labels. Example: @("^Private")
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()] 
         [array]$FileLabel,
 
+        # Limits the results to files excluded by the specified AIP classification labels. Use ^ when denoting (external) labels. Example: @("^Private")
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()] 
         [array]$FileLabelNot,
