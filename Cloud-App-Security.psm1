@@ -258,11 +258,14 @@ function Invoke-MCASRestMethod
         [ValidateNotNullOrEmpty()] 
         [string]$Token,
 
+        [Parameter(Mandatory=$false)]
+        [string]$ApiVersion = '/v1',
+
         [Switch]$Raw
         )
     Process
     {
-        $Uri = "https://$TenantUri/api/v1/$Endpoint/"
+        $Uri = "https://$TenantUri/api$ApiVersion/$Endpoint/"
 
         If ($EndpointSuffix) {
             $Uri += "$EndpointSuffix/"
@@ -2267,6 +2270,8 @@ function Get-MCASStream
     )
     Begin
     {
+        $Endpoint = 'discovery'
+        
         Try {$TenantUri = Select-MCASTenantUri}
             Catch {Throw $_}
 
@@ -2275,24 +2280,20 @@ function Get-MCASStream
     }
     Process
     {        
-    }
-    
+    } 
     End
     {
-
             # Get the matching items and handle errors
             Try 
             {                  
-                $ListResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/discovery/streams/" -Headers @{Authorization = "Token $Token"}
+                $ListResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -ApiVersion $null -Endpoint $Endpoint -EndpointSuffix 'streams' -Method Get -Token $Token
             }
                 Catch
                 { 
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
                 $ListResponse.streams
-               
     }
-    
 }
 
 <#
