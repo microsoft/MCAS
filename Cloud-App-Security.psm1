@@ -780,6 +780,7 @@ function Get-MCASActivity
         # Limits the results by performing a free text search
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()] 
+        [ValidateScript({$_.Length -ge 5})]
         [string]$Text,
 
         # Limits the results to events listed for the specified File ID.
