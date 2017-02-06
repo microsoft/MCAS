@@ -3,7 +3,9 @@
 #Stop-Job -Name MCASTest1 -ErrorAction SilentlyContinue
 #Remove-Job -Name MCASTest1 -Force -ErrorAction SilentlyContinue
 
-
+If ($CASCredential -eq $null -or !($CASCredential)) {
+    Get-MCASCredential
+    }
 
 $CmdletsToTest = @()
 
@@ -11,7 +13,7 @@ $CmdletsToTest = @()
 # Get-MCASAccount
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASAccount'
-$ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection','UserName','AppId','AppName','AppIdNot','AppNameNot')
+$ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection','UserName','AppId','AppName','AppIdNot','AppNameNot','UserDomain')
 
 $ThisCmdlet.ResultSetSizeValidRange = @(1,5000) 
 $ThisCmdlet.ValidSortBy = @('Username','LastSeen') 

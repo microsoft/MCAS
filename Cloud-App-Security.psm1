@@ -213,7 +213,8 @@ $ActionList = @{
 
 #region ------------------------Internal Functions------------------------
 
-function ConvertTo-MCASJsonFilterString {
+function ConvertTo-MCASJsonFilterString 
+{
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory=$true)]
@@ -229,7 +230,7 @@ function ConvertTo-MCASJsonFilterString {
     Write-Verbose "ConvertTo-MCASJsonFilterString: Converted filter set $FilterSet to JSON filter $RawJsonFilter"
     
     Write-Output $RawJsonFilter
-    }
+}
 
 function Invoke-MCASRestMethod 
 {
@@ -259,6 +260,7 @@ function Invoke-MCASRestMethod
         [string]$Token,
 
         [Parameter(Mandatory=$false)]
+        [ValidateSet($null,'/v1')]
         [string]$ApiVersion = '/v1',
 
         [Switch]$Raw
@@ -967,7 +969,7 @@ function Get-MCASAlert
         # Fetches an alert object by its unique identifier.
         [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
         [ValidatePattern({^[A-Fa-f0-9]{24}$})]
-        [alias("_id")]
+        [Alias("_id")]
         [string]$Identity,
         
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
@@ -1017,7 +1019,8 @@ function Get-MCASAlert
         # Limits the results to items related to the specified user/users, such as 'alice@contoso.com','bob@contoso.com'. 
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [string[]]$User,
+        [Alias("User")]
+        [string[]]$UserName,
 
         # Limits the results to items related to the specified service IDs, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -1140,7 +1143,7 @@ function Get-MCASAlert
             If ($ResolutionStatus) {$FilterSet += @{'resolutionStatus'= @{'eq'=($ResolutionStatus | ForEach {$_ -as [int]})}}}
 
             # Simple filters
-            If ($User)       {$FilterSet += @{'entity.user'=    @{'eq'=$User}}}
+            If ($UserName)   {$FilterSet += @{'entity.user'=    @{'eq'=$UserName}}}
             If ($AppId)      {$FilterSet += @{'entity.service'= @{'eq'=$AppId}}}
             If ($AppIdNot)   {$FilterSet += @{'entity.service'= @{'neq'=$AppIdNot}}}
             If ($Policy)     {$FilterSet += @{'entity.policy'=  @{'eq'=$Policy}}}
