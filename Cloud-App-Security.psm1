@@ -300,27 +300,36 @@ function Invoke-MCASRestMethod
         If ($Raw) {
             $Response
             }
-                                                                                    Else {
-        # Windows/Powershell case insensitivity causes collision of 'id' (string) and 'Id' (integer) properties, so this patches the problem by adding _int to the integer Id property for accounts
-        If ($Endpoint -eq 'accounts' -and $Response -ccontains '"Id":') {
-            $Response = $Response -replace '"Id":', '"Id_int":'
-            Write-Verbose "Invoke-MCASRestMethod: A property name collision was detected in the response from MCAS REST API $Endpoint endpoint for the following property names; 'id' and 'Id'. The 'Id' property was renamed to 'Id_int'."
-            }
-    
-        # Convert from JSON to Powershell objects
-        $Response = $Response | ConvertFrom-Json
+        Else {            
+            # Windows/Powershell case insensitivity causes collision of properties with same name but different case, so this patches the problem 
+            If ($Endpoint -eq 'accounts' -and $Response -cmatch '"Id":') {
+                $Response = $Response -replace '"Id":', '"Id_int":'
+                Write-Verbose "Invoke-MCASRestMethod: A property name collision was detected in the response from MCAS REST API $Endpoint endpoint for the following property names; 'id' and 'Id'. The 'Id' property was renamed to 'Id_int'."
+                }
+            If ($Endpoint -eq 'files' -and $Response -cmatch '"Created":') {
+                $Response = $Response -replace '"Created":', '"Created_2":'
+                Write-Verbose "Invoke-MCASRestMethod: A property name collision was detected in the response from MCAS REST API $Endpoint endpoint for the following property names; 'created' and 'Created'. The 'Created' property was renamed to 'Created_2'."
+                }
+                    
+            # Convert from JSON to Powershell objects
+            Write-Verbose "Invoke-MCASRestMethod: Modified response before JSON conversion: $Response"
+            $Response = $Response | ConvertFrom-Json
 
-        # For list responses, we need the data property only
-        If ($Response.data) {
-            $Response = $Response.data
-            }
+            # For list responses with zero results, set an empty collection as response rather than returning the response metadata
+            If ($Response.total -eq 0) {
+                $Response = @()
+                }
+            # For list responses, get the data property only
+            ElseIf ($Response.data) {
+                $Response = $Response.data
+                }
 
-        # Add 'Identity' alias property, when appropriate
-        If ($Response._id) {
-            $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
-            }
+            # Add 'Identity' alias property, when appropriate
+            If ($Response._id) {
+                $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
+                }
     
-        $Response
+            $Response
         }
     }
 }
@@ -1661,7 +1670,7 @@ function Send-MCASDiscoveryLog
         Try 
         {       
             # Get an upload URL for the file
-            $GetUploadUrlResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/discovery/upload_url/?filename=$FileName&source=$LogType" -Headers @{Authorization = "Token $Token"} -Method Get  
+            $GetUploadUrlResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/discovery/upload_url/?filename=$FileName&source=$LogType" -Headers @{Authorization = "Token $Token"} -Method Get -UseBasicParsing
 
             $UploadUrl = $GetUploadUrlResponse.url           
         }
@@ -1703,11 +1712,11 @@ function Send-MCASDiscoveryLog
             # Upload the log file to the target URL obtained earlier, using appropriate headers 
             If ($FileUploadHeader)
             {
-                If (Test-Path $LogFile) {Invoke-RestMethod -Uri $UploadUrl -InFile $LogFile -Headers $FileUploadHeader -Method Put -ErrorAction Stop}
+                If (Test-Path $LogFile) {Invoke-RestMethod -Uri $UploadUrl -InFile $LogFile -Headers $FileUploadHeader -Method Put -UseBasicParsing -ErrorAction Stop}
             }
             Else
             {
-                If (Test-Path $LogFile) {Invoke-RestMethod -Uri $UploadUrl -InFile $LogFile -Method Put -ErrorAction Stop}
+                If (Test-Path $LogFile) {Invoke-RestMethod -Uri $UploadUrl -InFile $LogFile -Method Put -UseBasicParsing -ErrorAction Stop}
             }
         }
             Catch 
@@ -1735,7 +1744,7 @@ function Send-MCASDiscoveryLog
         Try 
         {
             # Finalize the upload           
-            $FinalizeUploadResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/discovery/done_upload/" -Headers @{Authorization = "Token $Token"} -Body @{'uploadUrl'=$UploadUrl;'inputStreamName'=$DiscoveryDataSource} -Method Post -ErrorAction Stop                
+            $FinalizeUploadResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/discovery/done_upload/" -Headers @{Authorization = "Token $Token"} -Body @{'uploadUrl'=$UploadUrl;'inputStreamName'=$DiscoveryDataSource} -Method Post -UseBasicParsing -ErrorAction Stop                
         }
             Catch 
             { 
@@ -2020,7 +2029,7 @@ function Get-MCASDiscoveredApp
   
             Try 
             {
-                $ListResponse = (Invoke-Restmethod -Uri "https://$TenantUri/cas/api/discovery/" -Body $Body -Headers @{Authorization = "Token $Token"} -ErrorAction Stop -Method Get).data            
+                $ListResponse = (Invoke-Restmethod -Uri "https://$TenantUri/cas/api/discovery/" -Body $Body -Headers @{Authorization = "Token $Token"} -UseBasicParsing -ErrorAction Stop -Method Get).data            
             }
             Catch 
             { 
@@ -2130,7 +2139,7 @@ function Get-MCASAppInfo
             # Get the matching alerts and handle errors
             Try 
             {
-                $ListResponse = ((Invoke-WebRequest -Uri "https://$TenantUri/api/v1/saasdb/" -Body $Body -Headers @{Authorization = "Token $Token"} -Method Get -ErrorAction Stop) | ConvertFrom-Json).data              
+                $ListResponse = ((Invoke-WebRequest -Uri "https://$TenantUri/api/v1/saasdb/" -Body $Body -Headers @{Authorization = "Token $Token"} -UseBasicParsing -Method Get -ErrorAction Stop) | ConvertFrom-Json).data              
             }
             Catch 
             { 
@@ -2231,7 +2240,7 @@ function Get-MCASReport
             # Get the matching items and handle errors
             Try 
             {                  
-                $ListResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/reports/$Endpoint" -Headers @{Authorization = "Token $Token"}
+                $ListResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/reports/$Endpoint" -Headers @{Authorization = "Token $Token"} -UseBasicParsing
             }
                 Catch
                 { 
