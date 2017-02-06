@@ -24,7 +24,7 @@ $CmdletsToTest += $ThisCmdlet
 # Get-MCASActivity
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASActivity'
-$ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection','UserName','AppId','AppName','AppIdNot','AppNameNot')
+$ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection','UserName','AppId','AppName','AppIdNot','AppNameNot','Text')
 
 $ThisCmdlet.ResultSetSizeValidRange = @(1,10000) 
 $ThisCmdlet.ValidSortBy = @('Date','Created') 
@@ -187,7 +187,7 @@ ForEach ($this in $CmdletsToTest) {
 
             ########## FILTER PARAM VALIDATIONS ##########
 
-            # Test null values and empty collections
+            # Test null values, empty collections, etc
                 
             # -UserName
             If ($this.SupportedParams -contains 'UserName') {      
@@ -241,8 +241,24 @@ ForEach ($this in $CmdletsToTest) {
                     }
                 It "Should not accept an empty collection for -UserDomain" {
                     {&($this.CmdletName) -UserDomain @()} | Should Throw 'Cannot validate argument on parameter'
+                    }
                 }
             
+            # -Text
+            If ($this.SupportedParams -contains 'Text') {      
+                It "Should not accept a null value for -Text" {
+                    {&($this.CmdletName) -Text $null} | Should Throw 'Cannot validate argument on parameter'
+                    }
+                It "Should not accept an empty collection for -Text" {
+                    {&($this.CmdletName) -Text @()} | Should Throw 'Cannot process argument transformation on parameter'
+                    }
+                It "Should not accept a collection for -Text" {
+                    {&($this.CmdletName) -Text @('12345','12345')} | Should Throw 'Cannot process argument transformation on parameter'
+                    }
+                It "Should not accept a string for -Text with <5 chars" {
+                    {&($this.CmdletName) -Text '1234'} | Should Throw 'Cannot validate argument on parameter'
+                    }
+                }
 
 
 
@@ -252,9 +268,7 @@ ForEach ($this in $CmdletsToTest) {
 
 
 
-
-            }
-
+ 
 
             
         #Context 'Scrypt Analyzer' {

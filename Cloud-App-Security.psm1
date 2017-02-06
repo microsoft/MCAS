@@ -227,7 +227,7 @@ function ConvertTo-MCASJsonFilterString
         $Temp += ((($Filter | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{')) 
         }
     $RawJsonFilter = ('{'+($Temp -join '},')+'}}')
-    Write-Verbose "ConvertTo-MCASJsonFilterString: Converted filter set $FilterSet to JSON filter $RawJsonFilter"
+    Write-Verbose "ConvertTo-MCASJsonFilterString: Converted filter set to JSON filter: $RawJsonFilter"
     
     Write-Output $RawJsonFilter
 }
