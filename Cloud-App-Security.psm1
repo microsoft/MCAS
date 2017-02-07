@@ -1,6 +1,4 @@
-﻿#$ErrorActionPreference = 'Stop'
-
-
+﻿
 #region ----------------------------Enum Types----------------------------
 
 enum mcas_app
@@ -2506,30 +2504,3 @@ function Get-MCASGovernanceLog
 }
 
 #endregion -----------------------------Cmdlets-----------------------------
-
-#region ------------------------------Export------------------------------
-
-# Vars to export
-Export-ModuleMember -Variable CASCredential
-
-# Cmdlets to export
-Export-ModuleMember -Function Get-MCASAccount -Alias *
-Export-ModuleMember -Function Get-MCASActivity -Alias *
-Export-ModuleMember -Function Get-MCASAlert -Alias *
-Export-ModuleMember -Function Get-MCASCredential -Alias *
-Export-ModuleMember -Function Get-MCASFile -Alias *
-Export-ModuleMember -Function Send-MCASDiscoveryLog -Alias *
-Export-ModuleMember -Function Set-MCASAlert -Alias *
-Export-ModuleMember -Function Get-MCASDiscoveredApp -Alias *
-Export-ModuleMember -Function Get-MCASAppInfo -Alias *
-Export-ModuleMember -Function Get-MCASReport -Alias *
-Export-ModuleMember -Function Get-MCASStream -Alias *
-Export-ModuleMember -Function Get-MCASGovernanceLog -Alias *
-
-# Items to only export during dev/testing only
-#Export-ModuleMember -Function ConvertTo-MCASJsonFilterString -Alias *
-#Export-ModuleMember -Function Invoke-MCASRestMethod -Alias *
-#Export-ModuleMember -Function Select-MCASTenantUri -Alias *
-#Export-ModuleMember -Function Select-MCASToken -Alias *
-
-#endregion ------------------------------Export------------------------------
