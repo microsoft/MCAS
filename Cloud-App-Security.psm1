@@ -273,6 +273,8 @@ function Invoke-MCASRestMethod
 
         Try {
         If ($Body) {
+            $JsonBody = $Body | ConvertTo-Json -Compress 
+            Write-Verbose "Invoke-MCASRestMethod: Request body: $JsonBody"
             $Response = Invoke-WebRequest -Uri $Uri -Body $Body -Headers @{Authorization = "Token $Token"} -Method $Method -UseBasicParsing -ErrorAction Stop
             }
         Else {   
@@ -992,7 +994,8 @@ function Get-MCASAlert
 
         # Specifies the property by which to sort the results. Possible Values: 'Date','Severity', 'ResolutionStatus'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Date','Severity','ResolutionStatus')]
+        #[ValidateSet('Date','Severity','ResolutionStatus')] # Additional sort fields removed by PG
+        [ValidateSet('Date')]
         [string]$SortBy,
                 
         # Specifies the direction in which to sort the results. Possible Values: 'Ascending','Descending'.
