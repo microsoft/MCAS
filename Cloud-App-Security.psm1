@@ -302,13 +302,16 @@ function Invoke-MCASRestMethod
             }
         Else {            
             # Windows/Powershell case insensitivity causes collision of properties with same name but different case, so this patches the problem 
-            If ($Endpoint -eq 'accounts' -and $Response -cmatch '"Id":') {
-                $Response = $Response -replace '"Id":', '"Id_int":'
+            If ($Endpoint -eq 'accounts') {
+                $Response = $Response -creplace '"Id":', '"Id_int":'
                 Write-Verbose "Invoke-MCASRestMethod: A property name collision was detected in the response from MCAS REST API $Endpoint endpoint for the following property names; 'id' and 'Id'. The 'Id' property was renamed to 'Id_int'."
                 }
-            If ($Endpoint -eq 'files' -and $Response -cmatch '"Created":') {
-                $Response = $Response -replace '"Created":', '"Created_2":'
+            If ($Endpoint -eq 'files') {
+                $Response = $Response -creplace '"Created":', '"Created_2":'
                 Write-Verbose "Invoke-MCASRestMethod: A property name collision was detected in the response from MCAS REST API $Endpoint endpoint for the following property names; 'created' and 'Created'. The 'Created' property was renamed to 'Created_2'."
+                
+                $Response = $Response -creplace '"ftags":', '"ftags_2":'
+                Write-Verbose "Invoke-MCASRestMethod: A property name collision was detected in the response from MCAS REST API $Endpoint endpoint for the following property names; 'ftags' and 'fTags'. The 'ftags' property was renamed to 'ftags_2'."
                 }
                     
             # Convert from JSON to Powershell objects
