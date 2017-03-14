@@ -272,16 +272,16 @@ function Invoke-MCASRestMethod
             }
 
         Try {
-        If ($Body) {
-            $JsonBody = $Body | ConvertTo-Json -Compress 
-            Write-Verbose "Invoke-MCASRestMethod: Request body: $JsonBody"
-            $Response = Invoke-WebRequest -Uri $Uri -Body $Body -Headers @{Authorization = "Token $Token"} -Method $Method -UseBasicParsing -ErrorAction Stop
-            }
-        Else {   
-            $Response = Invoke-WebRequest -Uri $Uri -Headers @{Authorization = "Token $Token"} -Method $Method -UseBasicParsing -ErrorAction Stop
-            }
+            If ($Body) {
+                $JsonBody = $Body | ConvertTo-Json -Compress 
+                Write-Verbose "Invoke-MCASRestMethod: Request body: $JsonBody"
+                $Response = Invoke-WebRequest -Uri $Uri -Body $Body -Headers @{Authorization = "Token $Token"} -Method $Method -UseBasicParsing -ErrorAction Stop
+                }
+            Else {   
+                $Response = Invoke-WebRequest -Uri $Uri -Headers @{Authorization = "Token $Token"} -Method $Method -UseBasicParsing -ErrorAction Stop
+                }
         }
-            Catch {
+        Catch {
             If ($_ -like 'The remote server returned an error: (404) Not Found.') {
                 Write-Error "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid." -ErrorAction Stop
                 }
@@ -294,7 +294,7 @@ function Invoke-MCASRestMethod
             Else {
                 Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_" -ErrorAction Stop
                 }
-            }
+        }
     
         Write-Verbose "Invoke-MCASRestMethod: Raw response from MCAS REST API: $Response"
         If ($Raw) {
@@ -2510,3 +2510,18 @@ function Get-MCASGovernanceLog
 }
 
 #endregion -----------------------------Cmdlets-----------------------------
+
+#region ----------------------------Exports----------------------------
+
+# Cmdlets to export (must be exported as functions, not cmdlets)
+Export-ModuleMember -Function Get-MCAS*
+Export-ModuleMember -Function Send-MCASDiscoveryLog
+Export-ModuleMember -Function Set-MCASAlert
+
+# Vars to export (must be exported here, even if also included in the module manifest in 'VariablesToExport'
+Export-ModuleMember -Variable CASCredential
+
+# Aliases to export
+Export-ModuleMember -Alias *
+
+#endregion ----------------------------Exports----------------------------
