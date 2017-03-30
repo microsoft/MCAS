@@ -40,6 +40,16 @@ enum device_type
     ZSCALER
     }
 
+enum blockscript_format
+    {
+    BLUECOAT_PROXYSG = 102
+    CISCO_ASA = 104
+    FORTINET_FORTIGATE = 108
+    PALO_ALTO = 112
+    JUNIPER_SRX = 129
+    WEBSENSE = 135
+    }
+
 enum ip_category
     {
     None = 0
@@ -238,7 +248,7 @@ function Invoke-MCASRestMethod
         [string]$TenantUri,
 
         [Parameter(Mandatory=$true)]
-        [ValidateSet('accounts','activities','alerts','discovery','files','governance')]
+        [ValidateSet('accounts','activities','alerts','discovery','files','governance','discovery_block_scripts')]
         [string]$Endpoint,
 
         [Parameter(Mandatory=$true)]
@@ -268,8 +278,8 @@ function Invoke-MCASRestMethod
         $Uri = "https://$TenantUri/api$ApiVersion/$Endpoint/"
 
         If ($EndpointSuffix) {
-            $Uri += "$EndpointSuffix/"
-            }
+            $Uri += $EndpointSuffix
+            }      
 
         Try {
             If ($Body) {
@@ -312,8 +322,8 @@ function Invoke-MCASRestMethod
                 
                 $Response = $Response -creplace '"ftags":', '"ftags_2":'
                 Write-Verbose "Invoke-MCASRestMethod: A property name collision was detected in the response from MCAS REST API $Endpoint endpoint for the following property names; 'ftags' and 'fTags'. The 'ftags' property was renamed to 'ftags_2'."
-                }
-                    
+                } 
+ 
             # Convert from JSON to Powershell objects
             Write-Verbose "Invoke-MCASRestMethod: Modified response before JSON conversion: $Response"
             $Response = $Response | ConvertFrom-Json
@@ -331,7 +341,6 @@ function Invoke-MCASRestMethod
             If ($Response._id) {
                 $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
                 }
-    
             $Response
         }
     }
@@ -550,7 +559,7 @@ function Get-MCASAccount
             Try 
             {
                 # Fetch the item by its id
-                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix $Identity -Method Post -Token $Token
+                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
             }
                 Catch
                 { 
@@ -847,7 +856,7 @@ function Get-MCASActivity
             Try 
             {
                 # Fetch the item by its id
-                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix $Identity -Method Post -Token $Token
+                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
             }
                 Catch
                 { 
@@ -1101,7 +1110,7 @@ function Get-MCASAlert
             Try 
             {
                 # Fetch the item by its id
-                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix $Identity -Method Post -Token $Token
+                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
             }
                 Catch
                 { 
@@ -1339,7 +1348,6 @@ function Get-MCASFile
         [int]$Skip = 0,
 
 
-
         ##### FILTER PARAMS #####
 
         # Limits the results to items of the specified file type. Value Map: 0 = Other,1 = Document,2 = Spreadsheet, 3 = Presentation, 4 = Text, 5 = Image, 6 = Folder.
@@ -1493,7 +1501,7 @@ function Get-MCASFile
             Try 
             {
                 # Fetch the item by its id
-                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix $Identity -Method Post -Token $Token
+                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
             }
                 Catch
                 { 
@@ -1536,8 +1544,7 @@ function Get-MCASFile
             If ($FiletypeNot){
                 $Filetypehashtable = @{}
                 $FiletypeNot | ForEach {$Filetypehashtable.Add($_,$_)}
-                }
-                
+                }                
 
             # Additional parameter validations and mutual exclusions
             If ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
@@ -1872,7 +1879,7 @@ function Set-MCASAlert
         Try 
             {
                 # Set the alert's state by its id
-                $SetResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix $Identity/$Action -Method Post -Token $Token
+                $SetResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/$Action/" -Method Post -Token $Token
             }
             Catch
                 { 
@@ -1971,7 +1978,7 @@ function Get-MCASDiscoveredApp
         [string]$ScoreRange='1-10',
 
         # Limits the results by stream ID, for example '577d49d72b1c51a0762c61b0'. The stream ID can be found in the URL bar of the console when looking at the Discovery dashboard.
-        [Parameter(ParameterSetName='List', Mandatory=$true, Position=0)]
+        [Parameter(ParameterSetName='List', Mandatory=$true, Position=0, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
         [ValidatePattern('^[A-Fa-f0-9]{24}$')] 
         [ValidateNotNullOrEmpty()]
         [string]$StreamId,
@@ -2303,7 +2310,7 @@ function Get-MCASStream
             # Get the matching items and handle errors
             Try 
             {                  
-                $ListResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -ApiVersion $null -Endpoint $Endpoint -EndpointSuffix 'streams' -Method Get -Token $Token
+                $ListResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -ApiVersion $null -Endpoint $Endpoint -EndpointSuffix 'streams/' -Method Get -Token $Token
             }
                 Catch
                 { 
@@ -2437,7 +2444,7 @@ function Get-MCASGovernanceLog
             Try 
             {
                 # Fetch the item by its id
-                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix $Identity -Method Post -Token $Token
+                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
             }
                 Catch
                 { 
@@ -2509,6 +2516,100 @@ function Get-MCASGovernanceLog
     }
 }
 
+<#
+.Synopsis
+   Exports a proxy or firewall block script for the unsanctioned apps in your Cloud App Security tenant.
+.DESCRIPTION
+   Exports a block script, in the specified firewall or proxy device type format, for the unsanctioned apps and requires a credential be provided.
+
+   'Export-MCASBlockScript -Appliance <device format>' returns the text to be used in a Websense block script. Methods available are only those available to custom objects by default. 
+.EXAMPLE
+   Export-MCASBlockScript -Appliance WEBSENSE
+
+    dest_host=lawyerstravel.com action=deny
+    dest_host=wellsfargo.com action=deny
+    dest_host=usbank.com action=deny
+    dest_host=care2.com action=deny
+    dest_host=careerbuilder.com action=deny
+    dest_host=abcnews.go.com action=deny
+    dest_host=accuweather.com action=deny
+    dest_host=zoovy.com action=deny
+    dest_host=cars.com action=deny
+
+   This pulls back string to be used as a block script in Websense format.
+
+.EXAMPLE
+   Export-MCASBlockScript -Appliance BLUECOAT_PROXYSG
+
+    url.domain=lawyerstravel.com deny
+    url.domain=wellsfargo.com deny
+    url.domain=usbank.com deny
+    url.domain=care2.com deny
+    url.domain=careerbuilder.com deny
+    url.domain=abcnews.go.com deny
+    url.domain=accuweather.com deny
+    url.domain=zoovy.com deny
+    url.domain=cars.com deny
+
+   This pulls back string to be used as a block script in BlueCoat format.
+
+.EXAMPLE 
+   Export-MCASBlockScript -Appliance WEBSENSE | Set-Content MyNewWebsenseBlockScript.txt
+
+   This pulls back a Websense block script in text string format and creates a new text file out of it.
+.FUNCTIONALITY
+   Export-MCASBlockScript is intended to function as an export mechanism for obtaining block scripts from Cloud App Security.
+
+#>
+function Export-MCASBlockScript
+{
+    [CmdletBinding()]
+    [Alias('Export-CASBlockScript')]
+    Param
+    (   
+        # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
+        [Parameter(Mandatory=$false)]
+        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
+        [string]$TenantUri,
+
+        # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [System.Management.Automation.PSCredential]$Credential,
+
+        # Specifies the appliance type to use for the format of the block script. Possible Values: BLUECOAT_PROXYSG, CISCO_ASA, FORTINET_FORTIGATE, PALO_ALTO, JUNIPER_SRX, WEBSENSE
+        [Parameter(Mandatory=$true,ValueFromPipeline=$false,Position=0)]
+        [blockscript_format]$Appliance
+    )
+    Begin
+    {
+        $Endpoint = 'discovery_block_scripts'
+        
+        Try {$TenantUri = Select-MCASTenantUri}
+            Catch {Throw $_}
+
+        Try {$Token = Select-MCASToken}
+            Catch {Throw $_}
+    }
+    Process
+    {            
+        Try 
+        {
+            # Fetch the item by its id
+            $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix ('?format='+($Appliance -as [int])) -Method Get -Token $Token -ApiVersion $null -Raw
+        }
+            Catch
+            { 
+                Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+            }
+        $FetchResponse = $FetchResponse.Content
+        $FetchResponse
+    }
+    End
+    {
+    }
+}
+
 #endregion -----------------------------Cmdlets-----------------------------
 
 #region ----------------------------Exports----------------------------
@@ -2517,6 +2618,7 @@ function Get-MCASGovernanceLog
 Export-ModuleMember -Function Get-MCAS*
 Export-ModuleMember -Function Send-MCASDiscoveryLog
 Export-ModuleMember -Function Set-MCASAlert
+Export-ModuleMember -Function Export-MCASBlockScript
 
 # Vars to export (must be exported here, even if also included in the module manifest in 'VariablesToExport'
 Export-ModuleMember -Variable CASCredential

@@ -14,7 +14,6 @@ $CmdletsToTest = @()
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASAccount'
 $ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection','UserName','AppId','AppName','AppIdNot','AppNameNot','UserDomain')
-
 $ThisCmdlet.ResultSetSizeValidRange = @(1,5000) 
 $ThisCmdlet.ValidSortBy = @('Username','LastSeen') 
 $ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 
@@ -25,7 +24,6 @@ $CmdletsToTest += $ThisCmdlet
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASActivity'
 $ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection','UserName','AppId','AppName','AppIdNot','AppNameNot','Text')
-
 $ThisCmdlet.ResultSetSizeValidRange = @(1,10000) 
 $ThisCmdlet.ValidSortBy = @('Date','Created') 
 $ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 
@@ -37,9 +35,8 @@ $CmdletsToTest += $ThisCmdlet
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASAlert'
 $ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection','AppId','AppName','AppIdNot','AppNameNot')
-
 $ThisCmdlet.ResultSetSizeValidRange = @(1,10000) 
-$ThisCmdlet.ValidSortBy = @('Date','Severity','ResolutionStatus') 
+$ThisCmdlet.ValidSortBy = @('Date') 
 $ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 
 $ThisCmdlet.SupportsSkip = $true
 $CmdletsToTest += $ThisCmdlet
@@ -49,7 +46,6 @@ $CmdletsToTest += $ThisCmdlet
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASFile'
 $ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection','AppId','AppName','AppIdNot','AppNameNot')
-
 $ThisCmdlet.ResultSetSizeValidRange = @(1,5000) 
 $ThisCmdlet.ValidSortBy = @('DateModified') 
 $ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 
@@ -60,7 +56,6 @@ $CmdletsToTest += $ThisCmdlet
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'MCASDiscoveredApp'
 $ThisCmdlet.SupportedParams = @('Skip','ResultSetSize') # need to add'SortBy','SortDirection'
-
 $ThisCmdlet.ResultSetSizeValidRange = @(1,5000) 
 $ThisCmdlet.ValidSortBy = @('IpCount','LastUsed','Name','Transactions','Upload','UserCount') 
 $ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 
@@ -71,16 +66,10 @@ $CmdletsToTest += $ThisCmdlet
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASGovernanceLog'
 $ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection','AppId','AppName','AppIdNot','AppNameNot')
-
 $ThisCmdlet.ResultSetSizeValidRange = @(1,10000) 
 $ThisCmdlet.ValidSortBy = @('timestamp') 
 $ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 
 $CmdletsToTest += $ThisCmdlet
-
-
-
-
-
 
 
 # Set-MCASAlert
@@ -88,6 +77,8 @@ $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Set-MCASAlert'
 $ThisCmdlet.SupportedParams = @('Identity')
 $CmdletsToTest += $ThisCmdlet
+
+
 
 
 
@@ -120,6 +111,10 @@ $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Send-MCASDiscoveryLog'
 $CmdletsToTest += $ThisCmdlet
 
+# Export-MCASBlockScript
+$ThisCmdlet = @{}
+$ThisCmdlet.CmdletName = 'Export-MCASBlockScript'
+$CmdletsToTest += $ThisCmdlet
 #>
 
 
@@ -129,7 +124,7 @@ ForEach ($this in $CmdletsToTest) {
     Describe $this.CmdletName {
         Mock -ModuleName Cloud-App-Security Get-Date { return (New-Object datetime(2000,1,1)) }
     
-        Context 'Parameter Validation' {
+        Context 'Common Parameter Validation' {
 
             ## Test null credential (all cmdlets except Get-MCASCredential)
             #If ($this.CmdletName -ne 'Get-MCASCredential' -and $this.ResultSetSizeValidRange) {  
