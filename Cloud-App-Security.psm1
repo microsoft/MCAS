@@ -2600,15 +2600,14 @@ function Export-MCASBlockScript
     {            
         Try 
         {
-            # Fetch the item by its id
-            $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix ('?format='+($Appliance -as [int])) -Method Get -Token $Token -ApiVersion $null -Raw
+            $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix ('?format='+($Appliance -as [int])) -Method Get -Token $Token -ApiVersion $null -Raw
         }
             Catch
             { 
                 Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
             }
-        $FetchResponse = $FetchResponse.Content
-        $FetchResponse
+        $Response = $Response.Content
+        $Response
     }
     End
     {
