@@ -2006,16 +2006,11 @@ function Get-MCASDiscoveredApp
     )
     Begin
     {
-        If (!$TenantUri) # If -TenantUri specified, use it and skip these
-        {
-            If ($CASCredential) {$TenantUri = $CASCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
-            If ($Credential)                          {$TenantUri = $Credential.GetNetworkCredential().username} # If -Credential specfied, use it over the well-known cred session var
-        }
-        If (!$TenantUri) {Write-Error 'No tenant URI available. Please check the -TenantUri parameter or username of the supplied credential' -ErrorAction Stop}
-      
-        If ($CASCredential) {$Token = $CASCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
-        If ($Credential)                          {$Token = $Credential.GetNetworkCredential().Password.ToLower()} # If -Credential specfied, use it over the well-known cred session var
-        If (!$Token) {Write-Error 'No token available. Please check the OAuth token (password) of the supplied credential' -ErrorAction Stop}
+        Try {$TenantUri = Select-MCASTenantUri}
+            Catch {Throw $_}
+
+        Try {$Token = Select-MCASToken}
+            Catch {Throw $_}
     }
     Process
     {        
@@ -2133,16 +2128,11 @@ function Get-MCASAppInfo
     )
     Begin
     {
-        If (!$TenantUri) # If -TenantUri specified, use it and skip these
-        {
-            If ($CASCredential) {$TenantUri = $CASCredential.GetNetworkCredential().username} # If well-known cred session var present, use it
-            If ($Credential)                          {$TenantUri = $Credential.GetNetworkCredential().username} # If -Credential specfied, use it over the well-known cred session var
-        }
-        If (!$TenantUri) {Write-Error 'No tenant URI available. Please check the -TenantUri parameter or username of the supplied credential' -ErrorAction Stop}
-      
-        If ($CASCredential) {$Token = $CASCredential.GetNetworkCredential().Password.ToLower()} # If well-known cred session var present, use it
-        If ($Credential)                          {$Token = $Credential.GetNetworkCredential().Password.ToLower()} # If -Credential specfied, use it over the well-known cred session var
-        If (!$Token) {Write-Error 'No token available. Please check the OAuth token (password) of the supplied credential' -ErrorAction Stop}
+        Try {$TenantUri = Select-MCASTenantUri}
+            Catch {Throw $_}
+
+        Try {$Token = Select-MCASToken}
+            Catch {Throw $_}
     }
     Process
     { 
