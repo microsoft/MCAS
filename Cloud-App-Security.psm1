@@ -3,18 +3,22 @@
 
 enum mcas_app
     {
-    Box = 10489
-    Okta = 10980
-    Salesforce = 11114
-    Office_365 = 11161
     Amazon_Web_Services = 11599
+    Box = 10489
     Dropbox = 11627
     Google_Apps = 11770
-    ServiceNow = 14509
     Microsoft_OneDrive_for_Business = 15600
     Microsoft_Cloud_App_Security = 20595
     Microsoft_Sharepoint_Online = 20892
+    Microsoft_Skype_for_Business = 25275
     Microsoft_Exchange_Online = 20893
+    Microsoft_Teams = 28375
+    Microsoft_Yammer = 11522
+    Microsoft_Power_BI = 26324
+    Office_365 = 11161
+    Okta = 10980
+    Salesforce = 11114
+    ServiceNow = 14509
     }
 
 enum device_type
