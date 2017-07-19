@@ -259,6 +259,8 @@ function Invoke-MCASRestMethod
         [ValidateSet('Get','Post','Put')]
         [string]$Method,        
         
+        [switch]$CASPrefix,
+
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()] 
         [string]$EndpointSuffix,
@@ -279,7 +281,16 @@ function Invoke-MCASRestMethod
         )
     Process
     {
-        $Uri = "https://$TenantUri/api$ApiVersion/$Endpoint/"
+        If ($CASPrefix) {
+            $Uri = "https://$TenantUri/cas/api$ApiVersion/$Endpoint/"
+            }
+        Else {
+            $Uri = "https://$TenantUri/api$ApiVersion/$Endpoint/"
+            }
+
+        If ($EndpointPrefix) {
+            $Uri += $EndpointSuffix
+            }      
 
         If ($EndpointSuffix) {
             $Uri += $EndpointSuffix
