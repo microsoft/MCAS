@@ -574,13 +574,13 @@ function Get-MCASAccount
             Try 
             {
                 # Fetch the item by its id
-                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
             }
                 Catch
                 { 
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-            $FetchResponse
+            $Response
         }
     }
     End
@@ -645,13 +645,13 @@ function Get-MCASAccount
             # Get the matching items and handle errors
             Try 
             {
-                $ListResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token                    
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token                    
             }
                 Catch 
                 { 
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-            $ListResponse
+            $Response
         }
     }
 }
@@ -871,13 +871,13 @@ function Get-MCASActivity
             Try 
             {
                 # Fetch the item by its id
-                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
             }
                 Catch
                 { 
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-            $FetchResponse
+            $Response
         }
     }
     End
@@ -956,13 +956,13 @@ function Get-MCASActivity
             # Get the matching items and handle errors
             Try 
             {
-                $ListResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token                    
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token                    
             }
                 Catch 
                 { 
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-            $ListResponse
+            $Response
         }
     }
 }
@@ -1125,13 +1125,13 @@ function Get-MCASAlert
             Try 
             {
                 # Fetch the item by its id
-                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
             }
                 Catch
                 { 
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-            $FetchResponse
+            $Response
         }
     }
     End
@@ -1200,13 +1200,13 @@ function Get-MCASAlert
             # Get the matching items and handle errors
             Try 
             {
-                $ListResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token                    
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token                    
             }
                 Catch 
                 { 
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-            $ListResponse
+            $Response
         }
     }
 }
@@ -1516,13 +1516,13 @@ function Get-MCASFile
             Try 
             {
                 # Fetch the item by its id
-                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
             }
                 Catch
                 { 
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-            $FetchResponse
+            $Response
         }
     }
     End
@@ -1609,13 +1609,13 @@ function Get-MCASFile
             # Get the matching items and handle errors
             Try 
             {
-                $ListResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token                    
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token                    
             }
                 Catch 
                 { 
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-            $ListResponse
+            $Response
         }
     }
 }
@@ -2051,7 +2051,7 @@ function Get-MCASDiscoveredApp
   
             Try 
             {
-                $ListResponse = (Invoke-Restmethod -Uri "https://$TenantUri/cas/api/discovery/" -Body $Body -Headers @{Authorization = "Token $Token"} -UseBasicParsing -ErrorAction Stop -Method Get).data            
+                $Response = (Invoke-Restmethod -Uri "https://$TenantUri/cas/api/discovery/" -Body $Body -Headers @{Authorization = "Token $Token"} -UseBasicParsing -ErrorAction Stop -Method Get).data            
             }
             Catch 
             { 
@@ -2072,7 +2072,7 @@ function Get-MCASDiscoveredApp
                     Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
                 }
             }
-            If ($ListResponse) {Write-Output $ListResponse | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
+            If ($Response) {Write-Output $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
         }
     }
 }
@@ -2156,7 +2156,7 @@ function Get-MCASAppInfo
             # Get the matching alerts and handle errors
             Try 
             {
-                $ListResponse = ((Invoke-WebRequest -Uri "https://$TenantUri/api/v1/saasdb/" -Body $Body -Headers @{Authorization = "Token $Token"} -UseBasicParsing -Method Get -ErrorAction Stop) | ConvertFrom-Json).data              
+                $Response = ((Invoke-WebRequest -Uri "https://$TenantUri/api/v1/saasdb/" -Body $Body -Headers @{Authorization = "Token $Token"} -UseBasicParsing -Method Get -ErrorAction Stop) | ConvertFrom-Json).data              
             }
             Catch 
             { 
@@ -2177,7 +2177,7 @@ function Get-MCASAppInfo
                     Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
                 }
             }
-            If ($ListResponse) {Write-Output $ListResponse | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
+            If ($Response) {Write-Output $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
         }       
     }
     End
@@ -2257,13 +2257,13 @@ function Get-MCASReport
             # Get the matching items and handle errors
             Try 
             {                  
-                $ListResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/reports/$Endpoint" -Headers @{Authorization = "Token $Token"} -UseBasicParsing
+                $Response = Invoke-RestMethod -Uri "https://$TenantUri/api/reports/$Endpoint" -Headers @{Authorization = "Token $Token"} -UseBasicParsing
             }
                 Catch
                 { 
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-                $ListResponse.data
+                $Response.data
                
     }
     
@@ -2315,13 +2315,13 @@ function Get-MCASStream
             # Get the matching items and handle errors
             Try 
             {                  
-                $ListResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -ApiVersion $null -Endpoint $Endpoint -EndpointSuffix 'streams/' -Method Get -Token $Token
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -ApiVersion $null -Endpoint $Endpoint -EndpointSuffix 'streams/' -Method Get -Token $Token
             }
                 Catch
                 { 
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-                $ListResponse.streams
+                $Response.streams
     }
 }
 
@@ -2449,13 +2449,13 @@ function Get-MCASGovernanceLog
             Try 
             {
                 # Fetch the item by its id
-                $FetchResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
             }
                 Catch
                 { 
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-            $FetchResponse
+            $Response
         }
     }
     End
@@ -2508,14 +2508,14 @@ function Get-MCASGovernanceLog
             # Get the matching items and handle errors
             Try 
             {
-                $ListResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token                    
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token                    
             }
                 Catch 
                 { 
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-            If ($ListResponse.total -eq 0){Write-Verbose 'No governance log entries found for specified filters.'}
-            Else {$ListResponse}
+            If ($Response.total -eq 0){Write-Verbose 'No governance log entries found for specified filters.'}
+            Else {$Response}
             
         }
     }
