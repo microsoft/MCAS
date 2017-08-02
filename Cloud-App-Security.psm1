@@ -502,8 +502,8 @@ function Get-MCASAccount
 
         # Specifies the maximum number of results (up to 5000) to retrieve when listing items matching the specified filter criteria.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateRange(1,5000)]
-        [int]$ResultSetSize = 5000,
+        [ValidateRange(1,100)]
+        [int]$ResultSetSize = 100,
 
         # Specifies the number of records, from the beginning of the result set, to skip.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -722,8 +722,8 @@ function Get-MCASActivity
 
         # Specifies the maximum number of results (up to 10000) to retrieve when listing items matching the specified filter criteria.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateRange(1,10000)]
-        [int]$ResultSetSize = 10000,
+        [ValidateRange(1,100)]
+        [int]$ResultSetSize = 100,
 
         # Specifies the number of records, from the beginning of the result set, to skip.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -1032,8 +1032,8 @@ function Get-MCASAlert
 
         # Specifies the maximum number of results (up to 10000) to retrieve when listing items matching the specified filter criteria.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateRange(1,10000)]
-        [int]$ResultSetSize = 10000,
+        [ValidateRange(1,100)]
+        [int]$ResultSetSize = 100,
 
         # Specifies the number of records, from the beginning of the result set, to skip.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -1354,8 +1354,8 @@ function Get-MCASFile
 
         # Specifies the maximum number of results (up to 5000) to retrieve when listing items matching the specified filter criteria.  
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateRange(1,5000)]
-        [int]$ResultSetSize = 5000,
+        [ValidateRange(1,100)]
+        [int]$ResultSetSize = 100,
 
         # Specifies the number of records, from the beginning of the result set, to skip.  
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -1976,9 +1976,7 @@ function Get-MCASDiscoveredApp
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateScript({$_ -gt -1})]
         [int]$Skip = 0,
-
-
-
+        
         ##### FILTER PARAMS #####
         
         # Limits results by category type. A preset list of categories are included.
@@ -2250,7 +2248,6 @@ function Get-MCASReport
     Process
     {        
     }
-    
     End
     {
 
