@@ -1,4 +1,7 @@
-﻿
+﻿#region ----------------------------Constants----------------------------
+#Set-Variable MaxResultSize -Option Constant -Value 100
+#endregion ----------------------------Constants----------------------------
+
 #region ----------------------------Enum Types----------------------------
 
 enum mcas_app
@@ -2386,8 +2389,8 @@ function Get-MCASGovernanceLog
 
         # Specifies the maximum number of results (up to 10000) to retrieve when listing items matching the specified filter criteria.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateRange(1,10000)]
-        [int]$ResultSetSize = 5000,
+        [ValidateRange(1,100)]
+        [int]$ResultSetSize = 100,
 
         # Specifies the number of records, from the beginning of the result set, to skip.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -2625,6 +2628,7 @@ Export-ModuleMember -Function Get-MCAS*
 Export-ModuleMember -Function Send-MCASDiscoveryLog
 Export-ModuleMember -Function Set-MCASAlert
 Export-ModuleMember -Function Export-MCASBlockScript
+Export-ModuleMember -Function Invoke-MCASRestMethod
 
 # Vars to export (must be exported here, even if also included in the module manifest in 'VariablesToExport'
 Export-ModuleMember -Variable CASCredential
