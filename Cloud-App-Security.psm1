@@ -2591,32 +2591,25 @@ function Export-MCASBlockScript
         [Parameter(Mandatory=$true,ValueFromPipeline=$false,Position=0)]
         [blockscript_format]$Appliance
     )
-    Begin
-    {
-        $Endpoint = 'discovery_block_scripts'
+    $Endpoint = 'discovery_block_scripts'
         
-        Try {$TenantUri = Select-MCASTenantUri}
-            Catch {Throw $_}
+    Try {$TenantUri = Select-MCASTenantUri}
+        Catch {Throw $_}
 
-        Try {$Token = Select-MCASToken}
-            Catch {Throw $_}
-    }
-    Process
-    {            
-        Try 
-        {
-            $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix ('?format='+($Appliance -as [int])) -Method Get -Token $Token -ApiVersion $null -Raw
-        }
-            Catch
-            { 
-                Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
-            }
-        $Response = $Response.Content
-        $Response
-    }
-    End
+    Try {$Token = Select-MCASToken}
+        Catch {Throw $_}           
+    Try 
     {
+        $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix ('?format='+($Appliance -as [int])) -Method Get -Token $Token -ApiVersion $null -Raw
     }
+        Catch
+        { 
+            Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+        }
+
+    $Response = $Response.Content
+    $Response
+
 }
 
 function Get-MCASAdminAccess
@@ -2635,32 +2628,23 @@ function Get-MCASAdminAccess
         [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential
     )
-    Begin
-    {
-        $Endpoint = 'manage_admin_access'
+    $Endpoint = 'manage_admin_access'
         
-        Try {$TenantUri = Select-MCASTenantUri}
-            Catch {Throw $_}
+    Try {$TenantUri = Select-MCASTenantUri}
+        Catch {Throw $_}
 
-        Try {$Token = Select-MCASToken}
-            Catch {Throw $_}
-    }
-    Process
-    {            
-        Try 
-        {
-            $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -CASPrefix -Method Get -Token $Token
-        }
-            Catch
-            { 
-                Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
-            }
-        #$Response = $Response.Content
-        $Response
-    }
-    End
+    Try {$Token = Select-MCASToken}
+        Catch {Throw $_}          
+    Try 
     {
+        $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -CASPrefix -Method Get -Token $Token
     }
+        Catch
+        { 
+            Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+        }
+
+    $Response
 }
 
 #endregion -----------------------------Cmdlets-----------------------------
