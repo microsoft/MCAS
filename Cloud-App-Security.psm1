@@ -147,6 +147,12 @@ enum app_category
     WEBSITE_MONITORING
     }
 
+enum permission_type
+    {
+    READ_ONLY
+    FULL_ACCESS
+    }
+
 <#
 enum alert_type
     {
@@ -264,7 +270,7 @@ function Invoke-MCASRestMethod
         [string]$Endpoint,
 
         [Parameter(Mandatory=$true)]
-        [ValidateSet('Get','Post','Put')]
+        [ValidateSet('Get','Post','Put','Delete')]
         [string]$Method,        
         
         [switch]$CASPrefix,
@@ -285,7 +291,11 @@ function Invoke-MCASRestMethod
         [ValidateSet($null,'/v1')]
         [string]$ApiVersion = '/v1',
 
-        [Switch]$Raw
+        [Switch]$Raw,
+
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()] 
+        [string]$ContentType = 'application/json'
         )
     Process
     {
@@ -294,11 +304,7 @@ function Invoke-MCASRestMethod
             }
         Else {
             $Uri = "https://$TenantUri/api$ApiVersion/$Endpoint/"
-            }
-
-        If ($EndpointPrefix) {
-            $Uri += $EndpointSuffix
-            }      
+            }    
 
         If ($EndpointSuffix) {
             $Uri += $EndpointSuffix
@@ -306,12 +312,12 @@ function Invoke-MCASRestMethod
 
         Try {
             If ($Body) {
-                $JsonBody = $Body | ConvertTo-Json -Compress 
+                $JsonBody = $Body | ConvertTo-Json -Compress -Depth 2
                 Write-Verbose "Invoke-MCASRestMethod: Request body: $JsonBody"
-                $Response = Invoke-WebRequest -Uri $Uri -Body $Body -Headers @{Authorization = "Token $Token"} -Method $Method -UseBasicParsing -ErrorAction Stop
+                $Response = Invoke-WebRequest -Uri $Uri -Body $JsonBody -Headers @{Authorization = "Token $Token"} -Method $Method -ContentType $ContentType -UseBasicParsing -ErrorAction Stop
                 }
             Else {   
-                $Response = Invoke-WebRequest -Uri $Uri -Headers @{Authorization = "Token $Token"} -Method $Method -UseBasicParsing -ErrorAction Stop
+                $Response = Invoke-WebRequest -Uri $Uri -Headers @{Authorization = "Token $Token"} -Method $Method -ContentType $ContentType -UseBasicParsing -ErrorAction Stop
                 }
         }
         Catch {
@@ -352,7 +358,7 @@ function Invoke-MCASRestMethod
             $Response = $Response | ConvertFrom-Json
 
             # For list responses with zero results, set an empty collection as response rather than returning the response metadata
-            If ($Response.total -eq 0) {
+            If (($Response.total -eq 0) -or (($Response.data).count -eq 0)) {
                 $Response = @()
                 }
             # For list responses, get the data property only
@@ -361,7 +367,8 @@ function Invoke-MCASRestMethod
                 }
 
             # Add 'Identity' alias property, when appropriate
-            If ((($Response | Get-Member | Select Name) -match '_id').count -gt 0) {
+            #If ((($Response | Get-Member | Select Name) -match '_id').count -gt 0) {
+            If ($Response._id) {
                 $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
                 }
             $Response
@@ -2597,7 +2604,8 @@ function Export-MCASBlockScript
         Catch {Throw $_}
 
     Try {$Token = Select-MCASToken}
-        Catch {Throw $_}           
+        Catch {Throw $_}    
+               
     Try 
     {
         $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix ('?format='+($Appliance -as [int])) -Method Get -Token $Token -ApiVersion $null -Raw
@@ -2634,7 +2642,8 @@ function Get-MCASAdminAccess
         Catch {Throw $_}
 
     Try {$Token = Select-MCASToken}
-        Catch {Throw $_}          
+        Catch {Throw $_}     
+             
     Try 
     {
         $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -CASPrefix -Method Get -Token $Token
@@ -2647,6 +2656,109 @@ function Get-MCASAdminAccess
     $Response
 }
 
+function Add-MCASAdminAccess
+{
+    [CmdletBinding()]
+    [Alias('Add-CASAdminAccess')]
+    Param
+    (   
+        # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
+        [Parameter(Mandatory=$false)]
+        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
+        [string]$TenantUri,
+
+        # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [System.Management.Automation.PSCredential]$Credential,
+
+        [Parameter(Mandatory=$true,ValueFromPipeline=$true,Position=0)]
+        [ValidateNotNullOrEmpty()]
+        [string]$Username,
+
+        [Parameter(Mandatory=$true,ValueFromPipeline=$true,Position=1)]
+        [ValidateNotNullOrEmpty()]
+        [permission_type]$PermissionType
+    )
+    Begin
+    {
+        $Endpoint = 'manage_admin_access'
+        
+        Try {$TenantUri = Select-MCASTenantUri}
+            Catch {Throw $_}
+
+        Try {$Token = Select-MCASToken}
+            Catch {Throw $_}   
+    }
+    Process
+    {    
+        $Body = [ordered]@{'username'=$Username;'permissionType'=($PermissionType -as [string])}
+    
+        Try 
+        {
+            $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -CASPrefix -Method Post -Token $Token -Body $Body
+        }
+            Catch
+            { 
+                Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+            }
+
+        $Response
+    }
+    End
+    {
+    }
+}
+
+function Remove-MCASAdminAccess
+{
+    [CmdletBinding()]
+    [Alias('Remove-CASAdminAccess')]
+    Param
+    (   
+        # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
+        [Parameter(Mandatory=$false)]
+        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
+        [string]$TenantUri,
+
+        # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [System.Management.Automation.PSCredential]$Credential,
+
+        [Parameter(Mandatory=$true,ValueFromPipeline=$true,Position=0)]
+        [ValidateNotNullOrEmpty()]
+        [string]$Username
+    )
+    Begin
+    {
+        $Endpoint = 'manage_admin_access'
+        
+        Try {$TenantUri = Select-MCASTenantUri}
+            Catch {Throw $_}
+
+        Try {$Token = Select-MCASToken}
+            Catch {Throw $_}   
+    }
+    Process
+    { 
+           
+        Try 
+        {
+            $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Username/" -CASPrefix -Method Delete -Token $Token 
+        }
+            Catch
+            { 
+                Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+            }
+
+        $Response
+    }
+    End
+    {
+    }
+}
+
 #endregion -----------------------------Cmdlets-----------------------------
 
 #region ----------------------------Exports----------------------------
@@ -2656,6 +2768,8 @@ Export-ModuleMember -Function Get-MCAS*
 Export-ModuleMember -Function Send-MCASDiscoveryLog
 Export-ModuleMember -Function Set-MCASAlert
 Export-ModuleMember -Function Export-MCASBlockScript
+Export-ModuleMember -Function Add-MCASAdminAccess
+Export-ModuleMember -Function Remove-MCASAdminAccess
 Export-ModuleMember -Function Invoke-MCASRestMethod
 
 # Vars to export (must be exported here, even if also included in the module manifest in 'VariablesToExport'
