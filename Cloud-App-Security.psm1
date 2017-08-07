@@ -639,8 +639,8 @@ function Get-MCASAccount
             If ($External -and $Internal) {Throw 'Cannot reconcile -External and -Internal switches. Use zero or one of these, but not both.'}
 
             # Value-mapped filters
-            If ($AppName)    {$FilterSet += @{'service'=@{'eq'=($AppName | ForEach {$_ -as [int]})}}}
-            If ($AppNameNot) {$FilterSet += @{'service'=@{'neq'=($AppNameNot | ForEach {$_ -as [int]})}}}
+            If ($AppName)    {$FilterSet += @{'service'=@{'eq'=($AppName | ForEach-Object {$_ -as [int]})}}}
+            If ($AppNameNot) {$FilterSet += @{'service'=@{'neq'=($AppNameNot | ForEach-Object {$_ -as [int]})}}}
 
             # Simple filters
             If ($Internal)   {$FilterSet += @{'affiliation'=   @{'eq'=$false}}}
@@ -934,10 +934,10 @@ function Get-MCASActivity
             If ($Impersonated -and $ImpersonatedNot){Throw 'Cannot reconcile app parameters. Do not combine Impersonated and ImpersonatedNot parameters.'}
 
             # Value-mapped filters
-            If ($IpCategory) {$FilterSet += @{'ip.category'=@{'eq'=($IpCategory | ForEach {$_ -as [int]})}}}
-            If ($AppName)    {$FilterSet += @{'service'=    @{'eq'=($AppName | ForEach {$_ -as [int]})}}}
-            If ($AppNameNot) {$FilterSet += @{'service'=    @{'neq'=($AppNameNot | ForEach {$_ -as [int]})}}}
-            If ($IPTag)      {$FilterSet += @{'ip.tags'=    @{'eq'=($IPTag.GetEnumerator() | ForEach {$IPTagsList.$_ -join ','})}}}
+            If ($IpCategory) {$FilterSet += @{'ip.category'=@{'eq'=($IpCategory | ForEach-Object {$_ -as [int]})}}}
+            If ($AppName)    {$FilterSet += @{'service'=    @{'eq'=($AppName | ForEach-Object {$_ -as [int]})}}}
+            If ($AppNameNot) {$FilterSet += @{'service'=    @{'neq'=($AppNameNot | ForEach-Object {$_ -as [int]})}}}
+            If ($IPTag)      {$FilterSet += @{'ip.tags'=    @{'eq'=($IPTag.GetEnumerator() | ForEach-Object {$IPTagsList.$_ -join ','})}}}
 
             # Simple filters
             If ($UserName)             {$FilterSet += @{'user.username'=       @{'eq'=$UserName}}}
@@ -1190,10 +1190,10 @@ function Get-MCASAlert
             If ($Read -and $Unread) {Throw 'Cannot reconcile -Read and -Unread parameters. Only use one of them at a time.'}
 
             # Value-mapped filters
-            If ($AppName)          {$FilterSet += @{'entity.service'=   @{'eq'=($AppName | ForEach {$_ -as [int]})}}}
-            If ($AppNameNot)       {$FilterSet += @{'entity.service'=   @{'neq'=($AppNameNot | ForEach {$_ -as [int]})}}}
-            If ($Severity)         {$FilterSet += @{'severity'=         @{'eq'=($Severity | ForEach {$_ -as [int]})}}}
-            If ($ResolutionStatus) {$FilterSet += @{'resolutionStatus'= @{'eq'=($ResolutionStatus | ForEach {$_ -as [int]})}}}
+            If ($AppName)          {$FilterSet += @{'entity.service'=   @{'eq'=($AppName | ForEach-Object {$_ -as [int]})}}}
+            If ($AppNameNot)       {$FilterSet += @{'entity.service'=   @{'neq'=($AppNameNot | ForEach-Object {$_ -as [int]})}}}
+            If ($Severity)         {$FilterSet += @{'severity'=         @{'eq'=($Severity | ForEach-Object {$_ -as [int]})}}}
+            If ($ResolutionStatus) {$FilterSet += @{'resolutionStatus'= @{'eq'=($ResolutionStatus | ForEach-Object {$_ -as [int]})}}}
 
             # Simple filters
             If ($UserName)   {$FilterSet += @{'entity.user'=    @{'eq'=$UserName}}}
@@ -1569,11 +1569,11 @@ function Get-MCASFile
             # Additional Hash Tables for Filetype & FiletypeNot Filters
             If ($Filetype){
                 $Filetypehashtable = @{}
-                $Filetype | ForEach {$Filetypehashtable.Add($_,$_)}
+                $Filetype | ForEach-Object {$Filetypehashtable.Add($_,$_)}
                 }
             If ($FiletypeNot){
                 $Filetypehashtable = @{}
-                $FiletypeNot | ForEach {$Filetypehashtable.Add($_,$_)}
+                $FiletypeNot | ForEach-Object {$Filetypehashtable.Add($_,$_)}
                 }                
 
             # Additional parameter validations and mutual exclusions
@@ -1586,11 +1586,11 @@ function Get-MCASFile
             If ($Trashed -and $TrashedNot) {Throw 'Cannot reconcile -Trashed and -TrashedNot switches. Use zero or one of these, but not both.'}
             
             # Value-mapped filters
-            If ($Filetype)        {$FilterSet += @{'fileType'=@{'eq'= ($Filetype | ForEach {$_ -as [int]})}}}
-            If ($FiletypeNot)     {$FilterSet += @{'fileType'=@{'neq'=($FiletypeNot | ForEach {$_ -as [int]})}}}
-            If ($FileAccessLevel) {$FilterSet += @{'sharing'= @{'eq'= ($FileAccessLevel | ForEach {$_ -as [int]})}}}
-            If ($AppName)         {$FilterSet += @{'service'= @{'eq'= ($AppName | ForEach {$_ -as [int]})}}}  
-            If ($AppNameNot)      {$FilterSet += @{'service'= @{'neq'=($AppNameNot | ForEach {$_ -as [int]})}}}  
+            If ($Filetype)        {$FilterSet += @{'fileType'=@{'eq'= ($Filetype | ForEach-Object {$_ -as [int]})}}}
+            If ($FiletypeNot)     {$FilterSet += @{'fileType'=@{'neq'=($FiletypeNot | ForEach-Object {$_ -as [int]})}}}
+            If ($FileAccessLevel) {$FilterSet += @{'sharing'= @{'eq'= ($FileAccessLevel | ForEach-Object {$_ -as [int]})}}}
+            If ($AppName)         {$FilterSet += @{'service'= @{'eq'= ($AppName | ForEach-Object {$_ -as [int]})}}}  
+            If ($AppNameNot)      {$FilterSet += @{'service'= @{'neq'=($AppNameNot | ForEach-Object {$_ -as [int]})}}}  
 
             # Simple filters
             If ($AppId)                {$FilterSet += @{'service'=                  @{'eq'=$AppId}}}
@@ -2503,10 +2503,10 @@ function Get-MCASGovernanceLog
             If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
 
             # Value-mapped filters
-            If ($AppName)    {$FilterSet += @{'appId'=  @{'eq'= ($AppName | ForEach {$_ -as [int]})}}}
-            If ($AppNameNot) {$FilterSet += @{'appId'=  @{'neq'=($AppNameNot | ForEach {$_ -as [int]})}}}
-            If ($Status)     {$FilterSet += @{'status'= @{'eq'= ($Status | ForEach {$GovernanceStatus.$_})}}}
-            If ($Action)     {$FilterSet += @{'type'=   @{'eq'= ($Action | ForEach {$_})}}}
+            If ($AppName)    {$FilterSet += @{'appId'=  @{'eq'= ($AppName | ForEach-Object {$_ -as [int]})}}}
+            If ($AppNameNot) {$FilterSet += @{'appId'=  @{'neq'=($AppNameNot | ForEach-Object {$_ -as [int]})}}}
+            If ($Status)     {$FilterSet += @{'status'= @{'eq'= ($Status | ForEach-Object {$GovernanceStatus.$_})}}}
+            If ($Action)     {$FilterSet += @{'type'=   @{'eq'= ($Action | ForEach-Object {$_})}}}
 
             # Simple filters
             If ($AppId)    {$FilterSet += @{'appId'= @{'eq'=$AppId}}}
