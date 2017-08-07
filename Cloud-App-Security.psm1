@@ -2692,18 +2692,23 @@ function Add-MCASAdminAccess
     }
     Process
     {    
-        $Body = [ordered]@{'username'=$Username;'permissionType'=($PermissionType -as [string])}
-    
-        Try 
-        {
-            $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -CASPrefix -Method Post -Token $Token -Body $Body
-        }
-            Catch
-            { 
-                Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+        If ((Get-MCASAdminAccess).username -contains $Username) {
+            Write-Warning "$Username is already listed as an administrator of Cloud App Security. No changes were made."
             }
+        Else {        
+            $Body = [ordered]@{'username'=$Username;'permissionType'=($PermissionType -as [string])}
+    
+            Try 
+            {
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -CASPrefix -Method Post -Token $Token -Body $Body
+            }
+                Catch
+                { 
+                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+                }
 
-        $Response
+            $Response
+            }
     }
     End
     {
@@ -2741,18 +2746,22 @@ function Remove-MCASAdminAccess
             Catch {Throw $_}   
     }
     Process
-    { 
-           
-        Try 
-        {
-            $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Username/" -CASPrefix -Method Delete -Token $Token 
-        }
-            Catch
-            { 
-                Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+    {         
+        If ((Get-MCASAdminAccess).username -notcontains $Username) {
+            Write-Warning "$Username is not listed as an administrator of Cloud App Security. No changes were made."
             }
+        Else {
+            Try 
+            {
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Username/" -CASPrefix -Method Delete -Token $Token 
+            }
+                Catch
+                { 
+                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+                }
 
-        $Response
+            $Response
+            }
     }
     End
     {
