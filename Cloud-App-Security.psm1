@@ -260,7 +260,7 @@ function Invoke-MCASRestMethod
         [string]$TenantUri,
 
         [Parameter(Mandatory=$true)]
-        [ValidateSet('accounts','activities','alerts','discovery','files','governance','discovery_block_scripts')]
+        [ValidateSet('accounts','activities','alerts','discovery','files','governance','discovery_block_scripts','manage_admin_access')]
         [string]$Endpoint,
 
         [Parameter(Mandatory=$true)]
