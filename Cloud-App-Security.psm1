@@ -295,7 +295,11 @@ function Invoke-MCASRestMethod
 
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()] 
-        [string]$ContentType = 'application/json'
+        [string]$ContentType = 'application/json',
+
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNull()] 
+        $FilterSet
         )
     Process
     {
@@ -308,11 +312,16 @@ function Invoke-MCASRestMethod
 
         If ($EndpointSuffix) {
             $Uri += $EndpointSuffix
-            }      
+            }             
 
         Try {
             If ($Body) {
                 $JsonBody = $Body | ConvertTo-Json -Compress -Depth 2
+                
+                If ($FilterSet) {
+                    $JsonBody = $JsonBody.TrimEnd('}') + ',' + '"filters":{' + ((ConvertTo-MCASJsonFilterString $FilterSet).TrimStart('{')) + '}'
+                    }
+
                 Write-Verbose "Invoke-MCASRestMethod: Request body: $JsonBody"
                 $Response = Invoke-WebRequest -Uri $Uri -Body $JsonBody -Headers @{Authorization = "Token $Token"} -Method $Method -ContentType $ContentType -UseBasicParsing -ErrorAction Stop
                 }
@@ -650,17 +659,12 @@ function Get-MCASAccount
             If ($AppIdNot)   {$FilterSet += @{'service'=       @{'neq'=$AppIdNot}}}
             If ($UserDomain) {$FilterSet += @{'domain'=        @{'eq'=$UserDomain}}}
             
-            # boolean filters
-
-            # Add filter set to request body as the 'filter' property            
-            If ($FilterSet) {$Body.Add('filters',(ConvertTo-MCASJsonFilterString $FilterSet))}
-
             #endregion ----------------------------FILTERING----------------------------
 
             # Get the matching items and handle errors
             Try 
             {
-                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token                    
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token -FilterSet $FilterSet                    
             }
                 Catch 
                 { 
@@ -963,15 +967,12 @@ function Get-MCASActivity
             If ($AdminEvents)    {$FilterSet += @{'activity.type'= @{'eq'=$true}}}
             If ($NonAdminEvents) {$FilterSet += @{'activity.type'= @{'eq'=$false}}}
 
-            # Add filter set to request body as the 'filter' property            
-            If ($FilterSet) {$Body.Add('filters',(ConvertTo-MCASJsonFilterString $FilterSet))}
-
             #endregion ----------------------------FILTERING----------------------------
 
             # Get the matching items and handle errors
             Try 
             {
-                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token                    
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token -FilterSet $FilterSet
             }
                 Catch 
                 { 
@@ -1205,17 +1206,13 @@ function Get-MCASAlert
             If ($Source)     {$FilterSet += @{'source'=         @{'eq'=$Source}}}
             If ($Read)       {$FilterSet += @{'read'=           @{'eq'=$true}}}
             If ($Unread)     {$FilterSet += @{'read'=           @{'eq'=$false}}}
- 
- 
-            # Add filter set to request body as the 'filter' property            
-            If ($FilterSet) {$Body.Add('filters',(ConvertTo-MCASJsonFilterString $FilterSet))}
 
             #endregion ----------------------------FILTERING----------------------------
 
             # Get the matching items and handle errors
             Try 
             {
-                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token                    
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token -FilterSet $FilterSet                    
             }
                 Catch 
                 { 
@@ -1616,15 +1613,12 @@ function Get-MCASFile
             If ($FileLabel)            {$FilterSet += @{'fileLabels'=               @{'eq'=$FileLabel}}}
             If ($FileLabelNot)         {$FilterSet += @{'fileLabels'=               @{'neq'=$FileLabel}}}
 
-            # Add filter set to request body as the 'filter' property            
-            If ($FilterSet) {$Body.Add('filters',(ConvertTo-MCASJsonFilterString $FilterSet))}
-
             #endregion ----------------------------FILTERING----------------------------
 
             # Get the matching items and handle errors
             Try 
             {
-                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token                    
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token -FilterSet $FilterSet                    
             }
                 Catch 
                 { 
