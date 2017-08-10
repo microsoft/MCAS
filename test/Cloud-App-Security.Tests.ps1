@@ -1,4 +1,21 @@
-﻿Import-Module $PSScriptRoot\Cloud-App-Security.psm1 -Force
+﻿
+$ModuleManifestName = 'Cloud-App-Security.psd1'
+$ModuleManifestPath = "$PSScriptRoot\..\$ModuleManifestName"
+
+Describe 'Module Manifest Tests' {
+    It 'Passes Test-ModuleManifest' {
+        Test-ModuleManifest -Path $ModuleManifestPath
+        $? | Should Be $true
+    }
+}
+
+
+
+
+<#
+Import-Module $PSScriptRoot\Cloud-App-Security.psm1 -Force
+
+
 
 #Stop-Job -Name MCASTest1 -ErrorAction SilentlyContinue
 #Remove-Job -Name MCASTest1 -Force -ErrorAction SilentlyContinue
@@ -118,7 +135,7 @@ $CmdletsToTest += $ThisCmdlet
 #>
 
 
-
+<#
 
 ForEach ($this in $CmdletsToTest) {
     Describe $this.CmdletName {
@@ -335,8 +352,8 @@ Describe 'Get-MCASAccount' {
             Invoke-ScriptAnalyzer .\Cloud-App-Security.psm1 | Should be $null
         }
     }
-    #>
+    
 
 }
 
-
+#>
