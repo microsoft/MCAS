@@ -9,20 +9,21 @@ Describe 'Module Manifest Tests' {
     }
 }
 
-
-
-
-<#
-Import-Module $PSScriptRoot\Cloud-App-Security.psm1 -Force
-
-
-
-#Stop-Job -Name MCASTest1 -ErrorAction SilentlyContinue
-#Remove-Job -Name MCASTest1 -Force -ErrorAction SilentlyContinue
+Import-Module $PSScriptRoot\..\Cloud-App-Security.psm1 -Force
 
 If ($CASCredential -eq $null -or !($CASCredential)) {
     Get-MCASCredential
     }
+
+
+
+
+<#
+
+#Stop-Job -Name MCASTest1 -ErrorAction SilentlyContinue
+#Remove-Job -Name MCASTest1 -Force -ErrorAction SilentlyContinue
+
+
 
 $CmdletsToTest = @()
 

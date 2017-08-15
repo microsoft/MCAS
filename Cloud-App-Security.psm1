@@ -2671,7 +2671,7 @@ function Add-MCASAdminAccess
         [ValidateNotNullOrEmpty()]
         [string]$Username,
 
-        [Parameter(Mandatory=$true,ValueFromPipeline=$true,Position=1)]
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true,Position=1)]
         [ValidateNotNullOrEmpty()]
         [permission_type]$PermissionType
     )
@@ -2684,29 +2684,36 @@ function Add-MCASAdminAccess
 
         Try {$Token = Select-MCASToken}
             Catch {Throw $_}
+
+        $ReadOnlyAdded = $false
     }
     Process
     {
         If ((Get-MCASAdminAccess).username -contains $Username) {
-            Write-Warning "$Username is already listed as an administrator of Cloud App Security. No changes were made."
+            Write-Warning "Add-MCASAdminAccess: $Username is already listed as an administrator of Cloud App Security. No changes were made."
             }
         Else {
             $Body = [ordered]@{'username'=$Username;'permissionType'=($PermissionType -as [string])}
 
-            Try
-            {
+            Try {
                 $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -CASPrefix -Method Post -Token $Token -Body $Body
             }
-                Catch
-                {
+                Catch {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-
+            
+            If ($PermissionType -eq 'READ_ONLY') {
+                    $ReadOnlyAdded = $true
+                }
+            
             $Response
             }
     }
     End
     {
+        If ($ReadOnlyAdded) {
+            Write-Warning "Add-MCASAdminAccess: READ_ONLY acces includes the ability to manage alerts."
+        }
     }
 }
 
