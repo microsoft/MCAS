@@ -59,6 +59,7 @@ enum blockscript_format
     PALO_ALTO = 112
     JUNIPER_SRX = 129
     WEBSENSE = 135
+    ZSCALER = 120
     }
 
 enum ip_category
@@ -161,15 +162,15 @@ enum alert_type
     ALERT_CABINET_EVENT_MATCH_FILE = 15728642
     ALERT_GEOLOCATION_NEW_COUNTRY = 196608
     ALERT_MANAGEMENT_DISCONNECTED_API = 15794945
-    ALERT_SUSPICIOUS_ACTIVITY = 14680083   
-    ALERT_COMPROMISED_ACCOUNT = 
-    ALERT_DISCOVERY_ANOMALY_DETECTION = 
-    ALERT_CABINET_INLINE_EVENT_MATCH = 
-    ALERT_CABINET_EVENT_MATCH_OBJECT = 
-    ALERT_CABINET_DISCOVERY_NEW_SERVICE = 
-    ALERT_NEW_ADMIN_LOCATION = 
-    ALERT_PERSONAL_USER_SAGE = 
-    ALERT_ZOMBIE_USER = 
+    ALERT_SUSPICIOUS_ACTIVITY = 14680083
+    ALERT_COMPROMISED_ACCOUNT =
+    ALERT_DISCOVERY_ANOMALY_DETECTION =
+    ALERT_CABINET_INLINE_EVENT_MATCH =
+    ALERT_CABINET_EVENT_MATCH_OBJECT =
+    ALERT_CABINET_DISCOVERY_NEW_SERVICE =
+    ALERT_NEW_ADMIN_LOCATION =
+    ALERT_PERSONAL_USER_SAGE =
+    ALERT_ZOMBIE_USER =
     }
 #>
 
@@ -231,7 +232,7 @@ $GovernanceStatus = @{
 
 <#
 $ActionList = @{
-    
+
 }
 #>
 
@@ -239,7 +240,7 @@ $ActionList = @{
 
 #region ------------------------Internal Functions------------------------
 
-function ConvertTo-MCASJsonFilterString 
+function ConvertTo-MCASJsonFilterString
 {
     [CmdletBinding()]
     Param (
@@ -248,17 +249,17 @@ function ConvertTo-MCASJsonFilterString
         )
 
     $Temp = @()
-    
+
     ForEach ($Filter in $FilterSet) {
-        $Temp += ((($Filter | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{')) 
+        $Temp += ((($Filter | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{'))
         }
     $RawJsonFilter = ('{'+($Temp -join '},')+'}}')
     Write-Verbose "ConvertTo-MCASJsonFilterString: Converted filter set to JSON filter: $RawJsonFilter"
-    
+
     Write-Output $RawJsonFilter
 }
 
-function Invoke-MCASRestMethod 
+function Invoke-MCASRestMethod
 {
     [CmdletBinding()]
     Param (
@@ -271,20 +272,20 @@ function Invoke-MCASRestMethod
 
         [Parameter(Mandatory=$true)]
         [ValidateSet('Get','Post','Put','Delete')]
-        [string]$Method,        
-        
+        [string]$Method,
+
         [switch]$CASPrefix,
 
         [Parameter(Mandatory=$false)]
-        [ValidateNotNullOrEmpty()] 
+        [ValidateNotNullOrEmpty()]
         [string]$EndpointSuffix,
-        
+
         [Parameter(Mandatory=$false)]
-        [ValidateNotNullOrEmpty()] 
+        [ValidateNotNullOrEmpty()]
         $Body,
-        
+
         [Parameter(Mandatory=$true)]
-        [ValidateNotNullOrEmpty()] 
+        [ValidateNotNullOrEmpty()]
         [string]$Token,
 
         [Parameter(Mandatory=$false)]
@@ -294,11 +295,11 @@ function Invoke-MCASRestMethod
         [Switch]$Raw,
 
         [Parameter(Mandatory=$false)]
-        [ValidateNotNullOrEmpty()] 
+        [ValidateNotNullOrEmpty()]
         [string]$ContentType = 'application/json',
 
         [Parameter(Mandatory=$false)]
-        [ValidateNotNull()] 
+        [ValidateNotNull()]
         $FilterSet
         )
     Process
@@ -308,16 +309,16 @@ function Invoke-MCASRestMethod
             }
         Else {
             $Uri = "https://$TenantUri/api$ApiVersion/$Endpoint/"
-            }    
+            }
 
         If ($EndpointSuffix) {
             $Uri += $EndpointSuffix
-            }             
+            }
 
         Try {
             If ($Body) {
                 $JsonBody = $Body | ConvertTo-Json -Compress -Depth 2
-                
+
                 If ($FilterSet) {
                     $JsonBody = $JsonBody.TrimEnd('}') + ',' + '"filters":{' + ((ConvertTo-MCASJsonFilterString $FilterSet).TrimStart('{')) + '}'
                     }
@@ -325,7 +326,7 @@ function Invoke-MCASRestMethod
                 Write-Verbose "Invoke-MCASRestMethod: Request body: $JsonBody"
                 $Response = Invoke-WebRequest -Uri $Uri -Body $JsonBody -Headers @{Authorization = "Token $Token"} -Method $Method -ContentType $ContentType -UseBasicParsing -ErrorAction Stop
                 }
-            Else {   
+            Else {
                 $Response = Invoke-WebRequest -Uri $Uri -Headers @{Authorization = "Token $Token"} -Method $Method -ContentType $ContentType -UseBasicParsing -ErrorAction Stop
                 }
         }
@@ -335,7 +336,7 @@ function Invoke-MCASRestMethod
                 }
             ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.') {
                 Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is valid.' -ErrorAction Stop
-                }        
+                }
             ElseIf ($_ -match "The remote name could not be resolved: ") {
                 Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid." -ErrorAction Stop
                 }
@@ -343,13 +344,13 @@ function Invoke-MCASRestMethod
                 Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_" -ErrorAction Stop
                 }
         }
-    
+
         Write-Verbose "Invoke-MCASRestMethod: Raw response from MCAS REST API: $Response"
         If ($Raw) {
             $Response
             }
-        Else {            
-            # Windows/Powershell case insensitivity causes collision of properties with same name but different case, so this patches the problem 
+        Else {
+            # Windows/Powershell case insensitivity causes collision of properties with same name but different case, so this patches the problem
             If ($Endpoint -eq 'accounts') {
                 $Response = $Response -creplace '"Id":', '"Id_int":'
                 Write-Verbose "Invoke-MCASRestMethod: A property name collision was detected in the response from MCAS REST API $Endpoint endpoint for the following property names; 'id' and 'Id'. The 'Id' property was renamed to 'Id_int'."
@@ -357,11 +358,11 @@ function Invoke-MCASRestMethod
             If ($Endpoint -eq 'files') {
                 $Response = $Response -creplace '"Created":', '"Created_2":'
                 Write-Verbose "Invoke-MCASRestMethod: A property name collision was detected in the response from MCAS REST API $Endpoint endpoint for the following property names; 'created' and 'Created'. The 'Created' property was renamed to 'Created_2'."
-                
+
                 $Response = $Response -creplace '"ftags":', '"ftags_2":'
                 Write-Verbose "Invoke-MCASRestMethod: A property name collision was detected in the response from MCAS REST API $Endpoint endpoint for the following property names; 'ftags' and 'fTags'. The 'ftags' property was renamed to 'ftags_2'."
-                } 
- 
+                }
+
             # Convert from JSON to Powershell objects
             Write-Verbose "Invoke-MCASRestMethod: Modified response before JSON conversion: $Response"
             $Response = $Response | ConvertFrom-Json
@@ -386,7 +387,7 @@ function Invoke-MCASRestMethod
 }
 
 function Select-MCASTenantUri
-{       
+{
     If ($TenantUri) {
         $TenantUri
         }
@@ -426,7 +427,7 @@ function Select-MCASToken
 
    Without parameters, Get-MCASAccount gets 100 account records and associated properties. You can specify a particular account GUID to fetch a single account's information or you can pull a list of accounts based on the provided filters.
 
-   Get-MCASAccount returns a single custom PS Object or multiple PS Objects with all of the account properties. Methods available are only those available to custom objects by default. 
+   Get-MCASAccount returns a single custom PS Object or multiple PS Objects with all of the account properties. Methods available are only those available to custom objects by default.
 .EXAMPLE
    Get-MCASAccount -ResultSetSize 1
 
@@ -470,7 +471,7 @@ function Select-MCASToken
     This pulls back all accounts from the specified domain and returns a count of the returned objects.
 
 .EXAMPLE
-   Get-MCASAccount -Affiliation External | select @{N='Unique Domains'; E={$_.userDomain}} -Unique 
+   Get-MCASAccount -Affiliation External | select @{N='Unique Domains'; E={$_.userDomain}} -Unique
 
     Unique Domains
     --------------
@@ -497,7 +498,7 @@ function Get-MCASAccount
     [CmdletBinding()]
     [Alias('Get-CASAccount')]
     Param
-    (   
+    (
         # Fetches an account object by its unique identifier.
         [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
         [ValidatePattern({^[A-Fa-f0-9]{24}$})]
@@ -518,7 +519,7 @@ function Get-MCASAccount
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('Username','LastSeen')]
         [string]$SortBy,
-                
+
         # Specifies the direction in which to sort the results. Possible Values: 'Ascending','Descending'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('Ascending','Descending')]
@@ -537,7 +538,7 @@ function Get-MCASAccount
 
 
         ##### FILTER PARAMS #####
- 
+
         # Limits the results to external users
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [switch]$External,
@@ -545,8 +546,8 @@ function Get-MCASAccount
         # Limits the results to internal users
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [switch]$Internal,
-        
-        # Limits the results to items related to the specified user names, such as 'alice@contoso.com','bob@contoso.com'. 
+
+        # Limits the results to items related to the specified user names, such as 'alice@contoso.com','bob@contoso.com'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [string[]]$UserName,
@@ -583,7 +584,7 @@ function Get-MCASAccount
     Begin
     {
         $Endpoint = 'accounts'
-        
+
         Try {$TenantUri = Select-MCASTenantUri}
             Catch {Throw $_}
 
@@ -591,17 +592,17 @@ function Get-MCASAccount
             Catch {Throw $_}
     }
     Process
-    {        
+    {
         # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
         If ($PSCmdlet.ParameterSetName -eq 'Fetch')
-        {        
-            Try 
+        {
+            Try
             {
                 # Fetch the item by its id
                 $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
             }
                 Catch
-                { 
+                {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
             $Response
@@ -612,11 +613,11 @@ function Get-MCASAccount
         If ($PSCmdlet.ParameterSetName -eq  'List') # Only run remainder of this end block if not in fetch mode
         {
             # List mode logic only needs to happen once, so it goes in the 'End' block for efficiency
-            
+
             $Body = @{'skip'=$Skip;'limit'=$ResultSetSize} # Base request body
 
             #region ----------------------------SORTING----------------------------
-        
+
             If ($SortBy -xor $SortDirection) {Throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'}
 
             # Add sort direction to request body, if specified
@@ -624,17 +625,17 @@ function Get-MCASAccount
             If ($SortDirection -eq 'Descending') {$Body.Add('sortDirection','desc')}
 
             # Add sort field to request body, if specified
-            If ($SortBy) 
+            If ($SortBy)
             {
-                If ($SortBy -eq 'LastSeen') 
+                If ($SortBy -eq 'LastSeen')
                 {
                     $Body.Add('sortField','lastSeen') # Patch to convert 'LastSeen' to 'lastSeen'
-                } 
+                }
                 Else
                 {
                     $Body.Add('sortField',$SortBy.ToLower())
                 }
-            }  
+            }
             #endregion ----------------------------SORTING----------------------------
 
             #region ----------------------------FILTERING----------------------------
@@ -658,16 +659,16 @@ function Get-MCASAccount
             If ($AppId)      {$FilterSet += @{'service'=       @{'eq'=$AppId}}}
             If ($AppIdNot)   {$FilterSet += @{'service'=       @{'neq'=$AppIdNot}}}
             If ($UserDomain) {$FilterSet += @{'domain'=        @{'eq'=$UserDomain}}}
-            
+
             #endregion ----------------------------FILTERING----------------------------
 
             # Get the matching items and handle errors
-            Try 
+            Try
             {
-                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token -FilterSet $FilterSet                    
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token -FilterSet $FilterSet
             }
-                Catch 
-                { 
+                Catch
+                {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
             $Response
@@ -683,7 +684,7 @@ function Get-MCASAccount
 
    Without parameters, Get-MCASActivity gets 100 activity records and associated properties. You can specify a particular activity GUID to fetch a single activity's information or you can pull a list of activities based on the provided filters.
 
-   Get-MCASActivity returns a single custom PS Object or multiple PS Objects with all of the activity properties. Methods available are only those available to custom objects by default. 
+   Get-MCASActivity returns a single custom PS Object or multiple PS Objects with all of the activity properties. Methods available are only those available to custom objects by default.
 .EXAMPLE
    Get-MCASActivity -ResultSetSize 1
 
@@ -712,13 +713,13 @@ function Get-MCASActivity
     [CmdletBinding()]
     [Alias('Get-CASActivity')]
     Param
-    (   
+    (
         # Fetches an activity object by its unique identifier.
         [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
         [ValidatePattern("[A-Fa-f0-9_\-]{51}|[A-Za-z0-9_\-]{20}")]
         [alias("_id")]
         [string]$Identity,
-        
+
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
         [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
@@ -733,7 +734,7 @@ function Get-MCASActivity
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('Date','Created')]
         [string]$SortBy,
-                
+
         # Specifies the direction in which to sort the results. Possible Values: 'Ascending','Descending'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('Ascending','Descending')]
@@ -748,12 +749,12 @@ function Get-MCASActivity
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateScript({$_ -gt -1})]
         [int]$Skip = 0,
-        
+
 
 
         ##### FILTER PARAMS #####
- 
-        # -User limits the results to items related to the specified user/users, for example 'alice@contoso.com','bob@contoso.com'. 
+
+        # -User limits the results to items related to the specified user/users, for example 'alice@contoso.com','bob@contoso.com'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [Alias("User")]
@@ -793,7 +794,7 @@ function Get-MCASActivity
         [ValidateNotNullOrEmpty()]
         [string[]]$EventTypeNameNot,
 
-        # Limits the results by ip category. Possible Values: 'None','Internal','Administrative','Risky','VPN','Cloud_Provider'. 
+        # Limits the results by ip category. Possible Values: 'None','Internal','Administrative','Risky','VPN','Cloud_Provider'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [ip_category[]]$IpCategory,
@@ -807,7 +808,7 @@ function Get-MCASActivity
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateLength(1,45)]
         [string]$IpDoesNotStartWith,
-        
+
         # Limits the results to items found before specified date. Use Get-Date.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -817,43 +818,43 @@ function Get-MCASActivity
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [datetime]$DateAfter,
-        
-        # Limits the results by device type. Possible Values: 'Desktop','Mobile','Tablet','Other'. 
+
+        # Limits the results by device type. Possible Values: 'Desktop','Mobile','Tablet','Other'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('Desktop','Mobile','Tablet','Other')]
         [string[]]$DeviceType,
 
         # Limits the results by performing a free text search
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateNotNullOrEmpty()] 
+        [ValidateNotNullOrEmpty()]
         [ValidateScript({$_.Length -ge 5})]
         [string]$Text,
 
         # Limits the results to events listed for the specified File ID.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [ValidatePattern("\b[A-Za-z0-9]{24}\b")] 
+        [ValidatePattern("\b[A-Za-z0-9]{24}\b")]
         [string]$FileID,
 
         # Limits the results to events listed for the specified AIP classification labels. Use ^ when denoting (external) labels. Example: @("^Private")
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateNotNullOrEmpty()] 
+        [ValidateNotNullOrEmpty()]
         [array]$FileLabel,
 
         # Limits the results to events excluded by the specified AIP classification labels. Use ^ when denoting (external) labels. Example: @("^Private")
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateNotNullOrEmpty()] 
+        [ValidateNotNullOrEmpty()]
         [array]$FileLabelNot,
 
         # Limits the results to events listed for the specified IP Tags.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateNotNullOrEmpty()] 
+        [ValidateNotNullOrEmpty()]
         [validateset("Anonymous_Proxy","Botnet","Darknet_Scanning_IP","Exchange_Online","Exchangnline_Protection","Malware_CnC_Server","Microsoft_Cloud","Microsoft_Authentication_and_Identity","Office_365","Office_365_Planner","Office_365_ProPlus","Office_Online","Office_Sway","Office_Web_Access_Companion","OneNote","Remote_Connectivity_Analyzer","Satellite_Provider","SharePoint_Online","Skype_for_Business_Online","Smart_Proxy_and_Access_Proxy_Network","Tor","Yammer","Zscaler")]
         [string[]]$IPTag,
 
         # Limits the results to items occuring in the last x number of days.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateRange(1,180)] 
+        [ValidateRange(1,180)]
         [int]$DaysAgo,
 
         # Limits the results to admin events if specified.
@@ -883,17 +884,17 @@ function Get-MCASActivity
             Catch {Throw $_}
     }
     Process
-    {        
+    {
         # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
         If ($PSCmdlet.ParameterSetName -eq 'Fetch')
-        {        
-            Try 
+        {
+            Try
             {
                 # Fetch the item by its id
                 $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
             }
                 Catch
-                { 
+                {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
             $Response
@@ -904,11 +905,11 @@ function Get-MCASActivity
         If ($PSCmdlet.ParameterSetName -eq  'List') # Only run remainder of this end block if not in fetch mode
         {
             # List mode logic only needs to happen once, so it goes in the 'End' block for efficiency
-            
+
             $Body = @{'skip'=$Skip;'limit'=$ResultSetSize} # Base request body
 
             #region ----------------------------SORTING----------------------------
-        
+
             If ($SortBy -xor $SortDirection) {Throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'}
 
             # Add sort direction to request body, if specified
@@ -916,10 +917,10 @@ function Get-MCASActivity
             If ($SortDirection -eq 'Descending') {$Body.Add('sortDirection','desc')}
 
             # Add sort field to request body, if specified
-            If ($SortBy) 
+            If ($SortBy)
             {
                 $Body.Add('sortField',$SortBy.ToLower())
-            }  
+            }
             #endregion ----------------------------SORTING----------------------------
 
             #region ----------------------------FILTERING----------------------------
@@ -953,9 +954,9 @@ function Get-MCASActivity
             If ($UserAgentContains)    {$FilterSet += @{'userAgent.userAgent'= @{'contains'=$UserAgentContains}}}
             If ($UserAgentNotContains) {$FilterSet += @{'userAgent.userAgent'= @{'ncontains'=$UserAgentNotContains}}}
             If ($IpStartsWith)         {$FilterSet += @{'ip.address'=          @{'startswith'=$IpStartsWith}}}
-            If ($IpDoesNotStartWith)   {$FilterSet += @{'ip.address'=          @{'doesnotstartwith'=$IpStartsWith}}} 
-            If ($Text)                 {$FilterSet += @{'text'=                @{'text'=$Text}}} 
-            If ($DaysAgo)              {$FilterSet += @{'date'=                @{'gte_ndays'=$DaysAgo}}} 
+            If ($IpDoesNotStartWith)   {$FilterSet += @{'ip.address'=          @{'doesnotstartwith'=$IpStartsWith}}}
+            If ($Text)                 {$FilterSet += @{'text'=                @{'text'=$Text}}}
+            If ($DaysAgo)              {$FilterSet += @{'date'=                @{'gte_ndays'=$DaysAgo}}}
             If ($Impersonated)         {$FilterSet += @{'activity.impersonated' = @{'eq'=$true}}}
             If ($ImpersonatedNot)      {$FilterSet += @{'activity.impersonated' = @{'eq'=$false}}}
             If ($FileID)               {$FilterSet += @{'fileSelector'=        @{'eq'=$FileID}}}
@@ -970,12 +971,12 @@ function Get-MCASActivity
             #endregion ----------------------------FILTERING----------------------------
 
             # Get the matching items and handle errors
-            Try 
+            Try
             {
                 $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token -FilterSet $FilterSet
             }
-                Catch 
-                { 
+                Catch
+                {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
             $Response
@@ -991,7 +992,7 @@ function Get-MCASActivity
 
    Without parameters, Get-MCASAlert gets 100 alert records and associated properties. You can specify a particular alert GUID to fetch a single alert's information or you can pull a list of activities based on the provided filters.
 
-   Get-MCASAlert returns a single custom PS Object or multiple PS Objects with all of the alert properties. Methods available are only those available to custom objects by default. 
+   Get-MCASAlert returns a single custom PS Object or multiple PS Objects with all of the alert properties. Methods available are only those available to custom objects by default.
 .EXAMPLE
    Get-MCASAlert -ResultSetSize 1
 
@@ -1018,13 +1019,13 @@ function Get-MCASAlert
     [CmdletBinding()]
     [Alias('Get-CASAlert')]
     Param
-    (   
+    (
         # Fetches an alert object by its unique identifier.
         [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
         [ValidatePattern({^[A-Fa-f0-9]{24}$})]
         [Alias("_id")]
         [string]$Identity,
-        
+
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
         [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
@@ -1040,7 +1041,7 @@ function Get-MCASAlert
         #[ValidateSet('Date','Severity','ResolutionStatus')] # Additional sort fields removed by PG
         [ValidateSet('Date')]
         [string]$SortBy,
-                
+
         # Specifies the direction in which to sort the results. Possible Values: 'Ascending','Descending'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('Ascending','Descending')]
@@ -1060,17 +1061,17 @@ function Get-MCASAlert
 
         ##### FILTER PARAMS #####
 
-        # Limits the results by severity. Possible Values: 'High','Medium','Low'. 
+        # Limits the results by severity. Possible Values: 'High','Medium','Low'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [severity_level[]]$Severity,
-        
-        # Limits the results to items with a specific resolution status. Possible Values: 'Open','Dismissed','Resolved'. 
+
+        # Limits the results to items with a specific resolution status. Possible Values: 'Open','Dismissed','Resolved'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [resolution_status[]]$ResolutionStatus,
 
-        # Limits the results to items related to the specified user/users, such as 'alice@contoso.com','bob@contoso.com'. 
+        # Limits the results to items related to the specified user/users, such as 'alice@contoso.com','bob@contoso.com'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [Alias("User")]
@@ -1104,12 +1105,12 @@ function Get-MCASAlert
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [string[]]$Policy,
-        
-        # Limits the results to items with a specific risk score. The valid range is 1-10. 
+
+        # Limits the results to items with a specific risk score. The valid range is 1-10.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateRange(0,10)]
         [int[]]$Risk,
-        
+
         # Limits the results to items from a specific source.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -1134,17 +1135,17 @@ function Get-MCASAlert
             Catch {Throw $_}
     }
     Process
-    {        
+    {
         # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
         If ($PSCmdlet.ParameterSetName -eq 'Fetch')
-        {        
-            Try 
+        {
+            Try
             {
                 # Fetch the item by its id
                 $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
             }
                 Catch
-                { 
+                {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
             $Response
@@ -1155,11 +1156,11 @@ function Get-MCASAlert
         If ($PSCmdlet.ParameterSetName -eq  'List') # Only run remainder of this end block if not in fetch mode
         {
             # List mode logic only needs to happen once, so it goes in the 'End' block for efficiency
-            
+
             $Body = @{'skip'=$Skip;'limit'=$ResultSetSize} # Base request body
 
             #region ----------------------------SORTING----------------------------
-        
+
             If ($SortBy -xor $SortDirection) {Throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'}
 
             # Add sort direction to request body, if specified
@@ -1167,17 +1168,17 @@ function Get-MCASAlert
             If ($SortDirection -eq 'Descending') {$Body.Add('sortDirection','desc')}
 
             # Add sort field to request body, if specified
-            If ($SortBy) 
+            If ($SortBy)
             {
-                If ($SortBy -eq 'ResolutionStatus') 
+                If ($SortBy -eq 'ResolutionStatus')
                 {
                     $Body.Add('sortField','status') # Patch to convert 'resolutionStatus' to 'status', because the API is not using them consistently, but we are
-                } 
+                }
                 Else
                 {
                     $Body.Add('sortField',$SortBy.ToLower())
                 }
-            }  
+            }
             #endregion ----------------------------SORTING----------------------------
 
             #region ----------------------------FILTERING----------------------------
@@ -1210,12 +1211,12 @@ function Get-MCASAlert
             #endregion ----------------------------FILTERING----------------------------
 
             # Get the matching items and handle errors
-            Try 
+            Try
             {
-                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token -FilterSet $FilterSet                    
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token -FilterSet $FilterSet
             }
-                Catch 
-                { 
+                Catch
+                {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
             $Response
@@ -1240,7 +1241,7 @@ function Get-MCASAlert
 .EXAMPLE
    Get-MCASCredential
 
-    This prompts the user to enter both their tenant URL as well as their OAuth token. 
+    This prompts the user to enter both their tenant URL as well as their OAuth token.
 
     Username = Tenant URL without https:// (Example: contoso.portal.cloudappsecurity.com)
     Password = Tenant OAuth Token (Example: 432c1750f80d66a1cf2849afb6b10a7fcdf6738f5f554e32c9915fb006bd799a)
@@ -1290,7 +1291,7 @@ function Get-MCASCredential
     {
         # If tenant URI is specified, prompt for OAuth token and get it all into a global variable
         If ($TenantUri) {[System.Management.Automation.PSCredential]$Global:CASCredential = Get-Credential -UserName $TenantUri -Message "Enter the OAuth token for $TenantUri"}
-   
+
         # Else, prompt for both the tenant and OAuth token and get it all into a global variable
         Else {[System.Management.Automation.PSCredential]$Global:CASCredential = Get-Credential -Message "Enter the CAS tenant and OAuth token"}
 
@@ -1307,7 +1308,7 @@ function Get-MCASCredential
 
    Without parameters, Get-MCASFile gets 100 file records and associated properties. You can specify a particular file GUID to fetch a single file's information or you can pull a list of activities based on the provided filters.
 
-   Get-MCASFile returns a single custom PS Object or multiple PS Objects with all of the file properties. Methods available are only those available to custom objects by default. 
+   Get-MCASFile returns a single custom PS Object or multiple PS Objects with all of the file properties. Methods available are only those available to custom objects by default.
 .EXAMPLE
    Get-MCASFile -ResultSetSize 1
 
@@ -1337,13 +1338,13 @@ function Get-MCASFile
     [CmdletBinding()]
     [Alias('Get-CASFile')]
     Param
-    (   
-        # Fetches a file object by its unique identifier. 
+    (
+        # Fetches a file object by its unique identifier.
         [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
         [ValidatePattern({^[A-Fa-f0-9]{24}$})]
         [alias("_id")]
         [string]$Identity,
-                
+
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
         [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
@@ -1358,18 +1359,18 @@ function Get-MCASFile
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('DateModified')]
         [string]$SortBy,
-                
-        # Specifies the direction in which to sort the results. Possible Values: 'Ascending','Descending'.  
+
+        # Specifies the direction in which to sort the results. Possible Values: 'Ascending','Descending'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('Ascending','Descending')]
         [string]$SortDirection,
 
-        # Specifies the maximum number of results (up to 5000) to retrieve when listing items matching the specified filter criteria.  
+        # Specifies the maximum number of results (up to 5000) to retrieve when listing items matching the specified filter criteria.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateRange(1,100)]
         [int]$ResultSetSize = 100,
 
-        # Specifies the number of records, from the beginning of the result set, to skip.  
+        # Specifies the number of records, from the beginning of the result set, to skip.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateScript({$_ -gt -1})]
         [int]$Skip = 0,
@@ -1386,7 +1387,7 @@ function Get-MCASFile
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [file_type[]]$FiletypeNot,
-        
+
         # Limits the results to items of the specified sharing access level. Possible Values: 'Private','Internal','External','Public', 'PublicInternet'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -1394,12 +1395,12 @@ function Get-MCASFile
 
         # Limits the results to files listed for the specified AIP classification labels. Use ^ when denoting (external) labels. Example: @("^Private")
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateNotNullOrEmpty()] 
+        [ValidateNotNullOrEmpty()]
         [array]$FileLabel,
 
         # Limits the results to files excluded by the specified AIP classification labels. Use ^ when denoting (external) labels. Example: @("^Private")
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateNotNullOrEmpty()] 
+        [ValidateNotNullOrEmpty()]
         [array]$FileLabelNot,
 
         # Limits the results to items with the specified collaborator usernames, such as 'alice@contoso.com', 'bob@microsoft.com'.
@@ -1412,7 +1413,7 @@ function Get-MCASFile
         [ValidateNotNullOrEmpty()]
         [string[]]$CollaboratorsNot,
 
-        # Limits the results to items with the specified owner usernames, such as 'alice@contoso.com', 'bob@microsoft.com'. 
+        # Limits the results to items with the specified owner usernames, such as 'alice@contoso.com', 'bob@microsoft.com'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [string[]]$Owner,
@@ -1432,12 +1433,12 @@ function Get-MCASFile
         [ValidateNotNullOrEmpty()]
         [string]$MIMETypeNot,
 
-        # Limits the results to items shared with the specified domains, such as 'contoso.com', 'microsoft.com'.  
+        # Limits the results to items shared with the specified domains, such as 'contoso.com', 'microsoft.com'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [string[]]$Domains,
 
-        # Limits the results to items not shared with the specified domains, such as 'contoso.com', 'microsoft.com'. 
+        # Limits the results to items not shared with the specified domains, such as 'contoso.com', 'microsoft.com'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [string[]]$DomainsNot,
@@ -1476,12 +1477,12 @@ function Get-MCASFile
         [ValidateNotNullOrEmpty()]
         [string]$NameWithoutExtension,
 
-        # Limits the results to items with the specified file extensions, such as 'jpg', 'txt'. 
+        # Limits the results to items with the specified file extensions, such as 'jpg', 'txt'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [string]$Extension,
 
-        # Limits the results to items without the specified file extensions, such as 'jpg', 'txt'.  
+        # Limits the results to items without the specified file extensions, such as 'jpg', 'txt'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [string]$ExtensionNot,
@@ -1497,7 +1498,7 @@ function Get-MCASFile
         # Limits the results to items that CAS has marked as quarantined.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [switch]$Quarantined,
-        
+
         # Limits the results to items that CAS has marked as not quarantined.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [switch]$QuarantinedNot,
@@ -1513,7 +1514,7 @@ function Get-MCASFile
     Begin
     {
         $Endpoint = 'files'
-        
+
         Try {$TenantUri = Select-MCASTenantUri}
             Catch {Throw $_}
 
@@ -1521,17 +1522,17 @@ function Get-MCASFile
             Catch {Throw $_}
     }
     Process
-    {        
+    {
         # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
         If ($PSCmdlet.ParameterSetName -eq 'Fetch')
-        {        
-            Try 
+        {
+            Try
             {
                 # Fetch the item by its id
                 $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
             }
                 Catch
-                { 
+                {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
             $Response
@@ -1542,11 +1543,11 @@ function Get-MCASFile
         If ($PSCmdlet.ParameterSetName -eq  'List') # Only run remainder of this end block if not in fetch mode
         {
             # List mode logic only needs to happen once, so it goes in the 'End' block for efficiency
-            
+
             $Body = @{'skip'=$Skip;'limit'=$ResultSetSize} # Base request body
 
             #region ----------------------------SORTING----------------------------
-        
+
             If ($SortBy -xor $SortDirection) {Throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'}
 
             # Add sort direction to request body, if specified
@@ -1554,7 +1555,7 @@ function Get-MCASFile
             If ($SortDirection -eq 'Descending') {$Body.Add('sortDirection','desc')}
 
             # Add sort field to request body, if specified
-            If ($SortBy -eq 'DateModified') 
+            If ($SortBy -eq 'DateModified')
             {
                 $Body.Add('sortField','dateModified') # Patch to convert 'DateModified' to 'dateModified' for API compatibility. There is only one Sort Field today.
             }
@@ -1571,7 +1572,7 @@ function Get-MCASFile
             If ($FiletypeNot){
                 $Filetypehashtable = @{}
                 $FiletypeNot | ForEach-Object {$Filetypehashtable.Add($_,$_)}
-                }                
+                }
 
             # Additional parameter validations and mutual exclusions
             If ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
@@ -1581,13 +1582,13 @@ function Get-MCASFile
             If ($Folders -and $FoldersNot) {Throw 'Cannot reconcile -Folder and -FolderNot switches. Use zero or one of these, but not both.'}
             If ($Quarantined -and $QuarantinedNot) {Throw 'Cannot reconcile -Quarantined and -QuarantinedNot switches. Use zero or one of these, but not both.'}
             If ($Trashed -and $TrashedNot) {Throw 'Cannot reconcile -Trashed and -TrashedNot switches. Use zero or one of these, but not both.'}
-            
+
             # Value-mapped filters
             If ($Filetype)        {$FilterSet += @{'fileType'=@{'eq'= ($Filetype | ForEach-Object {$_ -as [int]})}}}
             If ($FiletypeNot)     {$FilterSet += @{'fileType'=@{'neq'=($FiletypeNot | ForEach-Object {$_ -as [int]})}}}
             If ($FileAccessLevel) {$FilterSet += @{'sharing'= @{'eq'= ($FileAccessLevel | ForEach-Object {$_ -as [int]})}}}
-            If ($AppName)         {$FilterSet += @{'service'= @{'eq'= ($AppName | ForEach-Object {$_ -as [int]})}}}  
-            If ($AppNameNot)      {$FilterSet += @{'service'= @{'neq'=($AppNameNot | ForEach-Object {$_ -as [int]})}}}  
+            If ($AppName)         {$FilterSet += @{'service'= @{'eq'= ($AppName | ForEach-Object {$_ -as [int]})}}}
+            If ($AppNameNot)      {$FilterSet += @{'service'= @{'neq'=($AppNameNot | ForEach-Object {$_ -as [int]})}}}
 
             # Simple filters
             If ($AppId)                {$FilterSet += @{'service'=                  @{'eq'=$AppId}}}
@@ -1606,8 +1607,8 @@ function Get-MCASFile
             If ($NameWithoutExtension) {$FilterSet += @{'filename'=                 @{'text'=$NameWithoutExtension}}}
             If ($Folders)              {$FilterSet += @{'folder'=                   @{'eq'=$true}}}
             If ($FoldersNot)           {$FilterSet += @{'folder'=                   @{'eq'=$false}}}
-            If ($Quarantined)          {$FilterSet += @{'quarantined'=              @{'eq'=$true}}} 
-            If ($QuarantinedNot)       {$FilterSet += @{'quarantined'=              @{'eq'=$false}}} 
+            If ($Quarantined)          {$FilterSet += @{'quarantined'=              @{'eq'=$true}}}
+            If ($QuarantinedNot)       {$FilterSet += @{'quarantined'=              @{'eq'=$false}}}
             If ($Trashed)              {$FilterSet += @{'trashed'=                  @{'eq'=$true}}}
             If ($TrashedNot)           {$FilterSet += @{'trashed'=                  @{'eq'=$false}}}
             If ($FileLabel)            {$FilterSet += @{'fileLabels'=               @{'eq'=$FileLabel}}}
@@ -1616,12 +1617,12 @@ function Get-MCASFile
             #endregion ----------------------------FILTERING----------------------------
 
             # Get the matching items and handle errors
-            Try 
+            Try
             {
-                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token -FilterSet $FilterSet                    
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token -FilterSet $FilterSet
             }
-                Catch 
-                { 
+                Catch
+                {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
             $Response
@@ -1657,17 +1658,17 @@ function Send-MCASDiscoveryLog
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
         [Validatescript({Test-Path $_})]
         [string]$LogFile,
-        
+
         # Specifies the source device type of the log file.
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=1)]
         [ValidateNotNullOrEmpty()]
         [device_type[]]$LogType,
-        
+
         # Specifies the discovery data source name as reflected in your CAS console, such as 'US West Microsoft ASA'.
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=2)]
         [ValidateNotNullOrEmpty()]
         [string]$DiscoveryDataSource,
-        
+
         # Specifies that the uploaded log file should be deleted after the upload operation completes.
         [alias("dts")]
         [switch]$Delete,
@@ -1691,7 +1692,7 @@ function Send-MCASDiscoveryLog
             Catch {Throw $_}
     }
     Process
-    {   
+    {
         # Get just the file name, for when full path is specified
         Try
         {
@@ -1699,20 +1700,20 @@ function Send-MCASDiscoveryLog
         }
             Catch
             {
-                Throw "Could not get $LogFile : $_"    
+                Throw "Could not get $LogFile : $_"
             }
 
         #region GET UPLOAD URL
-        Try 
-        {       
+        Try
+        {
             # Get an upload URL for the file
             $GetUploadUrlResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/discovery/upload_url/?filename=$FileName&source=$LogType" -Headers @{Authorization = "Token $Token"} -Method Get -UseBasicParsing
 
-            $UploadUrl = $GetUploadUrlResponse.url           
+            $UploadUrl = $GetUploadUrlResponse.url
         }
-            Catch 
-            { 
-                If ($_ -like 'The remote server returned an error: (404) Not Found.') 
+            Catch
+            {
+                If ($_ -like 'The remote server returned an error: (404) Not Found.')
                 {
                     Throw "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
                 }
@@ -1724,15 +1725,15 @@ function Send-MCASDiscoveryLog
                 {
                     Throw "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
                 }
-                Else 
+                Else
                 {
                     Throw "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
                 }
-            }            
+            }
         #endregion GET UPLOAD URL
 
         #region UPLOAD LOG FILE
-        
+
         # Set appropriate transfer encoding header info based on log file size
         If (($GetUploadUrlResponse.provider -eq 'azure') -and ($LogFileBlob.Length -le 64mb))
         {
@@ -1742,10 +1743,10 @@ function Send-MCASDiscoveryLog
         {
             $FileUploadHeader = @{'Transfer-Encoding'='chunked'}
         }
-                    
-        Try 
+
+        Try
         {
-            # Upload the log file to the target URL obtained earlier, using appropriate headers 
+            # Upload the log file to the target URL obtained earlier, using appropriate headers
             If ($FileUploadHeader)
             {
                 If (Test-Path $LogFile) {Invoke-RestMethod -Uri $UploadUrl -InFile $LogFile -Headers $FileUploadHeader -Method Put -UseBasicParsing -ErrorAction Stop}
@@ -1755,9 +1756,9 @@ function Send-MCASDiscoveryLog
                 If (Test-Path $LogFile) {Invoke-RestMethod -Uri $UploadUrl -InFile $LogFile -Method Put -UseBasicParsing -ErrorAction Stop}
             }
         }
-            Catch 
-            { 
-                If ($_ -like 'The remote server returned an error: (404) Not Found.') 
+            Catch
+            {
+                If ($_ -like 'The remote server returned an error: (404) Not Found.')
                 {
                     Throw "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
                 }
@@ -1769,22 +1770,22 @@ function Send-MCASDiscoveryLog
                 {
                     Throw "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
                 }
-                Else 
+                Else
                 {
                     Throw "File upload failed: $_"
                 }
             }
         #endregion UPLOAD LOG FILE
 
-        #region FINALIZE UPLOAD 
-        Try 
+        #region FINALIZE UPLOAD
+        Try
         {
-            # Finalize the upload           
-            $FinalizeUploadResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/discovery/done_upload/" -Headers @{Authorization = "Token $Token"} -Body @{'uploadUrl'=$UploadUrl;'inputStreamName'=$DiscoveryDataSource} -Method Post -UseBasicParsing -ErrorAction Stop                
+            # Finalize the upload
+            $FinalizeUploadResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/discovery/done_upload/" -Headers @{Authorization = "Token $Token"} -Body @{'uploadUrl'=$UploadUrl;'inputStreamName'=$DiscoveryDataSource} -Method Post -UseBasicParsing -ErrorAction Stop
         }
-            Catch 
-            { 
-                If ($_ -like 'The remote server returned an error: (404) Not Found.') 
+            Catch
+            {
+                If ($_ -like 'The remote server returned an error: (404) Not Found.')
                 {
                     Throw "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
                 }
@@ -1800,17 +1801,17 @@ function Send-MCASDiscoveryLog
                 {
                     Throw "400 - Bad Request: Ensure the -DiscoveryDataSource parameter specifies a valid data source name that you have created in the CAS web console."
                 }
-                Else 
+                Else
                 {
                     Throw "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
                 }
             }
         #endregion FINALIZE UPLOAD
 
-        Try 
+        Try
         {
-            # Delete the file           
-            If ($Delete) {Remove-Item $LogFile -Force -ErrorAction Stop}            
+            # Delete the file
+            If ($Delete) {Remove-Item $LogFile -Force -ErrorAction Stop}
         }
             Catch
             {
@@ -1829,7 +1830,7 @@ function Send-MCASDiscoveryLog
 .DESCRIPTION
    Sets the status of alerts in Cloud App Security and requires a credential be provided.
 
-   There are two parameter sets: 
+   There are two parameter sets:
 
    MarkAs: Used for marking an alert as 'Read' or 'Unread'.
    Dismiss: Used for marking an alert as 'Dismissed'.
@@ -1839,7 +1840,7 @@ function Send-MCASDiscoveryLog
 .EXAMPLE
    Set-MCASAlert -Identity cac1d0ec5734e596e6d785cc -MarkAs Read
 
-    This marks a single specified alert as 'Read'. 
+    This marks a single specified alert as 'Read'.
 
 .EXAMPLE
    Set-MCASAlert -Identity cac1d0ec5734e596e6d785cc -Dismiss
@@ -1865,7 +1866,7 @@ function Set-MCASAlert
         [ValidatePattern({^[A-Fa-f0-9]{24}$})]
         [alias("_id")]
         [string]$Identity,
-        
+
         # Specifies how to mark the alert. Possible Values: 'Read', 'Unread'.
         [Parameter(ParameterSetName='MarkAs',Mandatory=$true, Position=1)]
         [ValidateSet('Read','Unread')]
@@ -1900,13 +1901,13 @@ function Set-MCASAlert
         If ($Dismiss) {$Action = 'dismiss'}
         If ($MarkAs)  {$Action = $MarkAs.ToLower()} # Convert -MarkAs to lower case, as expected by the CAS API
 
-        Try 
+        Try
             {
                 # Set the alert's state by its id
                 $SetResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/$Action/" -Method Post -Token $Token
             }
             Catch
-                { 
+                {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
             $SetResponse
@@ -1924,13 +1925,13 @@ function Set-MCASAlert
 .EXAMPLE
     Get-MCASDiscoveredApp -StreamId $streamid | select name -First 5
 
-    name         
-    ----         
+    name
+    ----
     1ShoppingCart
-    ABC News     
-    ACTIVE       
-    AIM          
-    AT&T  
+    ABC News
+    ACTIVE
+    AIM
+    AT&T
 
     Retrieves the first 5 app names sorted alphabetically.
 .EXAMPLE
@@ -1938,11 +1939,11 @@ function Set-MCASAlert
 
     name                   Total (MB)
     ----                   ----------
-    Blue Coat              19.12     
-    Globalscape            0.00      
-    McAfee Control Console 1.28      
-    Symantec               0.20      
-    Websense               0.06      
+    Blue Coat              19.12
+    Globalscape            0.00
+    McAfee Control Console 1.28
+    Symantec               0.20
+    Websense               0.06
 
     In this example we pull back only discovered apps in the security category and display a table of names and Total traffic which we format to 2 decimal places and divide the totalTrafficBytes property by 1MB to show the traffic in MB.
 
@@ -1952,7 +1953,7 @@ function Get-MCASDiscoveredApp
     [CmdletBinding()]
     [Alias('Get-CASDiscoveredApp')]
     Param
-    (   
+    (
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
         [ValidateScript({(($_.StartsWith('https://') -eq $false) -and ($_.EndsWith('.adallom.com') -or $_.EndsWith('.cloudappsecurity.com')))})]
@@ -1968,7 +1969,7 @@ function Get-MCASDiscoveredApp
         [ValidateSet('IpCount','LastUsed','Name','Transactions','Upload','UserCount')]
         [ValidateNotNullOrEmpty()]
         [string]$SortBy='Name',
-                
+
         # Specifies the direction in which to sort the results. Set to 'Ascending' by default. Possible Values: 'Ascending','Descending'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('Ascending','Descending')]
@@ -1985,15 +1986,15 @@ function Get-MCASDiscoveredApp
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateScript({$_ -gt -1})]
         [int]$Skip = 0,
-        
+
         ##### FILTER PARAMS #####
-        
+
         # Limits results by category type. A preset list of categories are included.
         [Parameter(ParameterSetName='List', Mandatory=$false, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
         [ValidateNotNullOrEmpty()]
         [app_category[]]$Category,
 
-        # Limits the results by risk score range, for example '3-9'. Set to '1-10' by default. 
+        # Limits the results by risk score range, for example '3-9'. Set to '1-10' by default.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidatePattern('^([1-9]0?)-([1-9]0?)$')]
         [ValidateNotNullOrEmpty()]
@@ -2001,7 +2002,7 @@ function Get-MCASDiscoveredApp
 
         # Limits the results by stream ID, for example '577d49d72b1c51a0762c61b0'. The stream ID can be found in the URL bar of the console when looking at the Discovery dashboard.
         [Parameter(ParameterSetName='List', Mandatory=$true, Position=0, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
-        [ValidatePattern('^[A-Fa-f0-9]{24}$')] 
+        [ValidatePattern('^[A-Fa-f0-9]{24}$')]
         [ValidateNotNullOrEmpty()]
         [string]$StreamId,
 
@@ -2020,26 +2021,26 @@ function Get-MCASDiscoveredApp
             Catch {Throw $_}
     }
     Process
-    {        
+    {
     }
     End
     {
         If ($PSCmdlet.ParameterSetName -eq  'List') # Only run remainder of this end block if not in fetch mode
         {
             # List mode logic only needs to happen once, so it goes in the 'End' block for efficiency
-            
+
             $Body = @{
                 'skip'=$Skip;
-                'limit'=$ResultSetSize; 
-                'score'=$ScoreRange; 
+                'limit'=$ResultSetSize;
+                'score'=$ScoreRange;
                 'timeframe'=$TimeFrame;
                 'streamId'=$StreamId
                 } # Base request body
-            
+
             If ($Category){
                 $Body += @{'category'="SAASDB_CATEGORY_$Category"}
             }
-                 
+
             If ($SortBy -xor $SortDirection) {Write-Error 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.' -ErrorAction Stop}
 
             # Add sort direction to request body, if specified
@@ -2055,14 +2056,14 @@ function Get-MCASDiscoveredApp
                 'Upload'       {$Body.Add('sortField','trafficUploadedBytes')}
                 'Transactions' {$Body.Add('sortField','trafficTotalEvents')}
                 }
-  
-            Try 
+
+            Try
             {
-                $Response = (Invoke-Restmethod -Uri "https://$TenantUri/cas/api/discovery/" -Body $Body -Headers @{Authorization = "Token $Token"} -UseBasicParsing -ErrorAction Stop -Method Get).data            
+                $Response = (Invoke-Restmethod -Uri "https://$TenantUri/cas/api/discovery/" -Body $Body -Headers @{Authorization = "Token $Token"} -UseBasicParsing -ErrorAction Stop -Method Get).data
             }
-            Catch 
-            { 
-                If ($_ -like 'The remote server returned an error: (404) Not Found.') 
+            Catch
+            {
+                If ($_ -like 'The remote server returned an error: (404) Not Found.')
                 {
                     Write-Error "404 - Not Found: Check to ensure the -TenantUri parameter is valid."
                 }
@@ -2074,7 +2075,7 @@ function Get-MCASDiscoveredApp
                 {
                     Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
                 }
-                Else 
+                Else
                 {
                     Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
                 }
@@ -2094,8 +2095,8 @@ function Get-MCASDiscoveredApp
 .EXAMPLE
     Get-MCASAppInfo -AppId 11114 | select name, category
 
-    name       category           
-    ----       --------           
+    name       category
+    ----       --------
     Salesforce SAASDB_CATEGORY_CRM
 
 .EXAMPLE
@@ -2103,7 +2104,7 @@ function Get-MCASDiscoveredApp
 
     name        Compliance Security Provider Total
     ----        ---------- -------- -------- -----
-    Blue Coat   4          8        6        6      
+    Blue Coat   4          8        6        6
 
     This example creates a table with just the app name and high level scores.
 
@@ -2115,7 +2116,7 @@ function Get-MCASAppInfo
     [CmdletBinding()]
     [Alias('Get-CASAppInfo')]
     Param
-    (   
+    (
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
         [ValidateScript({(($_.StartsWith('https://') -eq $false) -and ($_.EndsWith('.adallom.com') -or $_.EndsWith('.cloudappsecurity.com')))})]
@@ -2131,7 +2132,7 @@ function Get-MCASAppInfo
         [ValidateNotNullOrEmpty()]
         [ValidatePattern('\b\d{5}\b')]
         [Alias("Service","Services")]
-        [int]$AppId
+        [int[]]$AppId
     )
     Begin
     {
@@ -2142,32 +2143,32 @@ function Get-MCASAppInfo
             Catch {Throw $_}
     }
     Process
-    { 
+    {
             If ($PSCmdlet.ParameterSetName -eq  'List') # Only run remainder of this end block if not in fetch mode
         {
             # List mode logic only needs to happen once, so it goes in the 'End' block for efficiency
-            
-            $Body = @{'skip'=0;'limit'=1} # Base request body
+
+            $Body = @{'skip'=0;'limit'=100} # Base request body
 
             #region ----------------------------FILTERING----------------------------
             $FilterSet = @() # Filter set array
- 
+
             # Simple filters
             If ($AppId) {$FilterSet += @{'appId'= @{'eq'=$AppId}}}
 
-            # Add filter set to request body as the 'filter' property            
+            # Add filter set to request body as the 'filter' property
             If ($FilterSet) {$Body.Add('filters',(ConvertTo-MCASJsonFilterString $FilterSet))}
 
             #endregion -------------------------FILTERING----------------------------
 
             # Get the matching alerts and handle errors
-            Try 
+            Try
             {
-                $Response = ((Invoke-WebRequest -Uri "https://$TenantUri/api/v1/saasdb/" -Body $Body -Headers @{Authorization = "Token $Token"} -UseBasicParsing -Method Get -ErrorAction Stop) | ConvertFrom-Json).data              
+                $Response = ((Invoke-WebRequest -Uri "https://$TenantUri/api/v1/saasdb/" -Body $Body -Headers @{Authorization = "Token $Token"} -UseBasicParsing -Method Get -ErrorAction Stop) | ConvertFrom-Json).data
             }
-            Catch 
-            { 
-                If ($_ -like 'The remote server returned an error: (404) Not Found.') 
+            Catch
+            {
+                If ($_ -like 'The remote server returned an error: (404) Not Found.')
                 {
                     Write-Error "404 - Not Found: Check to ensure the -TenantUri parameter is valid."
                 }
@@ -2179,13 +2180,13 @@ function Get-MCASAppInfo
                 {
                     Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
                 }
-                Else 
+                Else
                 {
                     Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
                 }
             }
             If ($Response) {Write-Output $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
-        }       
+        }
     }
     End
     {
@@ -2227,7 +2228,7 @@ function Get-MCASReport
     [CmdletBinding()]
     [Alias('Get-CASReport')]
     Param
-    (   
+    (
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
         [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
@@ -2238,7 +2239,7 @@ function Get-MCASReport
         [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential,
 
-        # -User limits the results to items related to the specified user/users, for example 'alice@contoso.com','bob@contoso.com'. 
+        # -User limits the results to items related to the specified user/users, for example 'alice@contoso.com','bob@contoso.com'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [ValidateSet('Activity by Location','Browser Use','IP Addresses','IP Addresses for Admins','OS Use','Strictly Remote Users','Cloud App Overview','Inactive Accounts','Privileged Users','Salesforce Special Privileged Accounts','User Logon','Data Sharing Overview','File Extensions','Orphan Files','Outbound Sharing by Domain','Owners of Shared Files','Personal User Accounts','Sensitive File Names')]
@@ -2255,24 +2256,24 @@ function Get-MCASReport
             Catch {Throw $_}
     }
     Process
-    {        
+    {
     }
     End
     {
 
             # Get the matching items and handle errors
-            Try 
-            {                  
+            Try
+            {
                 $Response = Invoke-RestMethod -Uri "https://$TenantUri/api/reports/$Endpoint" -Headers @{Authorization = "Token $Token"} -UseBasicParsing
             }
                 Catch
-                { 
+                {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
                 $Response.data
-               
+
     }
-    
+
 }
 
 <#
@@ -2292,7 +2293,7 @@ function Get-MCASStream
     [CmdletBinding()]
     [Alias('Get-CASStream')]
     Param
-    (   
+    (
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
         [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
@@ -2306,7 +2307,7 @@ function Get-MCASStream
     Begin
     {
         $Endpoint = 'discovery'
-        
+
         Try {$TenantUri = Select-MCASTenantUri}
             Catch {Throw $_}
 
@@ -2314,17 +2315,17 @@ function Get-MCASStream
             Catch {Throw $_}
     }
     Process
-    {        
-    } 
+    {
+    }
     End
     {
             # Get the matching items and handle errors
-            Try 
-            {                  
+            Try
+            {
                 $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -ApiVersion $null -Endpoint $Endpoint -EndpointSuffix 'streams/' -Method Get -Token $Token
             }
                 Catch
-                { 
+                {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
                 $Response.streams
@@ -2361,13 +2362,13 @@ function Get-MCASGovernanceLog
     [CmdletBinding()]
     [Alias('Get-CASGovernanceLog')]
     Param
-    (   
+    (
         # Fetches an activity object by its unique identifier.
         [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
         [ValidatePattern("((\d{8}_\d{5}_[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12})|([A-Za-z0-9]{20}))")]
         [alias("_id")]
         [string]$Identity,
-        
+
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
         [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
@@ -2382,7 +2383,7 @@ function Get-MCASGovernanceLog
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('timestamp')]
         [string]$SortBy,
-                
+
         # Specifies the direction in which to sort the results. Possible Values: 'Ascending','Descending'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('Ascending','Descending')]
@@ -2448,17 +2449,17 @@ function Get-MCASGovernanceLog
             Catch {Throw $_}
     }
     Process
-    {        
+    {
         # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
         If ($PSCmdlet.ParameterSetName -eq 'Fetch')
-        {        
-            Try 
+        {
+            Try
             {
                 # Fetch the item by its id
                 $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
             }
                 Catch
-                { 
+                {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
             $Response
@@ -2469,11 +2470,11 @@ function Get-MCASGovernanceLog
         If ($PSCmdlet.ParameterSetName -eq  'List') # Only run remainder of this end block if not in fetch mode
         {
             # List mode logic only needs to happen once, so it goes in the 'End' block for efficiency
-            
+
             $Body = @{'skip'=$Skip;'limit'=$ResultSetSize} # Base request body
 
             #region ----------------------------SORTING----------------------------
-        
+
             If ($SortBy -xor $SortDirection) {Throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'}
 
             # Add sort direction to request body, if specified
@@ -2481,10 +2482,10 @@ function Get-MCASGovernanceLog
             If ($SortDirection -eq 'Descending') {$Body.Add('sortDirection','desc')}
 
             # Add sort field to request body, if specified
-            If ($SortBy) 
+            If ($SortBy)
             {
                 $Body.Add('sortField',$SortBy.ToLower())
-            }  
+            }
             #endregion ----------------------------SORTING----------------------------
 
             #region ----------------------------FILTERING----------------------------
@@ -2506,23 +2507,23 @@ function Get-MCASGovernanceLog
             If ($AppId)    {$FilterSet += @{'appId'= @{'eq'=$AppId}}}
             If ($AppIdNot) {$FilterSet += @{'appId'= @{'neq'=$AppIdNot}}}
 
-            # Add filter set to request body as the 'filter' property            
+            # Add filter set to request body as the 'filter' property
             If ($FilterSet) {$Body.Add('filters',(ConvertTo-MCASJsonFilterString $FilterSet))}
 
             #endregion ----------------------------FILTERING----------------------------
 
             # Get the matching items and handle errors
-            Try 
+            Try
             {
-                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token                    
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token
             }
-                Catch 
-                { 
+                Catch
+                {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
             If ($Response.total -eq 0){Write-Verbose 'No governance log entries found for specified filters.'}
             Else {$Response}
-            
+
         }
     }
 }
@@ -2533,7 +2534,7 @@ function Get-MCASGovernanceLog
 .DESCRIPTION
    Exports a block script, in the specified firewall or proxy device type format, for the unsanctioned apps and requires a credential be provided.
 
-   'Export-MCASBlockScript -Appliance <device format>' returns the text to be used in a Websense block script. Methods available are only those available to custom objects by default. 
+   'Export-MCASBlockScript -Appliance <device format>' returns the text to be used in a Websense block script. Methods available are only those available to custom objects by default.
 .EXAMPLE
    Export-MCASBlockScript -Appliance WEBSENSE
 
@@ -2564,7 +2565,7 @@ function Get-MCASGovernanceLog
 
    This pulls back string to be used as a block script in BlueCoat format.
 
-.EXAMPLE 
+.EXAMPLE
    Export-MCASBlockScript -Appliance WEBSENSE | Set-Content MyNewWebsenseBlockScript.txt
 
    This pulls back a Websense block script in text string format and creates a new text file out of it.
@@ -2577,7 +2578,7 @@ function Export-MCASBlockScript
     [CmdletBinding()]
     [Alias('Export-CASBlockScript')]
     Param
-    (   
+    (
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
         [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
@@ -2593,19 +2594,19 @@ function Export-MCASBlockScript
         [blockscript_format]$Appliance
     )
     $Endpoint = 'discovery_block_scripts'
-        
+
     Try {$TenantUri = Select-MCASTenantUri}
         Catch {Throw $_}
 
     Try {$Token = Select-MCASToken}
-        Catch {Throw $_}    
-               
-    Try 
+        Catch {Throw $_}
+
+    Try
     {
         $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix ('?format='+($Appliance -as [int])) -Method Get -Token $Token -ApiVersion $null -Raw
     }
         Catch
-        { 
+        {
             Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
         }
 
@@ -2619,7 +2620,7 @@ function Get-MCASAdminAccess
     [CmdletBinding()]
     [Alias('Get-CASAdminAccess')]
     Param
-    (   
+    (
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
         [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
@@ -2631,19 +2632,19 @@ function Get-MCASAdminAccess
         [System.Management.Automation.PSCredential]$Credential
     )
     $Endpoint = 'manage_admin_access'
-        
+
     Try {$TenantUri = Select-MCASTenantUri}
         Catch {Throw $_}
 
     Try {$Token = Select-MCASToken}
-        Catch {Throw $_}     
-             
-    Try 
+        Catch {Throw $_}
+
+    Try
     {
         $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -CASPrefix -Method Get -Token $Token
     }
         Catch
-        { 
+        {
             Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
         }
 
@@ -2655,7 +2656,7 @@ function Add-MCASAdminAccess
     [CmdletBinding()]
     [Alias('Add-CASAdminAccess')]
     Param
-    (   
+    (
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
         [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
@@ -2677,27 +2678,27 @@ function Add-MCASAdminAccess
     Begin
     {
         $Endpoint = 'manage_admin_access'
-        
+
         Try {$TenantUri = Select-MCASTenantUri}
             Catch {Throw $_}
 
         Try {$Token = Select-MCASToken}
-            Catch {Throw $_}   
+            Catch {Throw $_}
     }
     Process
-    {    
+    {
         If ((Get-MCASAdminAccess).username -contains $Username) {
             Write-Warning "$Username is already listed as an administrator of Cloud App Security. No changes were made."
             }
-        Else {        
+        Else {
             $Body = [ordered]@{'username'=$Username;'permissionType'=($PermissionType -as [string])}
-    
-            Try 
+
+            Try
             {
                 $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -CASPrefix -Method Post -Token $Token -Body $Body
             }
                 Catch
-                { 
+                {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
 
@@ -2714,7 +2715,7 @@ function Remove-MCASAdminAccess
     [CmdletBinding()]
     [Alias('Remove-CASAdminAccess')]
     Param
-    (   
+    (
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
         [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
@@ -2732,25 +2733,25 @@ function Remove-MCASAdminAccess
     Begin
     {
         $Endpoint = 'manage_admin_access'
-        
+
         Try {$TenantUri = Select-MCASTenantUri}
             Catch {Throw $_}
 
         Try {$Token = Select-MCASToken}
-            Catch {Throw $_}   
+            Catch {Throw $_}
     }
     Process
-    {         
+    {
         If ((Get-MCASAdminAccess).username -notcontains $Username) {
             Write-Warning "$Username is not listed as an administrator of Cloud App Security. No changes were made."
             }
         Else {
-            Try 
+            Try
             {
-                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Username/" -CASPrefix -Method Delete -Token $Token 
+                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Username/" -CASPrefix -Method Delete -Token $Token
             }
                 Catch
-                { 
+                {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
 
