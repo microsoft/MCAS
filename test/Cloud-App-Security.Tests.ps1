@@ -1,6 +1,17 @@
 ﻿
+#  Configure tests
+
+    $RunInteractiveTest = $false
+
+
+
+
+
+
 $ModuleManifestName = 'Cloud-App-Security.psd1'
 $ModuleManifestPath = "$PSScriptRoot\..\$ModuleManifestName"
+
+
 
 Describe 'Module Manifest Tests' {
     It 'Passes Test-ModuleManifest' {
@@ -9,24 +20,54 @@ Describe 'Module Manifest Tests' {
     }
 }
 
+
+
 Import-Module $PSScriptRoot\..\Cloud-App-Security.psm1 -Force
+
+
 
 If ($CASCredential -eq $null -or !($CASCredential)) {
     Get-MCASCredential
     }
 
 
-Describe 'Get-MCASCredential' {
-    It 'Properly outputs CEF formatted message' {
-        #$Result = New-CEFMessage -DeviceVendor 'Contoso' -DeviceProduct 'MyPowershellScript' -DeviceVersion '1.0' -DeviceEventClassId 'Alert' -Name 'Something bad was detected.' -Severity 10 -externalId 12345 -src 192.168.1.1 -deviceDirection Outbound -act 'Blocked' -spriv 'Administrator' -Type Base -In 6213467 -dmac '01-23-45-67-89-AF' -cfp1 3.141592653589 -CustomExtensionRawString 'key=value'
-        #Result | Should Be $ExpectedResult
-    }
 
-    It 'Accepts input via ForEach-Object' {
-        #$Result = $TestCollection | New-CEFMessage
-        #$Result | Should Be $ExpectedResult
+
+
+If ($RunInteractiveTest) {
+    Describe 'Get-MCASCredential' {
+        It 'Outputs a credential object when -PassThru is used' {
+            (Get-MCASCredential -PassThru | Get-TypeData).TypeName | Should Be 'System.Management.Automation.PSCredential'
+        }
+
+        It 'Accepts -TenantUri' {
+            (Get-MCASCredential -PassThru -TenantUri 'contoso.portal.cloudappsecurity.com').GetNetworkCredential().username | Should Be 'contoso.portal.cloudappsecurity.com'
+        }
     }
 }
+
+Describe 'Add-MCASAdminAccess' {
+    It 'Returns $true' {
+        $AdminUser = Get-MCASAccount -ResultSetSize 1 -Internal -UserDomain
+        
+        $TestResult = $true
+        $TestResult | Should Be $true
+    }
+}
+
+
+
+
+
+
+Describe 'Verb-Noun' {
+    It 'Returns $true' {
+        $TestResult = $true
+        $TestResult | Should Be $true
+    }
+}
+
+
 
 <#
 Describe $this.CmdletName {

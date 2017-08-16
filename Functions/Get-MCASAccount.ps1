@@ -228,8 +228,8 @@ function Get-MCASAccount
             If ($External -and $Internal) {Throw 'Cannot reconcile -External and -Internal switches. Use zero or one of these, but not both.'}
 
             # Value-mapped filters
-            If ($AppName)    {$FilterSet += @{'service'=@{'eq'=($AppName | ForEach-Object {$_ -as [int]})}}}
-            If ($AppNameNot) {$FilterSet += @{'service'=@{'neq'=($AppNameNot | ForEach-Object {$_ -as [int]})}}}
+            If ($AppName)    {$FilterSet += @{'service'=@{'eq'=([int[]](($AppName | ForEach-Object {$_ -as [int]})))}}}
+            If ($AppNameNot) {$FilterSet += @{'service'=@{'neq'=([int[]](($AppNameNot | ForEach-Object {$_ -as [int]})))}}}
 
             # Simple filters
             If ($Internal)   {$FilterSet += @{'affiliation'=   @{'eq'=$false}}}

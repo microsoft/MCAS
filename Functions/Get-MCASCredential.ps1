@@ -50,6 +50,7 @@ function Get-MCASCredential
 {
     [CmdletBinding()]
     [Alias('Get-CASCredential')]
+    [OutputType([System.Management.Automation.PSCredential])]
     Param
     (
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
@@ -64,12 +65,18 @@ function Get-MCASCredential
     Process
     {
         # If tenant URI is specified, prompt for OAuth token and get it all into a global variable
-        If ($TenantUri) {[System.Management.Automation.PSCredential]$Global:CASCredential = Get-Credential -UserName $TenantUri -Message "Enter the OAuth token for $TenantUri"}
+        If ($TenantUri) {
+            [System.Management.Automation.PSCredential]$Global:CASCredential = Get-Credential -UserName $TenantUri -Message "Enter the OAuth token for $TenantUri"
+        }
 
         # Else, prompt for both the tenant and OAuth token and get it all into a global variable
-        Else {[System.Management.Automation.PSCredential]$Global:CASCredential = Get-Credential -Message "Enter the CAS tenant and OAuth token"}
+        Else {
+            [System.Management.Automation.PSCredential]$Global:CASCredential = Get-Credential -Message "Enter the CAS tenant and OAuth token"
+        }
 
         # If -PassThru is specified, write the credential object to the pipeline (the global variable will also be exported to the calling session with Export-ModuleMember)
-        If ($PassThru) {Write-Output $CASCredential}
+        If ($PassThru) {
+            $CASCredential
+        }
     }
 }
