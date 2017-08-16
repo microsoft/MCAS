@@ -16,6 +16,177 @@ If ($CASCredential -eq $null -or !($CASCredential)) {
     }
 
 
+Describe 'Get-MCASCredential' {
+    It 'Properly outputs CEF formatted message' {
+        #$Result = New-CEFMessage -DeviceVendor 'Contoso' -DeviceProduct 'MyPowershellScript' -DeviceVersion '1.0' -DeviceEventClassId 'Alert' -Name 'Something bad was detected.' -Severity 10 -externalId 12345 -src 192.168.1.1 -deviceDirection Outbound -act 'Blocked' -spriv 'Administrator' -Type Base -In 6213467 -dmac '01-23-45-67-89-AF' -cfp1 3.141592653589 -CustomExtensionRawString 'key=value'
+        #Result | Should Be $ExpectedResult
+    }
+
+    It 'Accepts input via ForEach-Object' {
+        #$Result = $TestCollection | New-CEFMessage
+        #$Result | Should Be $ExpectedResult
+    }
+}
+
+<#
+Describe $this.CmdletName {
+    Mock -ModuleName Cloud-App-Security Get-Date { return (New-Object datetime(2000,1,1)) }
+
+    Context 'Common Parameter Validation' {
+
+        ## Test null credential (all cmdlets except Get-MCASCredential)
+        #If ($this.CmdletName -ne 'Get-MCASCredential' -and $this.ResultSetSizeValidRange) {  
+        #    It "Should not accept a null credential" {
+        #        {&($this.CmdletName) -Credential $null -ResultSetSize 1} | Should Throw 'Cannot validate argument on parameter'
+        #        }                  
+        #    }
+        
+        # Test null identity
+        If ($this.SupportedParams -contains 'Identity') {      
+            It "Should not accept a null identity" {
+                {&($this.CmdletName) -Identity $null} | Should Throw 'Cannot validate argument on parameter'
+                }
+                
+            }
+        
+        # Test negative value for -Skip
+        If ($this.SupportedParams -contains 'Skip') {      
+            It "Should not accept a negative value for -Skip" {
+                {&($this.CmdletName) -Skip -1} | Should Throw 'Cannot validate argument on parameter'
+                }
+                
+            }
+        
+        # Test out of range result set sizes
+        If ($this.SupportedParams -contains 'ResultSetSize') {
+            $OutOfRangeResultSetSizes = @(($this.ResultSetSizeValidRange[0] - 2),($this.ResultSetSizeValidRange[0] - 1),($this.ResultSetSizeValidRange[1] + 1),($this.ResultSetSizeValidRange[1] + 2))
+
+            ForEach ($i in $OutOfRangeResultSetSizes) {
+                It "Should not accept $i for -ResultSetSize" {
+                    {&($this.CmdletName) -ResultSetSize $i} | Should Throw 'Cannot validate argument on parameter'
+                    }
+                }
+            }
+
+        # Test invalid values and combinations of -SortBy and -SortDirection
+        If ($this.SupportedParams -contains 'SortBy' -and $this.SupportedParams -contains 'SortDirection') {
+            ForEach ($i in $this.ValidSortBy) {
+                It "Should not accept 'invalid' for -SortDirection with -SortBy $i" {
+                    {&($this.CmdletName) -SortBy $i -SortDirection 'invalid'} | Should Throw 'Cannot validate argument on parameter'
+                    }
+                It "Should not accept -SortBy $i without -SortDirection" {
+                    {&($this.CmdletName) -SortBy $i} | Should Throw 'When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters'
+                    }
+                }
+            ForEach ($i in $this.ValidSortDirection) {
+                It "Should not accept 'invalid' for -SortBy with -SortDirection $i" {
+                    {&($this.CmdletName) -SortDirection $i -SortBy 'invalid'} | Should Throw 'Cannot validate argument on parameter'
+                    }
+                It "Should not accept -SortDirection $i without -SortBy" {
+                    {&($this.CmdletName) -SortDirection $i} | Should Throw 'When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters'
+                    }
+                }
+            }
+
+        ########## FILTER PARAM VALIDATIONS ##########
+
+        # Test null values, empty collections, etc
+            
+        # -UserName
+        If ($this.SupportedParams -contains 'UserName') {      
+            It "Should not accept a null value for -UserName" {
+                {&($this.CmdletName) -UserName $null} | Should Throw 'Cannot validate argument on parameter'
+                }
+            It "Should not accept an empty collection for -UserName" {
+                {&($this.CmdletName) -UserName @()} | Should Throw 'Cannot validate argument on parameter'
+                }
+            }
+        # -AppId
+        If ($this.SupportedParams -contains 'AppId') {      
+            It "Should not accept a null value for -AppId" {
+                {&($this.CmdletName) -AppId $null} | Should Throw 'Cannot validate argument on parameter'
+                }
+            It "Should not accept an empty collection for -AppId" {
+                {&($this.CmdletName) -AppId @()} | Should Throw 'Cannot validate argument on parameter'
+                }
+            }
+        # -AppName
+        If ($this.SupportedParams -contains 'AppName') {      
+            It "Should not accept a null value for -AppName" {
+                {&($this.CmdletName) -AppName $null} | Should Throw 'Cannot validate argument on parameter'
+                }
+            It "Should not accept an empty collection for -AppName" {
+                {&($this.CmdletName) -AppName @()} | Should Throw 'Cannot validate argument on parameter'
+                }
+            }
+        # -AppIdNot
+        If ($this.SupportedParams -contains 'AppIdNot') {      
+            It "Should not accept a null value for -AppIdNot" {
+                {&($this.CmdletName) -AppIdNot $null} | Should Throw 'Cannot validate argument on parameter'
+                }
+            It "Should not accept an empty collection for -ServicesNot" {
+                {&($this.CmdletName) -AppIdNot @()} | Should Throw 'Cannot validate argument on parameter'
+                }
+            }
+        # -AppNameNot
+        If ($this.SupportedParams -contains 'AppNameNot') {      
+            It "Should not accept a null value for -AppNameNot" {
+                {&($this.CmdletName) -AppNameNot $null} | Should Throw 'Cannot validate argument on parameter'
+                }
+            It "Should not accept an empty collection for -AppNameNot" {
+                {&($this.CmdletName) -AppNameNot @()} | Should Throw 'Cannot validate argument on parameter'
+                }
+            }
+        # -UserDomain
+        If ($this.SupportedParams -contains 'UserDomain') {      
+            It "Should not accept a null value for -UserDomain" {
+                {&($this.CmdletName) -UserDomain $null} | Should Throw 'Cannot validate argument on parameter'
+                }
+            It "Should not accept an empty collection for -UserDomain" {
+                {&($this.CmdletName) -UserDomain @()} | Should Throw 'Cannot validate argument on parameter'
+                }
+            }
+        
+        # -Text
+        If ($this.SupportedParams -contains 'Text') {      
+            It "Should not accept a null value for -Text" {
+                {&($this.CmdletName) -Text $null} | Should Throw 'Cannot validate argument on parameter'
+                }
+            It "Should not accept an empty collection for -Text" {
+                {&($this.CmdletName) -Text @()} | Should Throw 'Cannot process argument transformation on parameter'
+                }
+            It "Should not accept a collection for -Text" {
+                {&($this.CmdletName) -Text @('12345','12345')} | Should Throw 'Cannot process argument transformation on parameter'
+                }
+            It "Should not accept a string for -Text with <5 chars" {
+                {&($this.CmdletName) -Text '1234'} | Should Throw 'Cannot validate argument on parameter'
+                }
+            }
+
+
+
+
+
+
+
+
+
+
+
+        
+    #Context 'Scrypt Analyzer' {
+    #    It 'Does not have any issues with the Script Analyzer' {
+    #        Invoke-ScriptAnalyzer .\Cloud-App-Security.psm1 | Should be $null
+    #    }
+    #}
+
+        
+
+    }
+}
+
+#>
+
 
 
 <#
