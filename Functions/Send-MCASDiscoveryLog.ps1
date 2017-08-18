@@ -23,14 +23,14 @@ function Send-MCASDiscoveryLog
     Param
     (
         # The full path of the Log File to be uploaded, such as 'C:\mylogfile.log'.
-        [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
+        [Parameter(Mandatory=$true, ValueFromPipeline=$true, Position=0)]
         [Validatescript({Test-Path $_})]
         [string]$LogFile,
 
         # Specifies the source device type of the log file.
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=1)]
         [ValidateNotNullOrEmpty()]
-        [device_type[]]$LogType,
+        [device_type]$LogType,
 
         # Specifies the discovery data source name as reflected in your CAS console, such as 'US West Microsoft ASA'.
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=2)]
