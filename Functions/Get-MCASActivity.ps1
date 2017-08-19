@@ -174,6 +174,12 @@ function Get-MCASActivity
         [validateset("Anonymous_Proxy","Botnet","Darknet_Scanning_IP","Exchange_Online","Exchangnline_Protection","Malware_CnC_Server","Microsoft_Cloud","Microsoft_Authentication_and_Identity","Office_365","Office_365_Planner","Office_365_ProPlus","Office_Online","Office_Sway","Office_Web_Access_Companion","OneNote","Remote_Connectivity_Analyzer","Satellite_Provider","SharePoint_Online","Skype_for_Business_Online","Smart_Proxy_and_Access_Proxy_Network","Tor","Yammer","Zscaler")]
         [string[]]$IPTag,
 
+        # Limits the results to events listed for the specified IP Tags.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [ValidatePattern("[A-Fa-f0-9]{24}")]
+        [string]$PolicyId,
+
         # Limits the results to items occuring in the last x number of days.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateRange(1,180)]
@@ -267,22 +273,23 @@ function Get-MCASActivity
             If ($IPTag)      {$FilterSet += @{'ip.tags'=    @{'eq'=($IPTag.GetEnumerator() | ForEach-Object {$IPTagsList.$_ -join ','})}}}
 
             # Simple filters
-            If ($UserName)             {$FilterSet += @{'user.username'=       @{'eq'=$UserName}}}
-            If ($AppId)                {$FilterSet += @{'service'=             @{'eq'=$AppId}}}
-            If ($AppIdNot)             {$FilterSet += @{'service'=             @{'neq'=$AppIdNot}}}
-            If ($EventTypeName)        {$FilterSet += @{'activity.actionType'= @{'eq'=$EventTypeName}}}
-            If ($EventTypeNameNot)     {$FilterSet += @{'activity.actionType'= @{'neq'=$EventTypeNameNot}}}
-            If ($DeviceType)           {$FilterSet += @{'device.type'=         @{'eq'=$DeviceType.ToUpper()}}} # CAS API expects upper case here
-            If ($UserAgentContains)    {$FilterSet += @{'userAgent.userAgent'= @{'contains'=$UserAgentContains}}}
-            If ($UserAgentNotContains) {$FilterSet += @{'userAgent.userAgent'= @{'ncontains'=$UserAgentNotContains}}}
-            If ($IpStartsWith)         {$FilterSet += @{'ip.address'=          @{'startswith'=$IpStartsWith}}}
-            If ($IpDoesNotStartWith)   {$FilterSet += @{'ip.address'=          @{'doesnotstartwith'=$IpStartsWith}}}
-            If ($Text)                 {$FilterSet += @{'text'=                @{'text'=$Text}}}
-            If ($DaysAgo)              {$FilterSet += @{'date'=                @{'gte_ndays'=$DaysAgo}}}
+            If ($UserName)             {$FilterSet += @{'user.username'=          @{'eq'=$UserName}}}
+            If ($AppId)                {$FilterSet += @{'service'=                @{'eq'=$AppId}}}
+            If ($AppIdNot)             {$FilterSet += @{'service'=                @{'neq'=$AppIdNot}}}
+            If ($EventTypeName)        {$FilterSet += @{'activity.actionType'=    @{'eq'=$EventTypeName}}}
+            If ($EventTypeNameNot)     {$FilterSet += @{'activity.actionType'=    @{'neq'=$EventTypeNameNot}}}
+            If ($DeviceType)           {$FilterSet += @{'device.type'=            @{'eq'=$DeviceType.ToUpper()}}} # CAS API expects upper case here
+            If ($UserAgentContains)    {$FilterSet += @{'userAgent.userAgent'=    @{'contains'=$UserAgentContains}}}
+            If ($UserAgentNotContains) {$FilterSet += @{'userAgent.userAgent'=    @{'ncontains'=$UserAgentNotContains}}}
+            If ($IpStartsWith)         {$FilterSet += @{'ip.address'=             @{'startswith'=$IpStartsWith}}}
+            If ($IpDoesNotStartWith)   {$FilterSet += @{'ip.address'=             @{'doesnotstartwith'=$IpStartsWith}}}
+            If ($Text)                 {$FilterSet += @{'text'=                   @{'text'=$Text}}}
+            If ($DaysAgo)              {$FilterSet += @{'date'=                   @{'gte_ndays'=$DaysAgo}}}
             If ($Impersonated)         {$FilterSet += @{'activity.impersonated' = @{'eq'=$true}}}
             If ($ImpersonatedNot)      {$FilterSet += @{'activity.impersonated' = @{'eq'=$false}}}
-            If ($FileID)               {$FilterSet += @{'fileSelector'=        @{'eq'=$FileID}}}
-            If ($FileLabel)            {$FilterSet += @{'fileLabels'=          @{'eq'=$FileLabel}}}
+            If ($FileID)               {$FilterSet += @{'fileSelector'=           @{'eq'=$FileID}}}
+            If ($FileLabel)            {$FilterSet += @{'fileLabels'=             @{'eq'=$FileLabel}}}
+            If ($PolicyId)             {$FilterSet += @{'policy'=                 @{'eq'=$PolicyId}}}
             If ($DateBefore -and (-not $DateAfter)) {$FilterSet += @{'date'= @{'lte'=$DateBefore2}}}
             If ($DateAfter -and (-not $DateBefore)) {$FilterSet += @{'date'= @{'gte'=$DateAfter2}}}
 
