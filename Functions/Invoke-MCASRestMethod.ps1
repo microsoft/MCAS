@@ -119,9 +119,8 @@
             }
 
             # Add 'Identity' alias property, when appropriate
-            #If ((($Response | Get-Member | Select Name) -match '_id').count -gt 0) {
-            If ($Response._id) {
-                $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
+            If (($Response | Get-Member).name -contains '_id') {
+                    $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
             }
 
             $Response

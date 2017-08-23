@@ -1,10 +1,7 @@
 ﻿
-#  Configure tests
+#  Configure interactivity of tests
 
     $RunInteractiveTest = $false
-
-
-
 
 
 
@@ -20,18 +17,11 @@ Describe 'Module Manifest Tests' {
     }
 }
 
-
-
 Import-Module $PSScriptRoot\..\Cloud-App-Security.psm1 -Force
 
-
-
-If ($CASCredential -eq $null -or !($CASCredential)) {
+If (($null -eq $CASCredential) -or !($CASCredential)) {
     Get-MCASCredential
     }
-
-
-
 
 
 If ($RunInteractiveTest) {
@@ -40,19 +30,74 @@ If ($RunInteractiveTest) {
             (Get-MCASCredential -PassThru | Get-TypeData).TypeName | Should Be 'System.Management.Automation.PSCredential'
         }
 
-        It 'Accepts -TenantUri' {
+        It 'Properly accepts -TenantUri as specified by the user' {
             (Get-MCASCredential -PassThru -TenantUri 'contoso.portal.cloudappsecurity.com').GetNetworkCredential().username | Should Be 'contoso.portal.cloudappsecurity.com'
         }
     }
 }
 
-Describe 'Add-MCASAdminAccess' {
-    It 'Returns $true' {
-        $AdminUser = Get-MCASAccount -ResultSetSize 1 -Internal -UserDomain
-        
-        $TestResult = $true
-        $TestResult | Should Be $true
+
+################### TESTS ABOVE THIS MARKER ARE DONE ###################
+
+$script:AdminTestUsers = @()
+
+[int]$i = 0
+
+Do {
+    Get-MCASAccount -ResultSetSize 100 -Skip $i -Internal -AppName 'Office_365' | ForEach-Object {
+        If ($null -eq $_.admindata) {
+            $AdminTestUsers += $_
+        }
     }
+    
+    $i = $i + 100
+}
+Until ($AdminTestUsers.count -eq 2)
+
+Add-MCASAdminAccess -UserName ($AdminTestUsers[0].username) -PermissionType READ_ONLY
+Add-MCASAdminAccess -UserName ($AdminTestUsers[1].username) -PermissionType FULL_ACCESS
+
+Describe 'Add-MCASAdminAccess' {
+    It 'Adds a non-admin user to the list of READ_ONLY MCAS admins' {
+        
+        Add-MCASAdminAccess -UserName ($AdminTestUsers[0].username) -PermissionType READ_ONLY
+
+        #(Get-MCASAdminAccess).username -contains  ($TestUser1.username) | Should Be $true
+
+        (Get-MCASAdmin | Where-Object {$_.username -eq ($AdminTestUsers[0].username)}).permission_type -eq 'READ_ONLY' | Should Be $true
+
+    }
+    It 'Adds a non-admin user to the list of FULL_ACCESS MCAS admins' {
+        
+        Add-MCASAdminAccess -UserName ($AdminTestUsers[0].username) -PermissionType READ_ONLY
+
+        #(Get-MCASAdminAccess).username -contains  ($TestUser1.username) | Should Be $true
+
+        (Get-MCASAdmin | Where-Object {$_.username -eq ($AdminTestUsers[0].username)}).permission_type -eq 'FULL_ACCESS' | Should Be $true
+
+    }
+
+}
+Describe 'Remove-MCASAdminAccess' {
+    It 'Adds a non-admin user to the list of READ_ONLY MCAS admins' {
+        
+        Remove-MCASAdminAccess -UserName ($AdminTestUsers[0].username) 
+
+        #(Get-MCASAdminAccess).username -contains  ($TestUser1.username) | Should Be $true
+
+        (Get-MCASAdmin). $AdminTestUsers[0].username)}).permission_type -eq 'READ_ONLY' | Should Be $true
+
+    }
+    It 'Adds a non-admin user to the list of FULL_ACCESS MCAS admins' {
+        
+        Remove-MCASAdminAccess -UserName ($AdminTestUsers[0].username)
+
+        #(Get-MCASAdminAccess).username -contains  ($TestUser1.username) | Should Be $true
+
+        (Get-MCASAdmin | Where-Object {$_.username -eq ($AdminTestUsers[0].username)}).permission_type -eq 'FULL_ACCESS' | Should Be $true
+
+    }
+    
 }
 
 
@@ -67,7 +112,7 @@ Describe 'Verb-Noun' {
     }
 }
 
-
+#>
 
 <#
 Describe $this.CmdletName {
