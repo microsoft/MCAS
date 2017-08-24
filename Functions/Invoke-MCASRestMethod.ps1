@@ -108,18 +108,18 @@
             # Convert from JSON to Powershell objects
             Write-Verbose "Invoke-MCASRestMethod: Modified response before JSON conversion: $Response"
             $Response = $Response | ConvertFrom-Json
-
+            
             # For list responses with zero results, set an empty collection as response rather than returning the response metadata
             If (($Response.total -eq 0) -or (($Response.data).count -eq 0)) {
                 $Response = @()
             }
             # For list responses, get the data property only
-            ElseIf ($Response.data) {
+            ElseIf ($null -ne $Response.data) {
                 $Response = $Response.data
             }
 
             # Add 'Identity' alias property, when appropriate
-            If (($Response | Get-Member).name -contains '_id') {
+            If (($null -ne $Response) -and ($Response | Get-Member).name -contains '_id') {
                     $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
             }
 
