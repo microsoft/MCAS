@@ -2,6 +2,8 @@
 #  Configure interactivity of tests
 
     $Global:RunInteractiveTests = $false
+    $Global:RunTenantSpecificTests = $true
+    
 
 
 
@@ -26,23 +28,13 @@ $TestsFolder = (Split-Path -Parent -Path $MyInvocation.MyCommand.Path)
 . $TestsFolder\Test-Verb-Noun.ps1
 
 
+If ($Global:RunTenantSpecificTests) {
+    # Select some users on which to test admin access
+    $Global:AdminTestUsers = @('ZrinkaM@MOD623352.onmicrosoft.com','ZacharyP@MOD623352.onmicrosoft.com')
 
-# Select some users on which to test admin access
-$Global:AdminTestUsers = @()
-[int]$i = 0
-Do {
-    Get-MCASAccount -ResultSetSize 100 -Skip $i -Internal -AppName 'Office_365' | ForEach-Object {
-        If ($null -eq $_.admindata) {
-            $AdminTestUsers += $_
-        }
-    }
-    $i = $i + 100
+    . $TestsFolder\Test-Add-MCASAdminAccess.ps1
+    . $TestsFolder\Test-Remove-MCASAdminAccess.ps1
 }
-Until ($AdminTestUsers.count -gt 1)
-
-
-#. $TestsFolder\Test-Add-MCASAdminAccess.ps1
-#. $TestsFolder\Test-Remove-MCASAdminAccess.ps1
 
 
 

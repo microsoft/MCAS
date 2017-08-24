@@ -26,30 +26,24 @@ function Get-MCASStream
         [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential
     )
-    Begin
-    {
-        $Endpoint = 'discovery'
 
-        Try {$TenantUri = Select-MCASTenantUri}
-            Catch {Throw $_}
+    Try {$TenantUri = Select-MCASTenantUri}
+        Catch {Throw ($MyInvocation.InvocationName) + ': ' + (Resolve-MCASException $_)}
 
-        Try {$Token = Select-MCASToken}
-            Catch {Throw $_}
-    }
-    Process
+    Try {$Token = Select-MCASToken}
+        Catch {Throw ($MyInvocation.InvocationName) + ': ' + (Resolve-MCASException $_)}
+
+    # Get the matching items and handle errors
+    Try
     {
+        $Response = Invoke-RestMethod -Uri "https://$TenantUri/api/discovery/streams/" -Method Get -Headers @{Authorization = "Token $Token"} -ContentType 'application/json' -UseBasicParsing -ErrorAction Stop
     }
-    End
-    {
-            # Get the matching items and handle errors
-            Try
-            {
-                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -ApiVersion $null -Endpoint $Endpoint -EndpointSuffix 'streams/' -Method Get -Token $Token
-            }
-                Catch
-                {
-                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
-                }
-                $Response.streams
-    }
+        Catch
+        {
+            Throw $_.Exception
+        }
+
+    $Response = $Response.Streams
+    
+    $Response
 }
