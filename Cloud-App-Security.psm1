@@ -5,7 +5,7 @@
 $mypath = (Split-Path -Parent -Path $MyInvocation.MyCommand.Definition)
 
 #find all the ps1 files in the subfolder functions
-Resolve-Path -Path $mypath\functions\*.ps1 | ForEach-Object -Process {
+Resolve-Path -Path $mypath\Functions\*.ps1 | ForEach-Object -Process {
     . $_.ProviderPath
 }
 
@@ -17,6 +17,7 @@ $ExportedCommands = @('Add-MCASAdminAccess','Export-MCASBlockScript','Get-MCASAd
 $ExportedCommands | ForEach-Object {Export-ModuleMember -Function $_}
 
 Export-ModuleMember -Function Invoke-MCASRestMethod
+Export-ModuleMember -Function Invoke-MCASRestMethod2
 
 
 # Vars to export (must be exported here, even if also included in the module manifest in 'VariablesToExport'

@@ -20,8 +20,6 @@
     )
     Begin
     {
-        $Endpoint = 'manage_admin_access'
-
         Try {$TenantUri = Select-MCASTenantUri}
             Catch {Throw $_}
 
@@ -34,17 +32,20 @@
             Write-Warning "$Username is not listed as an administrator of Cloud App Security. No changes were made."
             }
         Else {
-            Try
-            {
-                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Username/" -CASPrefix -Method Delete -Token $Token
+            Try {
+                $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/cas/api/v1/manage_admin_access/$Username/" -Token $Token -Method Delete
             }
-                Catch
-                {
+                Catch {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
 
-            $Response
+            If ($Response.StatusCode -eq '200') {
+                Write-Verbose "$Username was removed from MCAS admin list"
             }
+            Else {
+                Write-Error "$Username could not be removed from MCAS admin list"
+            }
+        }
     }
     End
     {

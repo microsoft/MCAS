@@ -28,7 +28,7 @@ $TestsFolder = (Split-Path -Parent -Path $MyInvocation.MyCommand.Path)
 . $TestsFolder\Test-Verb-Noun.ps1
 
 
-If ($Global:RunTenantSpecificTests) {
+If ($RunTenantSpecificTests) {
     # Select some users on which to test admin access
     $Global:AdminTestUsers = @('ZrinkaM@MOD623352.onmicrosoft.com','ZacharyP@MOD623352.onmicrosoft.com')
 

@@ -24,8 +24,6 @@
     )
     Begin
     {
-        $Endpoint = 'manage_admin_access'
-
         Try {$TenantUri = Select-MCASTenantUri}
             Catch {Throw $_}
 
@@ -43,18 +41,22 @@
             $Body = [ordered]@{'username'=$Username;'permissionType'=($PermissionType -as [string])}
 
             Try {
-                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -CASPrefix -Method Post -Token $Token -Body $Body
+                $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/cas/api/v1/manage_admin_access/" -Token $Token -Method Post -Body $Body
             }
                 Catch {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-            
-            If ($PermissionType -eq 'READ_ONLY') {
+                      
+            If ($Response.StatusCode -eq '200') {
+                Write-Verbose "$Username was added to MCAS admin list with $PermissionType permission"
+                If ($PermissionType -eq 'READ_ONLY') {
                     $ReadOnlyAdded = $true
                 }
-            
-            $Response
             }
+            Else {
+                Write-Error "$Username could not be added to MCAS admin list with $PermissionType permission"
+            }
+        }
     }
     End
     {

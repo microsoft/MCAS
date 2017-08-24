@@ -1,4 +1,4 @@
-﻿function Invoke-MCASRestMethod
+﻿function Invoke-MCASRestMethod2
 {
     [CmdletBinding()]
     Param (
@@ -25,11 +25,6 @@
         [ValidateNotNull()]
         $FilterSet
     )
-
-
-    If ($EndpointSuffix) {
-        $Uri += $EndpointSuffix
-    }
 
     Try {
         If ($Body) {

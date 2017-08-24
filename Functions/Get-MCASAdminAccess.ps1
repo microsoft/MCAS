@@ -14,22 +14,25 @@
         [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential
     )
-    $Endpoint = 'manage_admin_access'
-
+    
     Try {$TenantUri = Select-MCASTenantUri}
         Catch {Throw $_}
 
     Try {$Token = Select-MCASToken}
         Catch {Throw $_}
 
-    Try
-    {
-        $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -CASPrefix -Method Get -Token $Token
+    Try {
+        $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/cas/api/v1/manage_admin_access/" -Token $Token -Method Get
     }
-        Catch
-        {
+        Catch {
             Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
         }
 
+    $Response = $Response.Content
+
+    $Response = $Response | ConvertFrom-Json
+    
+    $Response = $Response.Data
+    
     $Response
 }
