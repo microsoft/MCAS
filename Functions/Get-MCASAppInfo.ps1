@@ -40,6 +40,16 @@ function Get-MCASAppInfo
         [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential,
 
+        # Specifies the maximum number of results to retrieve when listing items matching the specified filter criteria.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateRange(1,100)]
+        [int]$ResultSetSize = 100,
+
+        # Specifies the number of records, from the beginning of the result set, to skip.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateScript({$_ -gt -1})]
+        [int]$Skip = 0,
+
         # Limits the results to items related to the specified service IDs, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
         [ValidateNotNullOrEmpty()]
@@ -53,7 +63,7 @@ function Get-MCASAppInfo
     Try {$Token = Select-MCASToken}
         Catch {Throw $_}
 
-    $Body = @{'skip'=0;'limit'=2} # Base request body
+    $Body = @{'skip'=$Skip;'limit'=$ResultSetSize} # Base request body
 
     #region ----------------------------FILTERING----------------------------
     $FilterSet = @() # Filter set array
