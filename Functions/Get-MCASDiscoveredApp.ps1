@@ -73,8 +73,9 @@ function Get-MCASDiscoveredApp
         # Limits results by category type. A preset list of categories are included.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [app_category[]]$Category,
-
+        #[app_category[]]$Category, # I dont think an array will work here, so i am commmenting this out for now
+        [app_category]$Category,
+        
         # Limits the results by risk score range, for example '3-9'. Set to '1-10' by default.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidatePattern('^([1-9]0?)-([1-9]0?)$')]

@@ -43,65 +43,45 @@ function Get-MCASAppInfo
         # Limits the results to items related to the specified service IDs, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
         [ValidateNotNullOrEmpty()]
-        [ValidatePattern('\b\d{5}\b')]
+        [ValidatePattern('^\d{5}$')]
         [Alias("Service","Services")]
         [int[]]$AppId
     )
-    Begin
-    {
-        Try {$TenantUri = Select-MCASTenantUri}
-            Catch {Throw $_}
+    Try {$TenantUri = Select-MCASTenantUri}
+        Catch {Throw $_}
 
-        Try {$Token = Select-MCASToken}
-            Catch {Throw $_}
+    Try {$Token = Select-MCASToken}
+        Catch {Throw $_}
+
+    $Body = @{'skip'=0;'limit'=2} # Base request body
+
+    #region ----------------------------FILTERING----------------------------
+    $FilterSet = @() # Filter set array
+
+    # Simple filters
+    If ($AppId) {$FilterSet += @{'appId'= @{'eq'=$AppId}}}
+    
+    #endregion -------------------------FILTERING----------------------------
+
+    # Get the matching alerts and handle errors
+    Try {
+        $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/v1/saasdb/" -Method Post -Body $Body -Token $Token -FilterSet $FilterSet
+        
     }
-    Process
-    {
-            If ($PSCmdlet.ParameterSetName -eq  'List') # Only run remainder of this end block if not in fetch mode
-        {
-            # List mode logic only needs to happen once, so it goes in the 'End' block for efficiency
-
-            $Body = @{'skip'=0;'limit'=100} # Base request body
-
-            #region ----------------------------FILTERING----------------------------
-            $FilterSet = @() # Filter set array
-
-            # Simple filters
-            If ($AppId) {$FilterSet += @{'appId'= @{'eq'=$AppId}}}
-
-            # Add filter set to request body as the 'filter' property
-            If ($FilterSet) {$Body.Add('filters',(ConvertTo-MCASJsonFilterString $FilterSet))}
-
-            #endregion -------------------------FILTERING----------------------------
-
-            # Get the matching alerts and handle errors
-            Try
-            {
-                $Response = ((Invoke-WebRequest -Uri "https://$TenantUri/api/v1/saasdb/" -Body $Body -Headers @{Authorization = "Token $Token"} -UseBasicParsing -Method Get -ErrorAction Stop) | ConvertFrom-Json).data
-            }
-            Catch
-            {
-                If ($_ -like 'The remote server returned an error: (404) Not Found.')
-                {
-                    Write-Error "404 - Not Found: Check to ensure the -TenantUri parameter is valid."
-                }
-                ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
-                {
-                    Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is authorized to perform the requested action.'
-                }
-                ElseIf ($_ -match "The remote name could not be resolved: ")
-                {
-                    Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
-                }
-                Else
-                {
-                    Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
-                }
-            }
-            If ($Response) {Write-Output $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
-        }
+    Catch {
+        Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
     }
-    End
-    {
-    }
+
+    $Response = $Response.content
+    
+    $Response = $Response | ConvertFrom-Json
+    
+    $Response = $Response.data
+
+    # Add 'Identity' alias property for appId
+    If (($null -ne $Response) -and ($Response | Get-Member).name -contains 'appId') {
+        $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value appId -PassThru
+    }  
+
+    $Response
 }
