@@ -136,24 +136,22 @@ function Get-MCASDiscoveredApp
     }
 
     Try {
-        $Response = (Invoke-Restmethod -Uri "https://$TenantUri/cas/api/discovery/" -Body $Body -Headers @{Authorization = "Token $Token"} -UseBasicParsing -ErrorAction Stop -Method Get).data
+        $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/cas/api/discovery/" -Method Post -Body $Body -Token $Token
     }
-    Catch
-    {
-        If ($_ -like 'The remote server returned an error: (404) Not Found.') {
-            Write-Error "404 - Not Found: Check to ensure the -TenantUri parameter is valid."
-        }
-        ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.') {
-            Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is authorized to perform the requested action.'
-        }
-        ElseIf ($_ -match "The remote name could not be resolved: ") {
-            Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
-        }
-        Else {
-            Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
-        }
+    Catch {
+        Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
     }
-    If ($Response) {
-        Write-Output $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
-    }
+    
+    $Response = $Response.content
+    
+    $Response = $Response | ConvertFrom-Json
+    
+    $Response = $Response.data
+
+    # Add 'Identity' alias property
+    If (($null -ne $Response) -and ($Response | Get-Member).name -contains '_id') {
+        $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
+        }
+    
+    $Response
 }
