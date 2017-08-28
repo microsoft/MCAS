@@ -57,41 +57,52 @@ function Get-MCASAppInfo
         [Alias("Service","Services")]
         [int[]]$AppId
     )
-    Try {$TenantUri = Select-MCASTenantUri}
-        Catch {Throw $_}
+    Begin {
+        Try {$TenantUri = Select-MCASTenantUri}
+            Catch {Throw $_}
 
-    Try {$Token = Select-MCASToken}
-        Catch {Throw $_}
+        Try {$Token = Select-MCASToken}
+            Catch {Throw $_}
 
-    $Body = @{'skip'=$Skip;'limit'=$ResultSetSize} # Base request body
-
-    #region ----------------------------FILTERING----------------------------
-    $FilterSet = @() # Filter set array
-
-    # Simple filters
-    If ($AppId) {$FilterSet += @{'appId'= @{'eq'=$AppId}}}
-    
-    #endregion -------------------------FILTERING----------------------------
-
-    # Get the matching alerts and handle errors
-    Try {
-        $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/v1/saasdb/" -Method Post -Body $Body -Token $Token -FilterSet $FilterSet
+        $AppIdList = @()
+    }
+    Process {
+        $AppIdList += $AppId
+    }
+    End {
+        Write-Verbose "App ID List - $AppIdList"
         
+        $Body = @{'skip'=$Skip;'limit'=$ResultSetSize} # Base request body
+        
+        #region ----------------------------FILTERING----------------------------
+        $FilterSet = @() # Filter set array
+
+        # Simple filters
+        #If ($AppId) {$FilterSet += @{'appId'= @{'eq'=$AppId}}}
+        If ($AppIdList.Count -gt 0) {$FilterSet += @{'appId'= @{'eq'=$AppIdList}}}
+
+        #endregion -------------------------FILTERING----------------------------
+
+        # Get the matching alerts and handle errors
+        Try {
+            $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/v1/saasdb/" -Method Post -Body $Body -Token $Token -FilterSet $FilterSet
+            
+        }
+        Catch {
+            Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+        }
+
+        $Response = $Response.content
+        
+        $Response = $Response | ConvertFrom-Json
+        
+        $Response = $Response.data
+
+        # Add 'Identity' alias property for appId
+        If (($null -ne $Response) -and ($Response | Get-Member).name -contains 'appId') {
+            $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value appId -PassThru
+        }  
+
+        $Response
     }
-    Catch {
-        Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
-    }
-
-    $Response = $Response.content
-    
-    $Response = $Response | ConvertFrom-Json
-    
-    $Response = $Response.data
-
-    # Add 'Identity' alias property for appId
-    If (($null -ne $Response) -and ($Response | Get-Member).name -contains 'appId') {
-        $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value appId -PassThru
-    }  
-
-    $Response
 }
