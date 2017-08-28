@@ -70,18 +70,12 @@ function Get-MCASAppInfo
         $AppIdList += $AppId
     }
     End {
-        Write-Verbose "App ID List - $AppIdList"
-        
         $Body = @{'skip'=$Skip;'limit'=$ResultSetSize} # Base request body
         
-        #region ----------------------------FILTERING----------------------------
         $FilterSet = @() # Filter set array
 
         # Simple filters
-        #If ($AppId) {$FilterSet += @{'appId'= @{'eq'=$AppId}}}
         If ($AppIdList.Count -gt 0) {$FilterSet += @{'appId'= @{'eq'=$AppIdList}}}
-
-        #endregion -------------------------FILTERING----------------------------
 
         # Get the matching alerts and handle errors
         Try {
@@ -92,11 +86,7 @@ function Get-MCASAppInfo
             Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
         }
 
-        $Response = $Response.content
-        
-        $Response = $Response | ConvertFrom-Json
-        
-        $Response = $Response.data
+        $Response = ($Response.content | ConvertFrom-Json).data
 
         # Add 'Identity' alias property for appId
         If (($null -ne $Response) -and ($Response | Get-Member).name -contains 'appId') {
