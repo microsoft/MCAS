@@ -86,6 +86,7 @@ function Get-MCASAppInfo
             Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
         }
 
+        # Get the response parts and format we need
         $Response = ($Response.content | ConvertFrom-Json).data
 
         # Add 'Identity' alias property for appId

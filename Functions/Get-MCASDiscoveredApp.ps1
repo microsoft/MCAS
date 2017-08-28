@@ -143,11 +143,8 @@ function Get-MCASDiscoveredApp
         Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
     }
     
-    $Response = $Response.content
-    
-    $Response = $Response | ConvertFrom-Json
-    
-    $Response = $Response.data
+    # Get the response parts and format we need
+    $Response = ($Response.content | ConvertFrom-Json).data
 
     # Add 'Identity' alias property
     If (($null -ne $Response) -and ($Response | Get-Member).name -contains '_id') {
