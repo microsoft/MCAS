@@ -59,7 +59,7 @@ function Get-MCASDiscoveredApp
 
         # Specifies the maximum number of results (up to 5000) to retrieve when listing items matching the specified filter criteria. Set to 100 by default.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateRange(1,5000)]
+        [ValidateRange(1,100)]
         [ValidateNotNullOrEmpty()]
         [int]$ResultSetSize = 100,
 
@@ -71,7 +71,7 @@ function Get-MCASDiscoveredApp
         ##### FILTER PARAMS #####
 
         # Limits results by category type. A preset list of categories are included.
-        [Parameter(ParameterSetName='List', Mandatory=$false, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [app_category[]]$Category,
 
@@ -82,7 +82,7 @@ function Get-MCASDiscoveredApp
         [string]$ScoreRange='1-10',
 
         # Limits the results by stream ID, for example '577d49d72b1c51a0762c61b0'. The stream ID can be found in the URL bar of the console when looking at the Discovery dashboard.
-        [Parameter(ParameterSetName='List', Mandatory=$true, Position=0, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
+        [Parameter(ParameterSetName='List', Mandatory=$false, Position=0)]
         [ValidatePattern('^[A-Fa-f0-9]{24}$')]
         [ValidateNotNullOrEmpty()]
         [string]$StreamId,
@@ -93,75 +93,67 @@ function Get-MCASDiscoveredApp
         [ValidateNotNullOrEmpty()]
         [int]$TimeFrame=90
     )
-    Begin
-    {
-        Try {$TenantUri = Select-MCASTenantUri}
-            Catch {Throw $_}
 
-        Try {$Token = Select-MCASToken}
-            Catch {Throw $_}
+    Try {$TenantUri = Select-MCASTenantUri}
+        Catch {Throw $_}
+
+    Try {$Token = Select-MCASToken}
+        Catch {Throw $_}
+
+    If ($StreamId) {
+        $Stream = $StreamId
     }
-    Process
-    {
+    Else {
+        $Stream = (Get-MCASStream | Where-Object {$_.displayName -eq 'Global View'}).Identity
+    } 
+
+    $Body = @{
+        'skip'=$Skip;
+        'limit'=$ResultSetSize;
+        'score'=$ScoreRange;
+        'timeframe'=$TimeFrame;
+        'streamId'=$Stream
+    } # Base request body
+
+    If ($Category) {
+        $Body += @{'category'="SAASDB_CATEGORY_$Category"}
     }
-    End
+
+    If ($SortBy -xor $SortDirection) {Write-Error 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.' -ErrorAction Stop}
+
+    # Add sort direction to request body, if specified
+    If ($SortDirection -eq 'Ascending')  {$Body.Add('sortDirection','asc')}
+    If ($SortDirection -eq 'Descending') {$Body.Add('sortDirection','desc')}
+
+    # Add sort field to request body, if specified
+    Switch ($SortBy) {
+        'Name'         {$Body.Add('sortField','name')}
+        'UserCount'    {$Body.Add('sortField','usersCount')}
+        'IpCount'      {$Body.Add('sortField','ipAddressesCount')}
+        'LastUsed'     {$Body.Add('sortField','lastUsed')}
+        'Upload'       {$Body.Add('sortField','trafficUploadedBytes')}
+        'Transactions' {$Body.Add('sortField','trafficTotalEvents')}
+    }
+
+    Try {
+        $Response = (Invoke-Restmethod -Uri "https://$TenantUri/cas/api/discovery/" -Body $Body -Headers @{Authorization = "Token $Token"} -UseBasicParsing -ErrorAction Stop -Method Get).data
+    }
+    Catch
     {
-        If ($PSCmdlet.ParameterSetName -eq  'List') # Only run remainder of this end block if not in fetch mode
-        {
-            # List mode logic only needs to happen once, so it goes in the 'End' block for efficiency
-
-            $Body = @{
-                'skip'=$Skip;
-                'limit'=$ResultSetSize;
-                'score'=$ScoreRange;
-                'timeframe'=$TimeFrame;
-                'streamId'=$StreamId
-                } # Base request body
-
-            If ($Category){
-                $Body += @{'category'="SAASDB_CATEGORY_$Category"}
-            }
-
-            If ($SortBy -xor $SortDirection) {Write-Error 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.' -ErrorAction Stop}
-
-            # Add sort direction to request body, if specified
-            If ($SortDirection -eq 'Ascending')  {$Body.Add('sortDirection','asc')}
-            If ($SortDirection -eq 'Descending') {$Body.Add('sortDirection','desc')}
-
-            # Add sort field to request body, if specified
-            Switch ($SortBy) {
-                'Name'         {$Body.Add('sortField','name')}
-                'UserCount'    {$Body.Add('sortField','usersCount')}
-                'IpCount'      {$Body.Add('sortField','ipAddressesCount')}
-                'LastUsed'     {$Body.Add('sortField','lastUsed')}
-                'Upload'       {$Body.Add('sortField','trafficUploadedBytes')}
-                'Transactions' {$Body.Add('sortField','trafficTotalEvents')}
-                }
-
-            Try
-            {
-                $Response = (Invoke-Restmethod -Uri "https://$TenantUri/cas/api/discovery/" -Body $Body -Headers @{Authorization = "Token $Token"} -UseBasicParsing -ErrorAction Stop -Method Get).data
-            }
-            Catch
-            {
-                If ($_ -like 'The remote server returned an error: (404) Not Found.')
-                {
-                    Write-Error "404 - Not Found: Check to ensure the -TenantUri parameter is valid."
-                }
-                ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
-                {
-                    Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is authorized to perform the requested action.'
-                }
-                ElseIf ($_ -match "The remote name could not be resolved: ")
-                {
-                    Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
-                }
-                Else
-                {
-                    Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
-                }
-            }
-            If ($Response) {Write-Output $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru}
+        If ($_ -like 'The remote server returned an error: (404) Not Found.') {
+            Write-Error "404 - Not Found: Check to ensure the -TenantUri parameter is valid."
         }
+        ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.') {
+            Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is authorized to perform the requested action.'
+        }
+        ElseIf ($_ -match "The remote name could not be resolved: ") {
+            Write-Error "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
+        }
+        Else {
+            Write-Error "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
+        }
+    }
+    If ($Response) {
+        Write-Output $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
     }
 }
