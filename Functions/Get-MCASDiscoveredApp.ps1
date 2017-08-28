@@ -57,7 +57,7 @@ function Get-MCASDiscoveredApp
         [ValidateNotNullOrEmpty()]
         [string]$SortDirection='Ascending',
 
-        # Specifies the maximum number of results (up to 5000) to retrieve when listing items matching the specified filter criteria. Set to 100 by default.
+        # Specifies the maximum number of results to retrieve when listing items matching the specified filter criteria. Set to 100 by default.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateRange(1,100)]
         [ValidateNotNullOrEmpty()]

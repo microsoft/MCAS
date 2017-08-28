@@ -65,18 +65,13 @@ function Get-MCASReport
     }
     End
     {
-
-            # Get the matching items and handle errors
-            Try
-            {
-                $Response = Invoke-RestMethod -Uri "https://$TenantUri/api/reports/$Endpoint" -Headers @{Authorization = "Token $Token"} -UseBasicParsing
-            }
-                Catch
-                {
-                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
-                }
-                $Response.data
-
+        # Get the matching items and handle errors
+        Try {
+            $Response = Invoke-RestMethod -Uri "https://$TenantUri/api/reports/$Endpoint" -Headers @{Authorization = "Token $Token"} -UseBasicParsing
+        }
+        Catch {
+            Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+        }
+        $Response.data
     }
-
 }

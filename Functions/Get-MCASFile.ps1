@@ -63,7 +63,7 @@ function Get-MCASFile
         [ValidateSet('Ascending','Descending')]
         [string]$SortDirection,
 
-        # Specifies the maximum number of results (up to 5000) to retrieve when listing items matching the specified filter criteria.
+        # Specifies the maximum number of results to retrieve when listing items matching the specified filter criteria.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateRange(1,100)]
         [int]$ResultSetSize = 100,
