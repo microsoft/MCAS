@@ -58,7 +58,8 @@ $CmdletsToTest = @()
 # Get-MCASAccount
 $ThisCmdlet = @{}
 $ThisCmdlet.CmdletName = 'Get-MCASAccount'
-$ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection')
+#$ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection')
+$ThisCmdlet.SupportedParams = @('Skip','ResultSetSize','SortBy','SortDirection')
 $ThisCmdlet.ResultSetSizeValidRange = @(1,100) 
 $ThisCmdlet.ValidSortBy = @('Username','LastSeen') 
 $ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 

@@ -25,24 +25,6 @@
     This pulls back a single user record and is part of the 'List' parameter set.
 
 .EXAMPLE
-   Get-MCASAccount -Identity 572caf4588011e452ec18ef0
-
-    username         : alice@contoso.com
-    consolidatedTags : {}
-    userDomain       : contoso.com
-    serviceData      : @{20595=}
-    agents           : {}
-    lastSeen         : 2016-05-13T20:23:47.210000Z
-    _tid             : 17000616
-    services         : {20595}
-    _id              : 572caf4588011e452ec18ef0
-    firstSeen        : 2016-05-06T14:50:44.762000Z
-    external         : False
-    Identity         : 572caf4588011e452ec18ef0
-
-    This pulls back a single user record using the GUID and is part of the 'Fetch' parameter set.
-
-.EXAMPLE
    (Get-MCASAccount -UserDomain contoso.com).count
 
     2
@@ -79,10 +61,10 @@ function Get-MCASAccount
     Param
     (
         # Fetches an account object by its unique identifier.
-        [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
-        [ValidatePattern({^[A-Fa-f0-9]{24}$})]
-        [alias("_id")]
-        [string]$Identity,
+        # [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
+        # [ValidatePattern({^[A-Fa-f0-9]{24}$})]
+        # [alias("_id")]
+        # [string]$Identity,
 
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
@@ -162,8 +144,6 @@ function Get-MCASAccount
     )
     Begin
     {
-        $Endpoint = 'accounts'
-
         Try {$TenantUri = Select-MCASTenantUri}
             Catch {Throw $_}
 
@@ -172,20 +152,19 @@ function Get-MCASAccount
     }
     Process
     {
-        # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
-        If ($PSCmdlet.ParameterSetName -eq 'Fetch')
-        {
-            Try
-            {
-                # Fetch the item by its id
-                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
-            }
-                Catch
-                {
-                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
-                }
-            $Response
-        }
+        # # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
+        # If ($PSCmdlet.ParameterSetName -eq 'Fetch')
+        # {
+        #     Try {
+        #         # Fetch the item by its id
+        #         #$Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
+        #         $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/v1/accounts/$Identity/" -Method Get -Token $Token
+        #     }
+        #         Catch {
+        #             Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+        #         }
+        #     $Response
+        # }
     }
     End
     {
@@ -243,11 +222,34 @@ function Get-MCASAccount
 
             # Get the matching items and handle errors
             Try {
-                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token -FilterSet $FilterSet
+                $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/v1/accounts/" -Body $Body -Method Post -Token $Token -FilterSet $FilterSet
             }
                 Catch {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
+            
+            $Response = $Response.content
+
+            If (Select-String -InputObject $Response -Pattern '"Id":' -CaseSensitive -Quiet) {
+                #$Response = $Response -creplace '"Id":', '"Id_int":'
+                $Response = $Response.Replace('"Id":', '"Id_int":')
+                Write-Verbose "Invoke-MCASRestMethod: A property name collision was detected in the response from MCAS for the following property names; 'id' and 'Id'. The 'Id' property was renamed to 'Id_int'."
+            }
+
+            $Response = $Response | ConvertFrom-Json
+
+            # For list responses with zero results, set an empty collection as response rather than returning the response metadata
+            If ($Response.total -eq 0) {
+                $Response = @()
+            }
+            # For list responses, get the data property only
+            Else {
+                $Response = $Response.data
+            }
+
+            If (($Response | Get-Member).name -contains '_id') {
+                $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
+            }
 
             $Response
         }
