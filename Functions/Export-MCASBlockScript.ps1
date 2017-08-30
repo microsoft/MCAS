@@ -2,7 +2,7 @@
 .Synopsis
    Exports a proxy or firewall block script for the unsanctioned apps in your Cloud App Security tenant.
 .DESCRIPTION
-   Exports a block script, in the specified firewall or proxy device type format, for the unsanctioned apps and requires a credential be provided.
+   Exports a block script, in the specified firewall or proxy device type format, for the unsanctioned apps.
 
    'Export-MCASBlockScript -Appliance <device format>' returns the text to be used in a Websense block script. Methods available are only those available to custom objects by default.
 .EXAMPLE
@@ -36,9 +36,9 @@
    This pulls back string to be used as a block script in BlueCoat format.
 
 .EXAMPLE
-   Export-MCASBlockScript -Appliance WEBSENSE | Set-Content MyNewWebsenseBlockScript.txt
+   Export-MCASBlockScript -Appliance WEBSENSE | Set-Content MyWebsenseBlockScript.txt -Encoding UTF8
 
-   This pulls back a Websense block script in text string format and creates a new text file out of it.
+   This pulls back a Websense block script in text string format and creates a new UTF-8 encoded text file out of it.
 .FUNCTIONALITY
    Export-MCASBlockScript is intended to function as an export mechanism for obtaining block scripts from Cloud App Security.
 
@@ -63,7 +63,6 @@ function Export-MCASBlockScript
         [Parameter(Mandatory=$true,ValueFromPipeline=$false,Position=0)]
         [blockscript_format]$Appliance
     )
-    $Endpoint = 'discovery_block_scripts'
 
     Try {$TenantUri = Select-MCASTenantUri}
         Catch {Throw $_}
@@ -71,15 +70,14 @@ function Export-MCASBlockScript
     Try {$Token = Select-MCASToken}
         Catch {Throw $_}
 
-    Try
-    {
-        $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix ('?format='+($Appliance -as [int])) -Method Get -Token $Token -ApiVersion $null -Raw
+    Try {
+        $Response = Invoke-MCASRestMethod2 -Uri ("https://$TenantUri/api/discovery_block_scripts/?format="+($Appliance -as [int])) -Method Get -Token $Token
     }
-        Catch
-        {
+        Catch {
             Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
         }
 
     $Response = $Response.Content
+
     $Response
 }

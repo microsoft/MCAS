@@ -9,13 +9,13 @@
         [ValidateSet('Get','Post','Put','Delete')]
         [string]$Method,
 
-        [Parameter(Mandatory=$false)]
-        [ValidateNotNullOrEmpty()]
-        $Body,
-
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [string]$Token,
+
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        $Body,
 
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -49,7 +49,7 @@
             Write-Error '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified token is valid.' -ErrorAction Stop
         }
         ElseIf ($_ -match "The remote name could not be resolved: ") {
-            Write-Error "The remote name could not be resolved: '$TenantUri'. Check to ensure the -TenantUri parameter is valid." -ErrorAction Stop
+            Write-Error "The remote name could not be resolved: '$Uri'. Check to ensure the -TenantUri parameter is valid." -ErrorAction Stop
         }
         ElseIf ($_ -like "The remote server returned an error: (429) TOO MANY REQUESTS.") {
             Write-Error '429 - Too many requests. Do not exceed 30 requests/min. Please wait and try again.'
