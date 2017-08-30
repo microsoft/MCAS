@@ -242,14 +242,13 @@ function Get-MCASAccount
             #endregion ----------------------------FILTERING----------------------------
 
             # Get the matching items and handle errors
-            Try
-            {
+            Try {
                 $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token -FilterSet $FilterSet
             }
-                Catch
-                {
+                Catch {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
+
             $Response
         }
     }
