@@ -140,8 +140,6 @@ function Get-MCASAlert
     )
     Begin
     {
-        $Endpoint = 'alerts'
-
         Try {$TenantUri = Select-MCASTenantUri}
             Catch {Throw $_}
 
@@ -156,12 +154,19 @@ function Get-MCASAlert
             Try
             {
                 # Fetch the item by its id
-                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
+                $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/v1/alerts/$Identity/" -Method Get -Token $Token
             }
                 Catch
                 {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
+
+            $Response = $Response.content | ConvertFrom-Json
+            
+            If (($Response | Get-Member).name -contains '_id') {
+                $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
+            }
+            
             $Response
         }
     }
@@ -225,14 +230,28 @@ function Get-MCASAlert
             #endregion ----------------------------FILTERING----------------------------
 
             # Get the matching items and handle errors
-            Try
-            {
-                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token -FilterSet $FilterSet
+            Try {
+                $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/v1/alerts/" -Body $Body -Method Post -Token $Token -FilterSet $FilterSet
             }
-                Catch
-                {
+                Catch {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
+
+            $Response = $Response | ConvertFrom-Json
+            
+            # For list responses with zero results, set an empty collection as response rather than returning the response metadata
+            If ($Response.total -eq 0) {
+                $Response = @()
+            }
+            # For list responses, get the data property only
+            Else {
+                $Response = $Response.data
+            }
+
+            If (($Response | Get-Member).name -contains '_id') {
+                $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
+            }
+
             $Response
         }
     }
