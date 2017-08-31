@@ -151,13 +151,11 @@ function Get-MCASAlert
         # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
         If ($PSCmdlet.ParameterSetName -eq 'Fetch')
         {
-            Try
-            {
+            Try {
                 # Fetch the item by its id
                 $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/v1/alerts/$Identity/" -Method Get -Token $Token
             }
-                Catch
-                {
+                Catch {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
 
