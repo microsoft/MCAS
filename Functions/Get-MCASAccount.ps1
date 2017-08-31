@@ -51,8 +51,8 @@
 
     This queries for any Cloud App Security accounts and displays the serviceData table containing the email, last login, and last seen properties. 20595 is the Service ID for Cloud App Security.
 
-    .FUNCTIONALITY
-       Get-MCASAccount is intended to function as a query mechanism for obtaining account information from Cloud App Security.
+.FUNCTIONALITY
+    Get-MCASAccount is intended to function as a query mechanism for obtaining account information from Cloud App Security.
 #>
 function Get-MCASAccount
 {
@@ -62,6 +62,7 @@ function Get-MCASAccount
     (
         # Fetches an account object by its unique identifier.
         # [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
+        # [ValidateNotNullOrEmpty()]
         # [ValidatePattern({^[A-Fa-f0-9]{24}$})]
         # [alias("_id")]
         # [string]$Identity,

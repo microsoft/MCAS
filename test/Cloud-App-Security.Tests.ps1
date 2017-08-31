@@ -106,17 +106,16 @@ $ThisCmdlet.ValidSortDirection = @('Ascending','Descending')
 $CmdletsToTest += $ThisCmdlet
 
 
-<#
-
-# Get-MCASGovernanceLog
+# Get-MCASGovernanceAction
 $ThisCmdlet = @{}
-$ThisCmdlet.CmdletName = 'Get-MCASGovernanceLog'
+$ThisCmdlet.CmdletName = 'Get-MCASGovernanceAction'
 $ThisCmdlet.SupportedParams = @('Identity','Skip','ResultSetSize','SortBy','SortDirection')
 $ThisCmdlet.ResultSetSizeValidRange = @(1,100) 
 $ThisCmdlet.ValidSortBy = @('timestamp') 
 $ThisCmdlet.ValidSortDirection = @('Ascending','Descending') 
 $CmdletsToTest += $ThisCmdlet
 
+<#
 
 # Set-MCASAlert
 $ThisCmdlet = @{}

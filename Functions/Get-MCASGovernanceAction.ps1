@@ -23,14 +23,15 @@
 .FUNCTIONALITY
 
 #>
-function Get-MCASGovernanceLog
+function Get-MCASGovernanceAction
 {
     [CmdletBinding()]
-    [Alias('Get-CASGovernanceLog')]
+    [Alias('Get-CASGovernanceLog','Get-MCASGovernanceLog')]
     Param
     (
         # Fetches an activity object by its unique identifier.
         [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
+        [ValidateNotNullOrEmpty()]
         #[ValidatePattern('((\d{8}_\d{5}_[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12})|([A-Za-z0-9]{20}))')]
         [alias('_id')]
         [string]$Identity,
@@ -106,8 +107,6 @@ function Get-MCASGovernanceLog
     )
     Begin
     {
-        $Endpoint = 'governance'
-
         Try {$TenantUri = Select-MCASTenantUri}
             Catch {Throw $_}
 
@@ -119,15 +118,20 @@ function Get-MCASGovernanceLog
         # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
         If ($PSCmdlet.ParameterSetName -eq 'Fetch')
         {
-            Try
-            {
+            Try {
                 # Fetch the item by its id
-                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
+                $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/v1/governance/$Identity/" -Method Get -Token $Token
             }
-                Catch
-                {
+                Catch {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
+            
+            $Response = $Response.content | ConvertFrom-Json
+            
+            If (($Response | Get-Member).name -contains '_id') {
+                $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
+            }
+            
             $Response
         }
     }
@@ -173,23 +177,32 @@ function Get-MCASGovernanceLog
             If ($AppId)    {$FilterSet += @{'appId'= @{'eq'=$AppId}}}
             If ($AppIdNot) {$FilterSet += @{'appId'= @{'neq'=$AppIdNot}}}
 
-            # Add filter set to request body as the 'filter' property
-            If ($FilterSet) {$Body.Add('filters',(ConvertTo-MCASJsonFilterString $FilterSet))}
-
             #endregion ----------------------------FILTERING----------------------------
 
             # Get the matching items and handle errors
-            Try
-            {
-                $Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -Body $Body -Method Post -Token $Token
+            Try {
+                $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/v1/governance/" -Body $Body -Method Post -Token $Token -FilterSet $FilterSet
             }
-                Catch
-                {
+                Catch {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-            If ($Response.total -eq 0){Write-Verbose 'No governance log entries found for specified filters.'}
-            Else {$Response}
 
+            $Response = $Response | ConvertFrom-Json
+            
+            # For list responses with zero results, set an empty collection as response rather than returning the response metadata
+            If ($Response.total -eq 0) {
+                $Response = @()
+            }
+            # For list responses, get the data property only
+            Else {
+                $Response = $Response.data
+            }
+
+            If (($Response | Get-Member).name -contains '_id') {
+                $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
+            }
+
+            $Response
         }
     }
 }

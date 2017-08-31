@@ -39,6 +39,7 @@ function Get-MCASFile
     (
         # Fetches a file object by its unique identifier.
         [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
+        [ValidateNotNullOrEmpty()]
         [ValidatePattern({^[A-Fa-f0-9]{24}$})]
         [alias("_id")]
         [string]$Identity,
