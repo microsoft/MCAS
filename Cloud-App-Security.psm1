@@ -12,11 +12,11 @@ Resolve-Path -Path $mypath\Functions\*.ps1 | ForEach-Object -Process {
 #----------------------------Exports---------------------------
 # Cmdlets to export (must be exported as functions, not cmdlets)
 
-$ExportedCommands = @('Add-MCASAdminAccess','Export-MCASBlockScript','Get-MCASAdminAccess','Get-MCASAccount','Get-MCASActivity','Get-MCASAlert','Get-MCASAppInfo','Get-MCASCredential','Get-MCASDiscoveredApp','Get-MCASFile','Get-MCASGovernanceAction','Get-MCASReport','Get-MCASReportData','Get-MCASStream','Remove-MCASAdminAccess','Send-MCASDiscoveryLog','Set-MCASAlert')
+$ExportedCommands = @('Add-MCASAdminAccess','Export-MCASBlockScript','Get-MCASAdminAccess','Get-MCASAccount','Get-MCASActivity','Get-MCASAlert','Get-MCASAppInfo','Get-MCASCredential','Get-MCASDiscoveredApp','Get-MCASFile','Get-MCASGovernanceAction','Get-MCASPolicy','Get-MCASReport','Get-MCASReportData','Get-MCASStream','Remove-MCASAdminAccess','Send-MCASDiscoveryLog','Set-MCASAlert')
 
 $ExportedCommands | ForEach-Object {Export-ModuleMember -Function $_}
 
-Export-ModuleMember -Function Invoke-MCASRestMethod
+#Export-ModuleMember -Function Invoke-MCASRestMethod
 Export-ModuleMember -Function Invoke-MCASRestMethod2
 
 

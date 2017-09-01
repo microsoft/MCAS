@@ -231,6 +231,18 @@ function Get-MCASFile
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
 
+            # Patch for property name collision: Created/created
+            If (Select-String -InputObject $Response -Pattern '"Created":' -CaseSensitive -Quiet) {
+                $Response = $Response.Replace('"Created":', '"Created_2":')
+                Write-Verbose "Invoke-MCASRestMethod: A property name collision was detected in the response from MCAS for the following property names; 'created' and 'created'. The 'Created' property was renamed to 'Created_2'."
+            }
+
+            # Patch for property name collision: ftags/fTags
+            If (Select-String -InputObject $Response -Pattern '"ftags":' -CaseSensitive -Quiet) {               
+                $Response = $Response.Replace('"ftags":', '"ftags_2":')
+                Write-Verbose "Invoke-MCASRestMethod: A property name collision was detected in the response from MCAS for the following property names; 'ftags' and 'fTags'. The 'ftags' property was renamed to 'ftags_2'."
+            }
+
             $Response = $Response.content | ConvertFrom-Json
             
             If (($Response | Get-Member).name -contains '_id') {
@@ -325,6 +337,18 @@ function Get-MCASFile
                 Catch {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
+            
+            # Patch for property name collision: Created/created
+            If (Select-String -InputObject $Response -Pattern '"Created":' -CaseSensitive -Quiet) {
+                $Response = $Response.Replace('"Created":', '"Created_2":')
+                Write-Verbose "Invoke-MCASRestMethod: A property name collision was detected in the response from MCAS for the following property names; 'created' and 'created'. The 'Created' property was renamed to 'Created_2'."
+            }
+
+            # Patch for property name collision: ftags/fTags
+            If (Select-String -InputObject $Response -Pattern '"ftags":' -CaseSensitive -Quiet) {               
+                $Response = $Response.Replace('"ftags":', '"ftags_2":')
+                Write-Verbose "Invoke-MCASRestMethod: A property name collision was detected in the response from MCAS for the following property names; 'ftags' and 'fTags'. The 'ftags' property was renamed to 'ftags_2'."
+            }
             
             $Response = $Response | ConvertFrom-Json
             

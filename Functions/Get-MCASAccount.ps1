@@ -153,19 +153,7 @@ function Get-MCASAccount
     }
     Process
     {
-        # # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
-        # If ($PSCmdlet.ParameterSetName -eq 'Fetch')
-        # {
-        #     Try {
-        #         # Fetch the item by its id
-        #         #$Response = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/" -Method Post -Token $Token
-        #         $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/v1/accounts/$Identity/" -Method Get -Token $Token
-        #     }
-        #         Catch {
-        #             Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
-        #         }
-        #     $Response
-        # }
+        # Fetch no longer works on the /accounts/ endpoint, so this was removed
     }
     End
     {
@@ -231,8 +219,8 @@ function Get-MCASAccount
             
             $Response = $Response.content
 
+            # Patch for property name collision: id/Id
             If (Select-String -InputObject $Response -Pattern '"Id":' -CaseSensitive -Quiet) {
-                #$Response = $Response -creplace '"Id":', '"Id_int":'
                 $Response = $Response.Replace('"Id":', '"Id_int":')
                 Write-Verbose "Invoke-MCASRestMethod: A property name collision was detected in the response from MCAS for the following property names; 'id' and 'Id'. The 'Id' property was renamed to 'Id_int'."
             }
