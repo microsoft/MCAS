@@ -22,11 +22,6 @@
 
     This will set the status of the specified alert as "Dismissed".
 
-.EXAMPLE
-   Get-MCASAlert -Unread -SortBy Date -SortDirection Descending -ResultSetSize 10 | Set-MCASAlert -MarkAs Read
-
-    This will pull the last 10 alerts that were generated with a status of 'Unread' and will mark them all as 'Read'.
-
 .FUNCTIONALITY
    Set-MCASAlert is intended to function as a mechanism for setting the status of alerts Cloud App Security.
 #>
@@ -60,12 +55,13 @@ function Set-MCASAlert
         # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [System.Management.Automation.PSCredential]$Credential
+        [System.Management.Automation.PSCredential]$Credential,
+
+        [Parameter(Mandatory=$false)]
+        [Switch]$Quiet
     )
     Begin
     {
-        $Endpoint = 'alerts'
-
         Try {$TenantUri = Select-MCASTenantUri}
             Catch {Throw $_}
 
@@ -77,16 +73,28 @@ function Set-MCASAlert
         If ($Dismiss) {$Action = 'dismiss'}
         If ($MarkAs)  {$Action = $MarkAs.ToLower()} # Convert -MarkAs to lower case, as expected by the CAS API
 
-        Try
-            {
+        Try {
                 # Set the alert's state by its id
-                $SetResponse = Invoke-MCASRestMethod -TenantUri $TenantUri -Endpoint $Endpoint -EndpointSuffix "$Identity/$Action/" -Method Post -Token $Token
+                $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/v1/alerts/$Identity/$Action/" -Token $Token -Method Post
             }
-            Catch
-                {
+            Catch {
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
-            $SetResponse
+            
+            Write-Verbose "Checking response for success" 
+            If ($Response.StatusCode -eq '200') {
+                $Success = $true
+                Write-Verbose "SUCCEEDED" 
+            }
+            Else {
+                $Success = $false
+                Write-Verbose "FAILED" 
+                Write-Error "Something went wrong attempting to modify alert $Identity"
+            }
+
+            If (!$Quiet) {
+                $Success
+            }
     }
     End
     {

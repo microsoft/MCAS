@@ -54,7 +54,7 @@
                 }
             }
             Else {
-                Write-Error "$Username could not be added to MCAS admin list with $PermissionType permission"
+                Write-Error "Something went wrong when attempting to add $Username to MCAS admin list with $PermissionType permission"
             }
         }
     }
