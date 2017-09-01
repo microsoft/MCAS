@@ -34,21 +34,17 @@ function Get-MCASStream
         Catch {Throw ($MyInvocation.InvocationName) + ': ' + (Resolve-MCASException $_)}
 
     # Get the matching items and handle errors
-    Try
-    {
-        $Response = Invoke-RestMethod -Uri "https://$TenantUri/api/discovery/streams/" -Method Get -Headers @{Authorization = "Token $Token"} -ContentType 'application/json' -UseBasicParsing -ErrorAction Stop
+    Try {
+        $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/discovery/streams/" -Method Get -Token $Token
     }
-        Catch
-        {
+        Catch {
             Throw $_.Exception
         }
 
-    $Response = $Response.Streams
+    $Response = ($Response.content | ConvertFrom-Json).streams
     
     # Add 'Identity' alias property
-    If (($null -ne $Response) -and ($Response | Get-Member).name -contains '_id') {
-        $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
-        }
+    $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
         
     $Response
 }

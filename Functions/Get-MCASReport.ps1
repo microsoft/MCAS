@@ -30,8 +30,9 @@ function Get-MCASReport
         }
 
     $Response = ($Response | ConvertFrom-Json).data
-    
-    $Response = $Response | ForEach-Object {Add-Member -InputObject $_ -MemberType NoteProperty -Name FriendlyName -Value $ReportsListReverse.Get_Item($_.report_name) -PassThru}
+
+    # Add 'Identity' alias property and 'FriendlyName' note property
+    $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru | ForEach-Object {Add-Member -InputObject $_ -MemberType NoteProperty -Name FriendlyName -Value $ReportsListReverse.Get_Item($_.report_name) -PassThru}
 
     $Response    
 }
