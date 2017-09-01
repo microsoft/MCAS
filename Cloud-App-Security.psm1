@@ -12,7 +12,7 @@ Resolve-Path -Path $mypath\Functions\*.ps1 | ForEach-Object -Process {
 #----------------------------Exports---------------------------
 # Cmdlets to export (must be exported as functions, not cmdlets)
 
-$ExportedCommands = @('Add-MCASAdminAccess','Export-MCASBlockScript','Get-MCASAdminAccess','Get-MCASAccount','Get-MCASActivity','Get-MCASAlert','Get-MCASAppInfo','Get-MCASCredential','Get-MCASDiscoveredApp','Get-MCASFile','Get-MCASGovernanceAction','Get-MCASReport','Get-MCASStream','Remove-MCASAdminAccess','Send-MCASDiscoveryLog','Set-MCASAlert')
+$ExportedCommands = @('Add-MCASAdminAccess','Export-MCASBlockScript','Get-MCASAdminAccess','Get-MCASAccount','Get-MCASActivity','Get-MCASAlert','Get-MCASAppInfo','Get-MCASCredential','Get-MCASDiscoveredApp','Get-MCASFile','Get-MCASGovernanceAction','Get-MCASReport','Get-MCASReportData','Get-MCASStream','Remove-MCASAdminAccess','Send-MCASDiscoveryLog','Set-MCASAlert')
 
 $ExportedCommands | ForEach-Object {Export-ModuleMember -Function $_}
 
@@ -221,25 +221,29 @@ $IPTagsList = @{
     }
 
 $ReportsList = @{
-	'Activity by Location' = 'geolocation_summary/'
-	'Browser Use' = 'browser_usage/'
-	'IP Addresses' = 'ip_usage/'
-	'IP Addresses for Admins' = 'ip_admin_usage/'
-	'OS Use' = 'os_usage/'
-	'Strictly Remote Users' = 'standalone_users/'
-	'Cloud App Overview' = 'app_summary/'
-	'Inactive Accounts' = 'zombie_users/'
-	'Privileged Users' = 'admins/'
-	'Salesforce Special Privileged Accounts' = 'sf_permissions/'
-	'User Logon' = 'logins_rate/'
-	'Data Sharing Overview' = 'files_summary/'
-	'File Extensions' = 'file_extensions/'
-	'Orphan Files' = 'orphan_files/'
-	'Outbound Sharing by Domain' = 'external_domains/'
-	'Owners of Shared Files' = 'shared_files_owners/'
-	'Personal User Accounts' = 'personal_users/'
-	'Sensitive File Names' = 'file_name_dlp/'
+	'Activity by Location' = 'geolocation_summary'
+	'Browser Use' = 'browser_usage'
+	'IP Addresses' = 'ip_usage'
+	'IP Addresses for Admins' = 'ip_admin_usage'
+	'OS Use' = 'os_usage'
+	'Strictly Remote Users' = 'standalone_users'
+	'Cloud App Overview' = 'app_summary'
+	'Inactive Accounts' = 'zombie_users'
+	'Privileged Users' = 'admins'
+	'Salesforce Special Privileged Accounts' = 'sf_permissions'
+	'User Logon' = 'logins_rate'
+	'Data Sharing Overview' = 'files_summary'
+	'File Extensions' = 'file_extensions'
+	'Orphan Files' = 'orphan_files'
+	'Outbound Sharing by Domain' = 'external_domains'
+	'Owners of Shared Files' = 'shared_files_owners'
+	'Personal User Accounts' = 'personal_users'
+	'Sensitive File Names' = 'file_name_dlp'
 }
+
+$ReportsListReverse = @{}
+$ReportsList.GetEnumerator() | ForEach-Object {$ReportsListReverse.Add($_.Value,$_.Key)}
+
 
 $GovernanceStatus = @{
     'Failed' = $false

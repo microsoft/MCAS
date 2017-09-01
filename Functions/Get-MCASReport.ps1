@@ -1,33 +1,3 @@
-﻿<#
-.Synopsis
-    Get-MCASReport retrieves built-in reports from Cloud App Security.
-.DESCRIPTION
-    Retrieves data based on the built-in reports.
-.EXAMPLE
-    Get-MCASReport -ReportName 'Browser Use' | select @{N='Browser';E={$_.unique_identifier}}, @{N='User Count';E={$_.record_data.users.count}} | sort -Property 'User Count' -Descending
-
-    Browser                               User Count
-    -------                               ----------
-    chrome_53.0.2785.143                           4
-    chrome_54.0.2840.71                            4
-    unknown_                                       4
-    microsoft bits_7.8                             3
-    microsoft exchange_                            3
-    microsoft exchange rpc_                        2
-    edge_14.14393                                  2
-    ie_11.0                                        2
-    microsoft onenote_16.0.7369.5783               1
-    apache-httpclient_4.3.5                        1
-    ie_9                                           1
-    skype for business_16.0.7369.2038              1
-    mobile safari_10.0                             1
-    microsoft web application companion_           1
-    chrome_54.0.2840.87                            1
-    microsoft excel_1.26.1007                      1
-    microsoft skydrivesync_17.3.6517.0809          1
-
-    This example retrives the Browser Use report, shows the browser name and user count columns, and sorts by user count descending.
-#>
 function Get-MCASReport
 {
     [CmdletBinding()]
@@ -42,36 +12,26 @@ function Get-MCASReport
         # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [System.Management.Automation.PSCredential]$Credential,
-
-        # -User limits the results to items related to the specified user/users, for example 'alice@contoso.com','bob@contoso.com'.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateNotNullOrEmpty()]
-        [ValidateSet('Activity by Location','Browser Use','IP Addresses','IP Addresses for Admins','OS Use','Strictly Remote Users','Cloud App Overview','Inactive Accounts','Privileged Users','Salesforce Special Privileged Accounts','User Logon','Data Sharing Overview','File Extensions','Orphan Files','Outbound Sharing by Domain','Owners of Shared Files','Personal User Accounts','Sensitive File Names')]
-        [string]$ReportName
+        [System.Management.Automation.PSCredential]$Credential
     )
-    Begin
-    {
-        $Endpoint = $ReportsList.$ReportName
 
-        Try {$TenantUri = Select-MCASTenantUri}
-            Catch {Throw $_}
+    Try {$TenantUri = Select-MCASTenantUri}
+        Catch {Throw $_}
 
-        Try {$Token = Select-MCASToken}
-            Catch {Throw $_}
+    Try {$Token = Select-MCASToken}
+        Catch {Throw $_}
+
+    # Get the matching items and handle errors
+    Try {
+        $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/reports/" -Method Post -Token $Token
     }
-    Process
-    {
-    }
-    End
-    {
-        # Get the matching items and handle errors
-        Try {
-            $Response = Invoke-RestMethod -Uri "https://$TenantUri/api/reports/$Endpoint" -Headers @{Authorization = "Token $Token"} -UseBasicParsing
-        }
         Catch {
             Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
         }
-        $Response.data
-    }
+
+    $Response = ($Response | ConvertFrom-Json).data
+    
+    $Response = $Response | ForEach-Object {Add-Member -InputObject $_ -MemberType NoteProperty -Name FriendlyName -Value $ReportsListReverse.Get_Item($_.report_name) -PassThru}
+
+    $Response    
 }
