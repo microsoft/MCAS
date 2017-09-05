@@ -84,11 +84,11 @@ function Set-MCASAlert
             Write-Verbose "Checking response for success" 
             If ($Response.StatusCode -eq '200') {
                 $Success = $true
-                Write-Verbose "SUCCEEDED" 
+                Write-Verbose "Successfully modified alert $Identity" 
             }
             Else {
                 $Success = $false
-                Write-Verbose "FAILED" 
+                Write-Verbose "Something went wrong attempting to modify alert $Identity" 
                 Write-Error "Something went wrong attempting to modify alert $Identity"
             }
 
