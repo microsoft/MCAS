@@ -219,11 +219,8 @@ function Get-MCASAccount
             
             $Response = $Response.content
 
-            # Patch for property name collision: id/Id
-            If (Select-String -InputObject $Response -Pattern '"Id":' -CaseSensitive -Quiet) {
-                $Response = $Response.Replace('"Id":', '"Id_int":')
-                Write-Verbose "Invoke-MCASRestMethod: A property name collision was detected in the response from MCAS for the following property names; 'id' and 'Id'. The 'Id' property was renamed to 'Id_int'."
-            }
+            Write-Verbose "Checking for property name collisions to handle"
+            $Response = Edit-MCASPropertyName $Response -OldPropName '"Id":' -NewPropName '"Id_int":'
 
             $Response = $Response | ConvertFrom-Json
 
