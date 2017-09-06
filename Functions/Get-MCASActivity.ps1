@@ -310,20 +310,11 @@ function Get-MCASActivity
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
 
-            $Response = $Response.content | ConvertFrom-Json
+            $Response = $Response.content 
+            
+            $Response = $Response | ConvertFrom-Json
 
-            # For list responses with zero results, set an empty collection as response rather than returning the response metadata
-            If ($Response.total -eq 0) {
-                $Response = @()
-            }
-            # For list responses, get the data property only
-            Else {
-                $Response = $Response.data
-            }
-
-            If (($Response | Get-Member).name -contains '_id') {
-                $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
-            }
+            $Response = Invoke-MCASResponseHandling -Response $Response
             
             $Response
         }

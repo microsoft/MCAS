@@ -143,12 +143,9 @@ function Get-MCASDiscoveredApp
     }
     
     # Get the response parts and format we need
-    $Response = ($Response.content | ConvertFrom-Json).data
+    $Response = $Response.content | ConvertFrom-Json
 
-    # Add 'Identity' alias property
-    If (($null -ne $Response) -and ($Response | Get-Member).name -contains '_id') {
-        $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
-        }
-    
+    $Response = Invoke-MCASResponseHandling -Response $Response -IdentityProperty 'appId'
+
     $Response
 }

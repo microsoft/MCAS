@@ -29,7 +29,11 @@
         }
 
     # Get the response parts and format we need
-    $Response = ($Response.content | ConvertFrom-Json).data
+    $Response = $Response.content 
+    
+    $Response = $Response | ConvertFrom-Json
+    
+    $Response = Invoke-MCASResponseHandling -Response $Response -IdentityProperty $null
     
     $Response
 }

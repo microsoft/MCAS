@@ -65,11 +65,9 @@ function Get-MCASPolicy
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
 
-            ($Response = $Response | ConvertFrom-Json).data
-
-            If (($Response | Get-Member).name -contains '_id') {
-                $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
-            }
+            $Response = $Response | ConvertFrom-Json
+            
+            $Response = Invoke-MCASResponseHandling -Response $Response
 
             $Response
         }
