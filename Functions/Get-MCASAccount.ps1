@@ -219,7 +219,7 @@ function Get-MCASAccount
             $Response = $Response.content
 
             Write-Verbose "Checking for property name collisions to handle"
-            $Response = Edit-MCASPropertyName $Response -OldPropName '"Id":' -NewPropName '"Id_int":'
+            $Response = Edit-MCASPropertyName -Data $Response -OldPropName '"Id":' -NewPropName '"Id_int":'
 
             $Response = $Response | ConvertFrom-Json
 

@@ -339,8 +339,8 @@ function Get-MCASFile
             $Response = $Response.Content
             
             Write-Verbose "Checking for property name collisions to handle"
-            $Response = Edit-MCASPropertyName -RawResponse $Response -OldPropName '"Created":' -NewPropName '"Created_2":'
-            $Response = Edit-MCASPropertyName -RawResponse $Response -OldPropName '"ftags":' -NewPropName '"ftags_2":'
+            $Response = Edit-MCASPropertyName -Data $Response -OldPropName '"Created":' -NewPropName '"Created_2":'
+            $Response = Edit-MCASPropertyName -Data $Response -OldPropName '"ftags":' -NewPropName '"ftags_2":'
             
             $Response = $Response | ConvertFrom-Json
             
