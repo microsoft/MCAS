@@ -123,8 +123,7 @@ function Get-MCASDiscoveredApp
     If ($SortBy -xor $SortDirection) {Write-Error 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.' -ErrorAction Stop}
 
     # Add sort direction to request body, if specified
-    If ($SortDirection -eq 'Ascending')  {$Body.Add('sortDirection','asc')}
-    If ($SortDirection -eq 'Descending') {$Body.Add('sortDirection','desc')}
+    If ($SortDirection) {$Body.Add('sortDirection',$SortDirection.TrimEnd('ending').ToLower())}
 
     # Add sort field to request body, if specified
     Switch ($SortBy) {

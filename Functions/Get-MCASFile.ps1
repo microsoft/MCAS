@@ -40,7 +40,7 @@ function Get-MCASFile
         # Fetches a file object by its unique identifier.
         [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
         [ValidateNotNullOrEmpty()]
-        [ValidatePattern({^[A-Fa-f0-9]{24}$})]
+        #[ValidatePattern({^[A-Fa-f0-9]{24}$})]
         [alias("_id")]
         [string]$Identity,
 
@@ -265,14 +265,11 @@ function Get-MCASFile
             If ($SortBy -xor $SortDirection) {Throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'}
 
             # Add sort direction to request body, if specified
-            If ($SortDirection -eq 'Ascending')  {$Body.Add('sortDirection','asc')}
-            If ($SortDirection -eq 'Descending') {$Body.Add('sortDirection','desc')}
+            If ($SortDirection) {$Body.Add('sortDirection',$SortDirection.TrimEnd('ending').ToLower())}
 
             # Add sort field to request body, if specified
-            If ($SortBy -eq 'DateModified')
-            {
-                $Body.Add('sortField','dateModified') # Patch to convert 'DateModified' to 'dateModified' for API compatibility. There is only one Sort Field today.
-            }
+            If ($SortBy -eq 'DateModified') {$Body.Add('sortField','modifiedDate')}
+
             #endregion ----------------------------SORTING----------------------------
 
             #region ----------------------------FILTERING----------------------------
@@ -338,9 +335,12 @@ function Get-MCASFile
                     Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
                 }
             
+            
+            $Response = $Response.Content
+            
             Write-Verbose "Checking for property name collisions to handle"
-            $Response = Edit-MCASPropertyName $Response -OldPropName '"Created":' -NewPropName '"Created_2":'
-            $Response = Edit-MCASPropertyName $Response -OldPropName '"ftags":' -NewPropName '"ftags_2":'
+            $Response = Edit-MCASPropertyName -RawResponse $Response -OldPropName '"Created":' -NewPropName '"Created_2":'
+            $Response = Edit-MCASPropertyName -RawResponse $Response -OldPropName '"ftags":' -NewPropName '"ftags_2":'
             
             $Response = $Response | ConvertFrom-Json
             

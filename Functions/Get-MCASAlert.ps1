@@ -182,8 +182,7 @@ function Get-MCASAlert
             If ($SortBy -xor $SortDirection) {Throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'}
 
             # Add sort direction to request body, if specified
-            If ($SortDirection -eq 'Ascending')  {$Body.Add('sortDirection','asc')}
-            If ($SortDirection -eq 'Descending') {$Body.Add('sortDirection','desc')}
+            If ($SortDirection) {$Body.Add('sortDirection',$SortDirection.TrimEnd('ending').ToLower())}
 
             # Add sort field to request body, if specified
             If ($SortBy)
