@@ -295,11 +295,11 @@ function Get-MCASFile
             If ($Trashed -and $TrashedNot) {Throw 'Cannot reconcile -Trashed and -TrashedNot switches. Use zero or one of these, but not both.'}
 
             # Value-mapped filters
-            If ($Filetype)        {$FilterSet += @{'fileType'=@{'eq'= ($Filetype | ForEach-Object {$_ -as [int]})}}}
-            If ($FiletypeNot)     {$FilterSet += @{'fileType'=@{'neq'=($FiletypeNot | ForEach-Object {$_ -as [int]})}}}
-            If ($FileAccessLevel) {$FilterSet += @{'sharing'= @{'eq'= ($FileAccessLevel | ForEach-Object {$_ -as [int]})}}}
-            If ($AppName)         {$FilterSet += @{'service'= @{'eq'= ($AppName | ForEach-Object {$_ -as [int]})}}}
-            If ($AppNameNot)      {$FilterSet += @{'service'= @{'neq'=($AppNameNot | ForEach-Object {$_ -as [int]})}}}
+            If ($Filetype)        {$FilterSet += @{'fileType'=@{'eq'= ([int[]]($Filetype | ForEach-Object {$_ -as [int]}))}}}
+            If ($FiletypeNot)     {$FilterSet += @{'fileType'=@{'neq'=([int[]]($FiletypeNot | ForEach-Object {$_ -as [int]}))}}}
+            If ($FileAccessLevel) {$FilterSet += @{'sharing'= @{'eq'= ([int[]]($FileAccessLevel | ForEach-Object {$_ -as [int]}))}}}
+            If ($AppName)         {$FilterSet += @{'service'=@{'eq'=([int[]]($AppName | ForEach-Object {$_ -as [int]}))}}}
+            If ($AppNameNot)      {$FilterSet += @{'service'=@{'neq'=([int[]]($AppNameNot | ForEach-Object {$_ -as [int]}))}}}
 
             # Simple filters
             If ($AppId)                {$FilterSet += @{'service'=                  @{'eq'=$AppId}}}

@@ -209,10 +209,10 @@ function Get-MCASAlert
             If ($Read -and $Unread) {Throw 'Cannot reconcile -Read and -Unread parameters. Only use one of them at a time.'}
 
             # Value-mapped filters
-            If ($AppName)          {$FilterSet += @{'entity.service'=   @{'eq'=($AppName | ForEach-Object {$_ -as [int]})}}}
-            If ($AppNameNot)       {$FilterSet += @{'entity.service'=   @{'neq'=($AppNameNot | ForEach-Object {$_ -as [int]})}}}
-            If ($Severity)         {$FilterSet += @{'severity'=         @{'eq'=($Severity | ForEach-Object {$_ -as [int]})}}}
-            If ($ResolutionStatus) {$FilterSet += @{'resolutionStatus'= @{'eq'=($ResolutionStatus | ForEach-Object {$_ -as [int]})}}}
+            If ($AppName)          {$FilterSet += @{'entity.service'=   @{'eq'=([int[]]($AppName | ForEach-Object {$_ -as [int]}))}}}
+            If ($AppNameNot)       {$FilterSet += @{'entity.service'=   @{'neq'=([int[]]($AppNameNot | ForEach-Object {$_ -as [int]}))}}}
+            If ($Severity)         {$FilterSet += @{'severity'=         @{'eq'=([int[]]($Severity | ForEach-Object {$_ -as [int]}))}}}
+            If ($ResolutionStatus) {$FilterSet += @{'resolutionStatus'= @{'eq'=([int[]]($ResolutionStatus | ForEach-Object {$_ -as [int]}))}}}
 
             # Simple filters
             If ($UserName)   {$FilterSet += @{'entity.user'=    @{'eq'=$UserName}}}

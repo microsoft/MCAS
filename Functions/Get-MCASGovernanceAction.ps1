@@ -167,8 +167,8 @@ function Get-MCASGovernanceAction
             If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
 
             # Value-mapped filters
-            If ($AppName)    {$FilterSet += @{'appId'=  @{'eq'= ($AppName | ForEach-Object {$_ -as [int]})}}}
-            If ($AppNameNot) {$FilterSet += @{'appId'=  @{'neq'=($AppNameNot | ForEach-Object {$_ -as [int]})}}}
+            If ($AppName)    {$FilterSet += @{'appId'=  @{'eq'= ([int[]]($AppName | ForEach-Object {$_ -as [int]}))}}}
+            If ($AppNameNot) {$FilterSet += @{'appId'=  @{'neq'=([int[]]($AppNameNot | ForEach-Object {$_ -as [int]}))}}}       
             If ($Status)     {$FilterSet += @{'status'= @{'eq'= ($Status | ForEach-Object {$GovernanceStatus.$_})}}}
             If ($Action)     {$FilterSet += @{'type'=   @{'eq'= ($Action | ForEach-Object {$_})}}}
 

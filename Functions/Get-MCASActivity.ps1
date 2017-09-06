@@ -172,7 +172,7 @@ function Get-MCASActivity
         # Limits the results to events listed for the specified IP Tags.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [validateset("Anonymous_Proxy","Botnet","Darknet_Scanning_IP","Exchange_Online","Exchangnline_Protection","Malware_CnC_Server","Microsoft_Cloud","Microsoft_Authentication_and_Identity","Office_365","Office_365_Planner","Office_365_ProPlus","Office_Online","Office_Sway","Office_Web_Access_Companion","OneNote","Remote_Connectivity_Analyzer","Satellite_Provider","SharePoint_Online","Skype_for_Business_Online","Smart_Proxy_and_Access_Proxy_Network","Tor","Yammer","Zscaler")]
+        [validateset("Anonymous_Proxy","Botnet","Darknet_Scanning_IP","Exchange_Online","Exchang_Online_Protection","Malware_CnC_Server","Microsoft_Cloud","Microsoft_Authentication_and_Identity","Office_365","Office_365_Planner","Office_365_ProPlus","Office_Online","Office_Sway","Office_Web_Access_Companion","OneNote","Remote_Connectivity_Analyzer","Satellite_Provider","SharePoint_Online","Skype_for_Business_Online","Smart_Proxy_and_Access_Proxy_Network","Tor","Yammer","Zscaler")]
         [string[]]$IPTag,
 
         # Limits the results to events listed for the specified IP Tags.
@@ -270,9 +270,9 @@ function Get-MCASActivity
             If ($Impersonated -and $ImpersonatedNot){Throw 'Cannot reconcile app parameters. Do not combine Impersonated and ImpersonatedNot parameters.'}
 
             # Value-mapped filters
-            If ($IpCategory) {$FilterSet += @{'ip.category'=@{'eq'=($IpCategory | ForEach-Object {$_ -as [int]})}}}
-            If ($AppName)    {$FilterSet += @{'service'=    @{'eq'=($AppName | ForEach-Object {$_ -as [int]})}}}
-            If ($AppNameNot) {$FilterSet += @{'service'=    @{'neq'=($AppNameNot | ForEach-Object {$_ -as [int]})}}}
+            If ($IpCategory) {$FilterSet += @{'ip.category'=@{'eq'=([int[]]($IpCategory | ForEach-Object {$_ -as [int]}))}}}
+            If ($AppName)    {$FilterSet += @{'service'=@{'eq'=([int[]]($AppName | ForEach-Object {$_ -as [int]}))}}}
+            If ($AppNameNot) {$FilterSet += @{'service'=@{'neq'=([int[]]($AppNameNot | ForEach-Object {$_ -as [int]}))}}}
             If ($IPTag)      {$FilterSet += @{'ip.tags'=    @{'eq'=($IPTag.GetEnumerator() | ForEach-Object {$IPTagsList.$_ -join ','})}}}
 
             # Simple filters
