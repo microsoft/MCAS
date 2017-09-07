@@ -1,4 +1,8 @@
 ﻿
+
+# THIS TEST SCRIPT IS STILL IN PROGRESS. IT IS CURRENTLY VERY UGLY. JUST IGNORE IT. THANKS. -Jared
+
+
 #  Configure interactivity of tests
 
     $Global:RunInteractiveTests = $false
@@ -25,7 +29,6 @@ $TestsFolder = (Split-Path -Parent -Path $MyInvocation.MyCommand.Path)
 
 
 . $TestsFolder\Test-Get-MCASCredential.ps1
-. $TestsFolder\Test-Verb-Noun.ps1
 
 
 If ($RunTenantSpecificTests) {
@@ -35,13 +38,6 @@ If ($RunTenantSpecificTests) {
     . $TestsFolder\Test-Add-MCASAdminAccess.ps1
     . $TestsFolder\Test-Remove-MCASAdminAccess.ps1
 }
-
-
-
-
-
-
-
 
 
 

@@ -10,15 +10,12 @@ Resolve-Path -Path $mypath\Functions\*.ps1 | ForEach-Object -Process {
 }
 
 #----------------------------Exports---------------------------
-# Cmdlets to export (must be exported as functions, not cmdlets)
-
+# Cmdlets to export (must be exported as functions, not cmdlets) - This array format can be copied directly to the manifest 
 $ExportedCommands = @('Add-MCASAdminAccess','Export-MCASBlockScript','Get-MCASAdminAccess','Get-MCASAccount','Get-MCASActivity','Get-MCASAlert','Get-MCASAppInfo','Get-MCASCredential','Get-MCASDiscoveredApp','Get-MCASFile','Get-MCASGovernanceAction','Get-MCASPolicy','Get-MCASReport','Get-MCASReportData','Get-MCASStream','Remove-MCASAdminAccess','Send-MCASDiscoveryLog','Set-MCASAlert')
 
 $ExportedCommands | ForEach-Object {Export-ModuleMember -Function $_}
 
-#Export-ModuleMember -Function Invoke-MCASRestMethod
-Export-ModuleMember -Function Invoke-MCASRestMethod2
-
+#Export-ModuleMember -Function Invoke-MCASRestMethod2
 
 # Vars to export (must be exported here, even if also included in the module manifest in 'VariablesToExport'
 Export-ModuleMember -Variable CASCredential

@@ -37,7 +37,7 @@ function Get-MCASAlert
         # Fetches an alert object by its unique identifier.
         [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
         [ValidateNotNullOrEmpty()]
-        [ValidatePattern({^[A-Fa-f0-9]{24}$})]
+        #[ValidatePattern({^[A-Fa-f0-9]{24}$})]
         [Alias("_id")]
         [string]$Identity,
 

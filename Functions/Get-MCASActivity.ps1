@@ -39,7 +39,7 @@ function Get-MCASActivity
         # Fetches an activity object by its unique identifier.
         [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
         [ValidateNotNullOrEmpty()]
-        [ValidatePattern("[A-Fa-f0-9_\-]{51}|[A-Za-z0-9_\-]{20}")]
+        #[ValidatePattern("[A-Fa-f0-9_\-]{51}|[A-Za-z0-9_\-]{20}")]
         [alias("_id")]
         [string]$Identity,
 
@@ -156,7 +156,7 @@ function Get-MCASActivity
         # Limits the results to events listed for the specified File ID.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [ValidatePattern("\b[A-Za-z0-9]{24}\b")]
+        #[ValidatePattern("\b[A-Za-z0-9]{24}\b")]
         [string]$FileID,
 
         # Limits the results to events listed for the specified AIP classification labels. Use ^ when denoting (external) labels. Example: @("^Private")
@@ -178,7 +178,7 @@ function Get-MCASActivity
         # Limits the results to events listed for the specified IP Tags.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [ValidatePattern("[A-Fa-f0-9]{24}")]
+        #[ValidatePattern("[A-Fa-f0-9]{24}")]
         [string]$PolicyId,
 
         # Limits the results to items occuring in the last x number of days.
