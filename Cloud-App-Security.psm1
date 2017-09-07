@@ -15,7 +15,8 @@ $ExportedCommands = @('Add-MCASAdminAccess','Export-MCASBlockScript','Get-MCASAd
 
 $ExportedCommands | ForEach-Object {Export-ModuleMember -Function $_}
 
-#Export-ModuleMember -Function Invoke-MCASRestMethod2
+Export-ModuleMember -Function Invoke-MCASRestMethod2
+Export-ModuleMember -Function Invoke-MCASCallLimiting
 
 # Vars to export (must be exported here, even if also included in the module manifest in 'VariablesToExport'
 Export-ModuleMember -Variable CASCredential
@@ -23,8 +24,7 @@ Export-ModuleMember -Variable CASCredential
 # Aliases to export
 Export-ModuleMember -Alias *
 
-
-#----------------------------Constants----------------------------
+#----------------------------Variables and Constants----------------------------
 #Set-Variable MaxResultSize -Option Constant -Value 100
 
 
