@@ -26,6 +26,8 @@
         $FilterSet
     )
 
+    Invoke-MCASCallLimiting
+    
     Try {
         If ($Body) {
             $JsonBody = $Body | ConvertTo-Json -Compress -Depth 2
