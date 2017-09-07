@@ -20,16 +20,12 @@ Export-ModuleMember -Function Invoke-MCASCallLimiting
 
 # Vars to export (must be exported here, even if also included in the module manifest in 'VariablesToExport'
 Export-ModuleMember -Variable CASCredential
-Export-ModuleMember -Variable MCASApiCalls
 
 # Aliases to export
 Export-ModuleMember -Alias *
 
-
 #----------------------------Variables and Constants----------------------------
 #Set-Variable MaxResultSize -Option Constant -Value 100
-
-[datetime[]]$Global:MCASApiCalls = @()
 
 
 #----------------------------Enum Types----------------------------
