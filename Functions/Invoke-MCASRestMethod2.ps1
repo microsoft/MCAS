@@ -47,7 +47,7 @@
         Catch {
             If ($_ -like 'The remote server returned an error: (429) TOO MANY REQUESTS.') {
                 #Write-Error '429 - Too many requests. Do not exceed 30 requests/min. Please wait and try again.' -ErrorAction Stop
-                Write-Warning '429 - Too many requests. The MCAS API throttling limit has been hit, the call will be retried in 3 second(s)...'
+                Write-Warning '429 - Too many requests. The MCAS API throttling limit has been hit, the call will be retried in 5 second(s)...'
                 
                 $CallThrottled = $true
                 

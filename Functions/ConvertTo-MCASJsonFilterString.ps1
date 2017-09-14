@@ -14,5 +14,5 @@
     $RawJsonFilter = ('{'+($Temp -join '},')+'}}')
     Write-Verbose "ConvertTo-MCASJsonFilterString: Converted filter set to JSON filter: $RawJsonFilter"
 
-    Write-Output $RawJsonFilter
+    $RawJsonFilter
 }
