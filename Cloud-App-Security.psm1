@@ -1,31 +1,4 @@
-﻿#----------------------------Include functions---------------------------
-# KUDOS to the chocolatey project for the basis of this code
-
-# get the path of where the module is saved (if module is at c:\myscripts\module.psm1, then c:\myscripts\)
-$mypath = (Split-Path -Parent -Path $MyInvocation.MyCommand.Definition)
-
-#find all the ps1 files in the Functions subfolder
-Resolve-Path -Path $mypath\Functions\*.ps1 | ForEach-Object -Process {
-    . $_.ProviderPath
-}
-
-
-
-#----------------------------Exports---------------------------
-# Cmdlets to export (must be exported as functions, not cmdlets) - This array format can be copied directly to the manifest as the 'FunctionsToExport' value
-$ExportedCommands = @('Add-MCASAdminAccess','Export-MCASBlockScript','Get-MCASAdminAccess','Get-MCASAccount','Get-MCASActivity','Get-MCASAlert','Get-MCASAppInfo','Get-MCASCredential','Get-MCASDiscoveredApp','Get-MCASFile','Get-MCASGovernanceAction','Get-MCASPolicy','Get-MCASReport','Get-MCASReportData','Get-MCASStream','Remove-MCASAdminAccess','Send-MCASDiscoveryLog','Set-MCASAlert')
-$ExportedCommands | ForEach-Object {Export-ModuleMember -Function $_}
-
-#Export-ModuleMember -Function Invoke-MCASRestMethod2
-
-# Vars to export (must be exported here, even if also included in the module manifest in 'VariablesToExport'
-Export-ModuleMember -Variable CASCredential
-
-# Aliases to export
-Export-ModuleMember -Alias *
-
-
-
+﻿
 #----------------------------Enum Types----------------------------
 enum mcas_app {
     Amazon_Web_Services = 11599
@@ -245,3 +218,30 @@ enum alert_type
     ALERT_ZOMBIE_USER =
     }
 #>
+
+
+#----------------------------Include functions---------------------------
+# KUDOS to the chocolatey project for the basis of this code
+
+# get the path of where the module is saved (if module is at c:\myscripts\module.psm1, then c:\myscripts\)
+$mypath = (Split-Path -Parent -Path $MyInvocation.MyCommand.Definition)
+
+#find all the ps1 files in the Functions subfolder
+Resolve-Path -Path $mypath\Functions\*.ps1 | ForEach-Object -Process {
+    . $_.ProviderPath
+}
+
+
+#----------------------------Exports---------------------------
+# Cmdlets to export (must be exported as functions, not cmdlets) - This array format can be copied directly to the manifest as the 'FunctionsToExport' value
+$ExportedCommands = @('Add-MCASAdminAccess','Export-MCASBlockScript','Get-MCASAdminAccess','Get-MCASAccount','Get-MCASActivity','Get-MCASAlert','Get-MCASAppInfo','Get-MCASCredential','Get-MCASDiscoveredApp','Get-MCASFile','Get-MCASGovernanceAction','Get-MCASPolicy','Get-MCASReport','Get-MCASReportData','Get-MCASStream','Remove-MCASAdminAccess','Send-MCASDiscoveryLog','Set-MCASAlert')
+$ExportedCommands | ForEach-Object {Export-ModuleMember -Function $_}
+
+#Export-ModuleMember -Function Invoke-MCASRestMethod2
+
+# Vars to export (must be exported here, even if also included in the module manifest in 'VariablesToExport'
+Export-ModuleMember -Variable CASCredential
+
+# Aliases to export
+Export-ModuleMember -Alias *
+

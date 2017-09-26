@@ -122,6 +122,11 @@ function Get-MCASFile
         [ValidateNotNullOrEmpty()]
         [string[]]$OwnerNot,
 
+        # Limits the results to items with the specified policy ids, such as '59c1954dbff351a11ae56fe2', '59a8657ebff351ba49d5955f'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string[]]$PolicyId,
+        
         # Limits the results to items with the specified MIME Type, such as 'text/plain', 'image/vnd.adobe.photoshop'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -312,6 +317,7 @@ function Get-MCASFile
             If ($CollaboratorsNot)     {$FilterSet += @{'collaborators.users'=      @{'neq'=$CollaboratorsNot}}}
             If ($Owner)                {$FilterSet += @{'owner.username'=           @{'eq'=$Owner}}}
             If ($OwnerNot)             {$FilterSet += @{'owner.username'=           @{'neq'=$OwnerNot}}}
+            If ($PolicyId)             {$FilterSet += @{'policy'=                   @{'eq'=$PolicyId}}}
             If ($MIMEType)             {$FilterSet += @{'mimeType'=                 @{'eq'=$MIMEType}}}
             If ($MIMETypeNot)          {$FilterSet += @{'mimeType'=                 @{'neq'=$MIMETypeNot}}}
             If ($Name)                 {$FilterSet += @{'filename'=                 @{'eq'=$Name}}}
