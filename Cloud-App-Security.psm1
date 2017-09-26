@@ -1,33 +1,4 @@
-﻿#----------------------------Include functions---------------------------
-# KUDOS to the chocolatey project for the basis of this code
-
-# get the path of where the module is saved (if module is at c:\myscripts\module.psm1, then c:\myscripts\)
-$mypath = (Split-Path -Parent -Path $MyInvocation.MyCommand.Definition)
-
-#find all the ps1 files in the subfolder functions
-Resolve-Path -Path $mypath\Functions\*.ps1 | ForEach-Object -Process {
-    . $_.ProviderPath
-}
-
-#----------------------------Exports---------------------------
-# Cmdlets to export (must be exported as functions, not cmdlets) - This array format can be copied directly to the manifest 
-$ExportedCommands = @('Add-MCASAdminAccess','Export-MCASBlockScript','Get-MCASAdminAccess','Get-MCASAccount','Get-MCASActivity','Get-MCASAlert','Get-MCASAppInfo','Get-MCASCredential','Get-MCASDiscoveredApp','Get-MCASFile','Get-MCASGovernanceAction','Get-MCASPolicy','Get-MCASReport','Get-MCASReportData','Get-MCASStream','Remove-MCASAdminAccess','Send-MCASDiscoveryLog','Set-MCASAlert')
-
-$ExportedCommands | ForEach-Object {Export-ModuleMember -Function $_}
-
-Export-ModuleMember -Function Invoke-MCASRestMethod2
-Export-ModuleMember -Function Invoke-MCASCallLimiting
-
-# Vars to export (must be exported here, even if also included in the module manifest in 'VariablesToExport'
-Export-ModuleMember -Variable CASCredential
-
-# Aliases to export
-Export-ModuleMember -Alias *
-
-#----------------------------Variables and Constants----------------------------
-#Set-Variable MaxResultSize -Option Constant -Value 100
-
-
+﻿
 #----------------------------Enum Types----------------------------
 enum mcas_app {
     Amazon_Web_Services = 11599
@@ -169,26 +140,6 @@ enum permission_type {
     FULL_ACCESS
     }
 
-<#
-enum alert_type
-    {
-    ALERT_ADMIN_USER = 14680070
-    ALERT_CABINET_EVENT_MATCH_AUDIT = 15728641
-    ALERT_CABINET_EVENT_MATCH_FILE = 15728642
-    ALERT_GEOLOCATION_NEW_COUNTRY = 196608
-    ALERT_MANAGEMENT_DISCONNECTED_API = 15794945
-    ALERT_SUSPICIOUS_ACTIVITY = 14680083
-    ALERT_COMPROMISED_ACCOUNT =
-    ALERT_DISCOVERY_ANOMALY_DETECTION =
-    ALERT_CABINET_INLINE_EVENT_MATCH =
-    ALERT_CABINET_EVENT_MATCH_OBJECT =
-    ALERT_CABINET_DISCOVERY_NEW_SERVICE =
-    ALERT_NEW_ADMIN_LOCATION =
-    ALERT_PERSONAL_USER_SAGE =
-    ALERT_ZOMBIE_USER =
-    }
-#>
-
 
 #----------------------------Hash Tables---------------------------
 $IPTagsList = @{
@@ -238,13 +189,59 @@ $ReportsList = @{
 	'Sensitive File Names' = 'file_name_dlp'
 }
 
+# Reversed copy of the reports list hash table (keys become values and value become keys)
 $ReportsListReverse = @{}
 $ReportsList.GetEnumerator() | ForEach-Object {$ReportsListReverse.Add($_.Value,$_.Key)}
-
 
 $GovernanceStatus = @{
     'Failed' = $false
     'Pending' = $null
     'Successful' = $true
 }
+
+<#
+enum alert_type
+    {
+    ALERT_ADMIN_USER = 14680070
+    ALERT_CABINET_EVENT_MATCH_AUDIT = 15728641
+    ALERT_CABINET_EVENT_MATCH_FILE = 15728642
+    ALERT_GEOLOCATION_NEW_COUNTRY = 196608
+    ALERT_MANAGEMENT_DISCONNECTED_API = 15794945
+    ALERT_SUSPICIOUS_ACTIVITY = 14680083
+    ALERT_COMPROMISED_ACCOUNT =
+    ALERT_DISCOVERY_ANOMALY_DETECTION =
+    ALERT_CABINET_INLINE_EVENT_MATCH =
+    ALERT_CABINET_EVENT_MATCH_OBJECT =
+    ALERT_CABINET_DISCOVERY_NEW_SERVICE =
+    ALERT_NEW_ADMIN_LOCATION =
+    ALERT_PERSONAL_USER_SAGE =
+    ALERT_ZOMBIE_USER =
+    }
+#>
+
+
+#----------------------------Include functions---------------------------
+# KUDOS to the chocolatey project for the basis of this code
+
+# get the path of where the module is saved (if module is at c:\myscripts\module.psm1, then c:\myscripts\)
+$mypath = (Split-Path -Parent -Path $MyInvocation.MyCommand.Definition)
+
+#find all the ps1 files in the Functions subfolder
+Resolve-Path -Path $mypath\Functions\*.ps1 | ForEach-Object -Process {
+    . $_.ProviderPath
+}
+
+
+#----------------------------Exports---------------------------
+# Cmdlets to export (must be exported as functions, not cmdlets) - This array format can be copied directly to the manifest as the 'FunctionsToExport' value
+$ExportedCommands = @('Add-MCASAdminAccess','Export-MCASBlockScript','Get-MCASAdminAccess','Get-MCASAccount','Get-MCASActivity','Get-MCASAlert','Get-MCASAppInfo','Get-MCASCredential','Get-MCASDiscoveredApp','Get-MCASFile','Get-MCASGovernanceAction','Get-MCASPolicy','Get-MCASReport','Get-MCASReportData','Get-MCASStream','Remove-MCASAdminAccess','Send-MCASDiscoveryLog','Set-MCASAlert')
+$ExportedCommands | ForEach-Object {Export-ModuleMember -Function $_}
+
+#Export-ModuleMember -Function Invoke-MCASRestMethod2
+
+# Vars to export (must be exported here, even if also included in the module manifest in 'VariablesToExport'
+Export-ModuleMember -Variable CASCredential
+
+# Aliases to export
+Export-ModuleMember -Alias *
 

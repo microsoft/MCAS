@@ -94,7 +94,7 @@ $CmdletsToTest += $ThisCmdlet
 
 # Get-MCASDiscoveredApp
 $ThisCmdlet = @{}
-$ThisCmdlet.CmdletName = 'MCASDiscoveredApp'
+$ThisCmdlet.CmdletName = 'Get-MCASDiscoveredApp'
 $ThisCmdlet.SupportedParams = @('Skip','ResultSetSize') # need to add'SortBy','SortDirection'
 $ThisCmdlet.ResultSetSizeValidRange = @(1,100) 
 $ThisCmdlet.ValidSortBy = @('IpCount','LastUsed','Name','Transactions','Upload','UserCount') 
