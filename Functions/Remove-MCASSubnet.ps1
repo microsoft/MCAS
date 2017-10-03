@@ -62,17 +62,17 @@ function Remove-MCASSubnet
         Write-Verbose "Checking response for success" 
         If ($Response.StatusCode -eq '200') {
             $Success = $true
-            Write-Verbose "Successfully deleted subnet $NameOrIdTargeted" 
+            Write-Verbose "Successfully created subnet $Name" 
         }
         Else {
             $Success = $false
-            Write-Verbose "Something went wrong attempting to delete subnet $NameOrIdTargeted" 
-            Write-Error "Something went wrong attempting to delete subnet $NameOrIdTargeted"
+            Write-Verbose "Something went wrong attempting to create subnet $Name" 
+            Write-Error "Something went wrong attempting to create subnet $Name"
         }
 
         If (!$Quiet) {
             $Success
-        }       
+        }      
     }
     End {
     }

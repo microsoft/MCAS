@@ -61,18 +61,18 @@ function New-MCASSubnet
         
         Write-Verbose "Checking response for success" 
         If ($Response.StatusCode -eq '200') {
-            $Success = $true
-            Write-Verbose "Successfully created subnet $Name" 
+            Write-Verbose "Successfully deleted subnet $NameOrIdTargeted" 
         }
         Else {
-            $Success = $false
-            Write-Verbose "Something went wrong attempting to create subnet $Name" 
-            Write-Error "Something went wrong attempting to create subnet $Name"
-        }
+            Write-Verbose "Something went wrong attempting to delete subnet $NameOrIdTargeted" 
+            Write-Error "Something went wrong attempting to delete subnet $NameOrIdTargeted"
+        }  
+
+        $Response = $Response.content | ConvertFrom-Json
 
         If (!$Quiet) {
-            $Success
-        }       
+            $Response
+        }
     }
     End {
     }
