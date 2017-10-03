@@ -69,6 +69,6 @@
     }
     While ($CallThrottled)
     
-    #Write-Verbose "Invoke-MCASRestMethod: Raw response from MCAS REST API: $Response"
+    Write-Verbose "Invoke-MCASRestMethod: Raw response from MCAS REST API: $Response"
     $Response
 }
