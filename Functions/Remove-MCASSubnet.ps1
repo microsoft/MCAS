@@ -1,7 +1,7 @@
-function Remove-MCASSubnet
+function Remove-MCASSubnetAlpha
 {
     [CmdletBinding()]
-    [Alias('Remove-CASSubnet')]
+    [Alias('Remove-MCASSubnetAlpha')]
     Param
     (
         # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
