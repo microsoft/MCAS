@@ -35,7 +35,7 @@ function Remove-MCASSubnetAlpha
     Process {
         If ($PSCmdlet.ParameterSetName -eq 'ByName') {
             Write-Verbose "Parameter set 'ByName' detected"
-            Get-MCASSubnet -TenantUri $TenantUri -Token $Token | ForEach-Object {
+            Get-MCASSubnet -TenantUri $TenantUri | ForEach-Object {
                 If ($_.Name -eq $Name) {
                     $SubnetId = $_.Identity
                     $NameOrIdTargeted = $Name
