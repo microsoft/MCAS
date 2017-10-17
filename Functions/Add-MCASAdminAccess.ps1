@@ -34,7 +34,7 @@
     }
     Process
     {
-        If ((Get-MCASAdminAccess -TenantUri $TenantUri -Token $Token).username -contains $Username) {
+        If ((Get-MCASAdminAccess).username -contains $Username) {
             Write-Warning "Add-MCASAdminAccess: $Username is already listed as an administrator of Cloud App Security. No changes were made."
             }
         Else {
