@@ -175,6 +175,10 @@ function Get-MCASActivity
         [validateset("Anonymous_Proxy","Botnet","Darknet_Scanning_IP","Exchange_Online","Exchang_Online_Protection","Malware_CnC_Server","Microsoft_Cloud","Microsoft_Authentication_and_Identity","Office_365","Office_365_Planner","Office_365_ProPlus","Office_Online","Office_Sway","Office_Web_Access_Companion","OneNote","Remote_Connectivity_Analyzer","Satellite_Provider","SharePoint_Online","Skype_for_Business_Online","Smart_Proxy_and_Access_Proxy_Network","Tor","Yammer","Zscaler")]
         [string[]]$IPTag,
 
+        # Limits the results to events that include a country code value.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [switch]$CountryCodePresent,
+        
         # Limits the results to events listed for the specified IP Tags.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -281,6 +285,7 @@ function Get-MCASActivity
             If ($AppIdNot)             {$FilterSet += @{'service'=                @{'neq'=$AppIdNot}}}
             If ($EventTypeName)        {$FilterSet += @{'activity.actionType'=    @{'eq'=$EventTypeName}}}
             If ($EventTypeNameNot)     {$FilterSet += @{'activity.actionType'=    @{'neq'=$EventTypeNameNot}}}
+            If ($CountryCodePresent)   {$FilterSet += @{'location.country'=       @{'isset'=$true}}}
             If ($DeviceType)           {$FilterSet += @{'device.type'=            @{'eq'=$DeviceType.ToUpper()}}} # CAS API expects upper case here
             If ($UserAgentContains)    {$FilterSet += @{'userAgent.userAgent'=    @{'contains'=$UserAgentContains}}}
             If ($UserAgentNotContains) {$FilterSet += @{'userAgent.userAgent'=    @{'ncontains'=$UserAgentNotContains}}}

@@ -10,7 +10,6 @@
     
 
 
-
 $ModuleManifestName = 'Cloud-App-Security.psd1'
 $ModuleManifestPath = "$PSScriptRoot\..\$ModuleManifestName"
 
@@ -33,7 +32,7 @@ $TestsFolder = (Split-Path -Parent -Path $MyInvocation.MyCommand.Path)
 
 If ($RunTenantSpecificTests) {
     # Select some users on which to test admin access
-    $Global:AdminTestUsers = @('ZrinkaM@MOD623352.onmicrosoft.com','ZacharyP@MOD623352.onmicrosoft.com')
+    $Global:AdminTestUsers = @('ZrinkaM@jpoeppelnoprev.onmicrosoft.com','ZacharyP@jpoeppelnoprev.onmicrosoft.com')
 
     . $TestsFolder\Test-Add-MCASAdminAccess.ps1
     . $TestsFolder\Test-Remove-MCASAdminAccess.ps1
