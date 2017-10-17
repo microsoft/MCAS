@@ -28,7 +28,7 @@
     }
     Process
     {
-        If ((Get-MCASAdminAccess -TenantUri $TenantUri -Token $Token).username -notcontains $Username) {
+        If ((Get-MCASAdminAccess -TenantUri $TenantUri).username -notcontains $Username) {
             Write-Warning "$Username is not listed as an administrator of Cloud App Security. No changes were made."
             }
         Else {
