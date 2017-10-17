@@ -10,7 +10,6 @@
     
 
 
-
 $ModuleManifestName = 'Cloud-App-Security.psd1'
 $ModuleManifestPath = "$PSScriptRoot\..\$ModuleManifestName"
 
