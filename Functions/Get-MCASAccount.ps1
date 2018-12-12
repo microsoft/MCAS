@@ -8,7 +8,7 @@
 
    Get-MCASAccount returns a single custom PS Object or multiple PS Objects with all of the account properties. Methods available are only those available to custom objects by default.
 .EXAMPLE
-   Get-MCASAccount -ResultSetSize 1
+    PS C:\> Get-MCASAccount -ResultSetSize 1
 
     username         : alice@contoso.com
     consolidatedTags : {}
@@ -25,14 +25,14 @@
     This pulls back a single user record and is part of the 'List' parameter set.
 
 .EXAMPLE
-   (Get-MCASAccount -UserDomain contoso.com).count
+    PS C:\> (Get-MCASAccount -UserDomain contoso.com).count
 
     2
 
     This pulls back all accounts from the specified domain and returns a count of the returned objects.
 
 .EXAMPLE
-   Get-MCASAccount -Affiliation External | select @{N='Unique Domains'; E={$_.userDomain}} -Unique
+    PS C:\> Get-MCASAccount -Affiliation External | select @{N='Unique Domains'; E={$_.userDomain}} -Unique
 
     Unique Domains
     --------------
@@ -43,7 +43,7 @@
     This pulls back all accounts flagged as external to the domain and displays only unique records in a new property called 'Unique Domains'.
 
 .EXAMPLE
-   (Get-MCASAccount -ServiceNames 'Microsoft Cloud App Security').serviceData.20595
+    PS C:\> (Get-MCASAccount -ServiceNames 'Microsoft Cloud App Security').serviceData.20595
 
     email                              lastLogin                   lastSeen
     -----                              ---------                   --------
@@ -54,28 +54,21 @@
 .FUNCTIONALITY
     Get-MCASAccount is intended to function as a query mechanism for obtaining account information from Cloud App Security.
 #>
-function Get-MCASAccount
-{
+function Get-MCASAccount {
     [CmdletBinding()]
-    [Alias('Get-CASAccount')]
-    Param
+    param
     (
         # Fetches an account object by its unique identifier.
-        # [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
-        # [ValidateNotNullOrEmpty()]
-        # [ValidatePattern({^[A-Fa-f0-9]{24}$})]
-        # [alias("_id")]
-        # [string]$Identity,
+        [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
+        [ValidateNotNullOrEmpty()]
+        [ValidatePattern({^[A-Fa-f0-9]{24}$})]
+        [alias("_id")]
+        [string]$Identity,
 
-        # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
-        [Parameter(Mandatory=$false)]
-        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
-        [string]$TenantUri,
-
-        # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
+        # Specifies the credential object containing tenant as username (e.g. 'contoso.us.portal.cloudappsecurity.com') and the 64-character hexadecimal Oauth token as the password.
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [System.Management.Automation.PSCredential]$Credential,
+        [System.Management.Automation.PSCredential]$Credential = $CASCredential,
 
         # Specifies the property by which to sort the results. Possible Values: 'UserName','LastSeen'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -96,7 +89,6 @@ function Get-MCASAccount
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateScript({$_ -gt -1})]
         [int]$Skip = 0,
-
 
 
         ##### FILTER PARAMS #####
@@ -143,89 +135,140 @@ function Get-MCASAccount
         [ValidateNotNullOrEmpty()]
         [string[]]$UserDomain
     )
-    Begin
+    begin {}
+    process
     {
-        Try {$TenantUri = Select-MCASTenantUri}
-            Catch {Throw $_}
+        # Fetch no longer works on the /accounts/ endpoint, so the code below was commented
 
-        Try {$Token = Select-MCASToken}
-            Catch {Throw $_}
+        # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
+        if ($PSCmdlet.ParameterSetName -eq 'Fetch')
+        {
+            <#
+            try {
+                # Fetch the item by its id
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/accounts/$Identity/" -Method Get -Raw
+            }
+            catch {
+                throw "Error calling MCAS API. The exception was: $_"
+            }
+            
+            $response = $response.content
+
+            # Attempt the JSON conversion. If it fails due to property name collisions to to case insensitivity on Windows, attempt to resolve it by renaming the properties.
+            try {
+                $response = $response | ConvertFrom-Json
+            }
+            catch {
+                Write-Verbose "One or more property name collisions were detected in the response. An attempt will be made to resolve this by renaming any offending properties."
+                $response = $response.Replace('"Id":','"Id_int":')
+                try {
+                    $response = $response | ConvertFrom-Json # Try the JSON conversion again, now that we hopefully fixed the property collisions
+                }
+                catch {
+                    throw $_
+                }
+                Write-Verbose "Any property name collisions appear to have been resolved."
+            }
+
+            $response = $response.data
+
+            try {
+                Write-Verbose "Adding alias property to results, if appropriate"
+                $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
+            }
+            catch {}
+
+            $response
+            #>
+        }
     }
-    Process
+    end
     {
-        # Fetch no longer works on the /accounts/ endpoint, so this was removed
-    }
-    End
-    {
-        If ($PSCmdlet.ParameterSetName -eq  'List') # Only run remainder of this end block if not in fetch mode
+        if ($PSCmdlet.ParameterSetName -eq  'List') # Only run remainder of this end block if not in fetch mode
         {
             # List mode logic only needs to happen once, so it goes in the 'End' block for efficiency
 
-            $Body = @{'skip'=$Skip;'limit'=$ResultSetSize} # Base request body
+            $body = @{'skip'=$Skip;'limit'=$ResultSetSize} # Base request body
 
             #region ----------------------------SORTING----------------------------
 
-            If ($SortBy -xor $SortDirection) {Throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'}
+            if ($SortBy -xor $SortDirection) {
+                throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'
+            }
 
             # Add sort direction to request body, if specified
-            If ($SortDirection) {$Body.Add('sortDirection',$SortDirection.TrimEnd('ending').ToLower())}
+            if ($SortDirection) {$body.Add('sortDirection',$SortDirection.TrimEnd('ending').ToLower())}
 
             # Add sort field to request body, if specified
-            If ($SortBy)
-            {
-                If ($SortBy -eq 'LastSeen')
-                {
-                    $Body.Add('sortField','lastSeen') # Patch to convert 'LastSeen' to 'lastSeen'
+            if ($SortBy) {
+                if ($SortBy -eq 'LastSeen') {
+                    $body.Add('sortField','lastSeen') # Patch to convert 'LastSeen' to 'lastSeen'
                 }
-                Else
-                {
-                    $Body.Add('sortField',$SortBy.ToLower())
+                else {
+                    $body.Add('sortField',$SortBy.ToLower())
                 }
             }
             #endregion ----------------------------SORTING----------------------------
 
             #region ----------------------------FILTERING----------------------------
-            $FilterSet = @() # Filter set array
+            $filterSet = @() # Filter set array
 
             # Additional parameter validations and mutual exclusions
-            If ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
-            If ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
-            If ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
-            If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
-            If ($External -and $Internal) {Throw 'Cannot reconcile -External and -Internal switches. Use zero or one of these, but not both.'}
+            if ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            if ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            if ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            if ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            if ($External -and $Internal) {throw 'Cannot reconcile -External and -Internal switches. Use zero or one of these, but not both.'}
 
             # Value-mapped filters
-            If ($AppName)    {$FilterSet += @{'service'=@{'eq'=([int[]]($AppName | ForEach-Object {$_ -as [int]}))}}}
-            If ($AppNameNot) {$FilterSet += @{'service'=@{'neq'=([int[]]($AppNameNot | ForEach-Object {$_ -as [int]}))}}}
+            if ($AppName)    {$filterSet += @{'service'=@{'eq'=([int[]]($AppName | ForEach-Object {$_ -as [int]}))}}}
+            if ($AppNameNot) {$filterSet += @{'service'=@{'neq'=([int[]]($AppNameNot | ForEach-Object {$_ -as [int]}))}}}
 
             # Simple filters
-            If ($Internal)   {$FilterSet += @{'affiliation'=   @{'eq'=$false}}}
-            If ($External)   {$FilterSet += @{'affiliation'=   @{'eq'=$true}}}
-            If ($UserName)   {$FilterSet += @{'user.username'= @{'eq'=$UserName}}}
-            If ($AppId)      {$FilterSet += @{'service'=       @{'eq'=$AppId}}}
-            If ($AppIdNot)   {$FilterSet += @{'service'=       @{'neq'=$AppIdNot}}}
-            If ($UserDomain) {$FilterSet += @{'domain'=        @{'eq'=$UserDomain}}}
+            if ($Internal)   {$filterSet += @{'affiliation'=   @{'eq'=$false}}}
+            if ($External)   {$filterSet += @{'affiliation'=   @{'eq'=$true}}}
+            if ($UserName)   {$filterSet += @{'user.username'= @{'eq'=$UserName}}}
+            if ($AppId)      {$filterSet += @{'service'=       @{'eq'=$AppId}}}
+            if ($AppIdNot)   {$filterSet += @{'service'=       @{'neq'=$AppIdNot}}}
+            if ($UserDomain) {$filterSet += @{'domain'=        @{'eq'=$UserDomain}}}
 
             #endregion ----------------------------FILTERING----------------------------
 
             # Get the matching items and handle errors
-            Try {
-                $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/v1/accounts/" -Body $Body -Method Post -Token $Token -FilterSet $FilterSet
+            try {
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/accounts/" -Body $body -Method Post -FilterSet $filterSet -Raw
             }
-                Catch {
-                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
-                }
+            catch {
+                throw "Error calling MCAS API. The exception was: $_"
+            }
             
-            $Response = $Response.content
+            $response = $response.content
 
-            Write-Verbose "Checking for property name collisions to handle"
-            $Response = Edit-MCASPropertyName -Data $Response -OldPropName '"Id":' -NewPropName '"Id_int":'
+            # Attempt the JSON conversion. If it fails due to property name collisions to to case insensitivity on Windows, attempt to resolve it by renaming the properties.
+            try {
+                $response = $response | ConvertFrom-Json
+            }
+            catch {
+                Write-Verbose "One or more property name collisions were detected in the response. An attempt will be made to resolve this by renaming any offending properties."
+                $response = $response.Replace('"Id":','"Id_int":')
+                try {
+                    $response = $response | ConvertFrom-Json # Try the JSON conversion again, now that we hopefully fixed the property collisions
+                }
+                catch {
+                    throw $_
+                }
+                Write-Verbose "Any property name collisions appear to have been resolved."
+            }
+            
+            $response = $response.data
 
-            $Response = $Response | ConvertFrom-Json
+            try {
+                Write-Verbose "Adding alias property to results, if appropriate"
+                $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
+            }
+            catch {}
 
-            $Response = Invoke-MCASResponseHandling -Response $Response
-
-            $Response
+            $response
         }
     }
 }

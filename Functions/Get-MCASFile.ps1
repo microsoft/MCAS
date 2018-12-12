@@ -8,17 +8,17 @@
 
    Get-MCASFile returns a single custom PS Object or multiple PS Objects with all of the file properties. Methods available are only those available to custom objects by default.
 .EXAMPLE
-   Get-MCASFile -ResultSetSize 1
+    PS C:\> Get-MCASFile -ResultSetSize 1
 
     This pulls back a single file record and is part of the 'List' parameter set.
 
 .EXAMPLE
-   Get-MCASFile -Identity 572caf4588011e452ec18ef0
+    PS C:\> Get-MCASFile -Identity 572caf4588011e452ec18ef0
 
     This pulls back a single file record using the GUID and is part of the 'Fetch' parameter set.
 
 .EXAMPLE
-   Get-MCASFile -AppName Box -Extension pdf -Domains 'microsoft.com' | select name
+    PS C:\> Get-MCASFile -AppName Box -Extension pdf -Domains 'microsoft.com' | select name
 
     name                      dlpScanTime
     ----                      -----------
@@ -31,11 +31,9 @@
 .FUNCTIONALITY
    Get-MCASFile is intended to function as a query mechanism for obtaining file information from Cloud App Security.
 #>
-function Get-MCASFile
-{
+function Get-MCASFile {
     [CmdletBinding()]
-    [Alias('Get-CASFile')]
-    Param
+    param
     (
         # Fetches a file object by its unique identifier.
         [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
@@ -44,15 +42,10 @@ function Get-MCASFile
         [alias("_id")]
         [string]$Identity,
 
-        # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
-        [Parameter(Mandatory=$false)]
-        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
-        [string]$TenantUri,
-
-        # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
+        # Specifies the credential object containing tenant as username (e.g. 'contoso.us.portal.cloudappsecurity.com') and the 64-character hexadecimal Oauth token as the password.
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [System.Management.Automation.PSCredential]$Credential,
+        [System.Management.Automation.PSCredential]$Credential = $CASCredential,
 
         # Specifies the property by which to sort the results. Possible Value: 'DateModified'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -215,144 +208,160 @@ function Get-MCASFile
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [switch]$FoldersNot
     )
-    Begin
-    {
-        Try {$TenantUri = Select-MCASTenantUri}
-            Catch {Throw $_}
-
-        Try {$Token = Select-MCASToken}
-            Catch {Throw $_}
-    }
-    Process
+    begin {}
+    process
     {
         # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
-        If ($PSCmdlet.ParameterSetName -eq 'Fetch')
+        if ($PSCmdlet.ParameterSetName -eq 'Fetch')
         {
-            Try {
+            try {
                 # Fetch the item by its id
-                $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/v1/files/$Identity/" -Method Get -Token $Token
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/files/$Identity/" -Method Get -Raw         
             }
-                Catch {
-                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+            catch {
+                throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+            }
+
+            $response = $response.Content
+
+            # Attempt the JSON conversion. If it fails due to property name collisions to to case insensitivity on Windows, attempt to resolve it by renaming the properties.
+            try {
+                $response = $response | ConvertFrom-Json
+            }
+            catch {
+                Write-Verbose "One or more property name collisions were detected in the response. An attempt will be made to resolve this by renaming any offending properties."
+                $response = $response.Replace('"Created":','"Created_2":')
+                $response = $response.Replace('"ftags":','"ftags_2":')
+                try {
+                    $response = $response | ConvertFrom-Json # Try the JSON conversion again, now that we hopefully fixed the property collisions
                 }
-
-            # Patch for property name collision: Created/created
-            If (Select-String -InputObject $Response -Pattern '"Created":' -CaseSensitive -Quiet) {
-                $Response = $Response.Replace('"Created":', '"Created_2":')
-                Write-Verbose "Invoke-MCASRestMethod: A property name collision was detected in the response from MCAS for the following property names; 'created' and 'created'. The 'Created' property was renamed to 'Created_2'."
-            }
-
-            # Patch for property name collision: ftags/fTags
-            If (Select-String -InputObject $Response -Pattern '"ftags":' -CaseSensitive -Quiet) {               
-                $Response = $Response.Replace('"ftags":', '"ftags_2":')
-                Write-Verbose "Invoke-MCASRestMethod: A property name collision was detected in the response from MCAS for the following property names; 'ftags' and 'fTags'. The 'ftags' property was renamed to 'ftags_2'."
-            }
-
-            $Response = $Response.content | ConvertFrom-Json
-            
-            If (($Response | Get-Member).name -contains '_id') {
-                $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
+                catch {
+                    throw $_
+                }
+                Write-Verbose "Any property name collisions appear to have been resolved."
             }
             
-            $Response
+            try {
+                Write-Verbose "Adding alias property to results, if appropriate"
+                $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
+            }
+            catch {}
+
+            $response
         }
     }
-    End
+    end
     {
-        If ($PSCmdlet.ParameterSetName -eq  'List') # Only run remainder of this end block if not in fetch mode
+        if ($PSCmdlet.ParameterSetName -eq  'List') # Only run remainder of this end block if not in fetch mode
         {
             # List mode logic only needs to happen once, so it goes in the 'End' block for efficiency
 
-            $Body = @{'skip'=$Skip;'limit'=$ResultSetSize} # Base request body
+            $body = @{'skip'=$Skip;'limit'=$ResultSetSize} # Base request body
 
             #region ----------------------------SORTING----------------------------
 
-            If ($SortBy -xor $SortDirection) {Throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'}
+            if ($SortBy -xor $SortDirection) {throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'}
 
             # Add sort direction to request body, if specified
-            If ($SortDirection) {$Body.Add('sortDirection',$SortDirection.TrimEnd('ending').ToLower())}
+            if ($SortDirection) {$body.Add('sortDirection',$SortDirection.TrimEnd('ending').ToLower())}
 
             # Add sort field to request body, if specified
-            If ($SortBy -eq 'DateModified') {$Body.Add('sortField','modifiedDate')}
+            if ($SortBy -eq 'DateModified') {$body.Add('sortField','modifiedDate')}
 
             #endregion ----------------------------SORTING----------------------------
 
             #region ----------------------------FILTERING----------------------------
-            $FilterSet = @() # Filter set array
+            $filterSet = @() # Filter set array
 
             # Additional Hash Tables for Filetype & FiletypeNot Filters
-            If ($Filetype){
-                $Filetypehashtable = @{}
-                $Filetype | ForEach-Object {$Filetypehashtable.Add($_,$_)}
+            if ($Filetype) {
+                $filetypehashtable = @{}
+                $Filetype | ForEach-Object {$filetypehashtable.Add($_,$_)}
                 }
-            If ($FiletypeNot){
-                $Filetypehashtable = @{}
-                $FiletypeNot | ForEach-Object {$Filetypehashtable.Add($_,$_)}
+            if ($FiletypeNot) {
+                $filetypehashtable = @{}
+                $FiletypeNot | ForEach-Object {$filetypehashtable.Add($_,$_)}
                 }
 
             # Additional parameter validations and mutual exclusions
-            If ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
-            If ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
-            If ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
-            If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
-            If ($Folders -and $FoldersNot) {Throw 'Cannot reconcile -Folder and -FolderNot switches. Use zero or one of these, but not both.'}
-            If ($Quarantined -and $QuarantinedNot) {Throw 'Cannot reconcile -Quarantined and -QuarantinedNot switches. Use zero or one of these, but not both.'}
-            If ($Trashed -and $TrashedNot) {Throw 'Cannot reconcile -Trashed and -TrashedNot switches. Use zero or one of these, but not both.'}
+            if ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            if ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            if ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            if ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            if ($Folders -and $FoldersNot) {throw 'Cannot reconcile -Folder and -FolderNot switches. Use zero or one of these, but not both.'}
+            if ($Quarantined -and $QuarantinedNot) {throw 'Cannot reconcile -Quarantined and -QuarantinedNot switches. Use zero or one of these, but not both.'}
+            if ($Trashed -and $TrashedNot) {throw 'Cannot reconcile -Trashed and -TrashedNot switches. Use zero or one of these, but not both.'}
 
             # Value-mapped filters
-            If ($Filetype)        {$FilterSet += @{'fileType'=@{'eq'= ([int[]]($Filetype | ForEach-Object {$_ -as [int]}))}}}
-            If ($FiletypeNot)     {$FilterSet += @{'fileType'=@{'neq'=([int[]]($FiletypeNot | ForEach-Object {$_ -as [int]}))}}}
-            If ($FileAccessLevel) {$FilterSet += @{'sharing'= @{'eq'= ([int[]]($FileAccessLevel | ForEach-Object {$_ -as [int]}))}}}
-            If ($AppName)         {$FilterSet += @{'service'=@{'eq'=([int[]]($AppName | ForEach-Object {$_ -as [int]}))}}}
-            If ($AppNameNot)      {$FilterSet += @{'service'=@{'neq'=([int[]]($AppNameNot | ForEach-Object {$_ -as [int]}))}}}
+            if ($Filetype)        {$filterSet += @{'fileType'=@{'eq'= ([int[]]($Filetype | ForEach-Object {$_ -as [int]}))}}}
+            if ($FiletypeNot)     {$filterSet += @{'fileType'=@{'neq'=([int[]]($FiletypeNot | ForEach-Object {$_ -as [int]}))}}}
+            if ($FileAccessLevel) {$filterSet += @{'sharing'= @{'eq'= ([int[]]($FileAccessLevel | ForEach-Object {$_ -as [int]}))}}}
+            if ($AppName)         {$filterSet += @{'service'=@{'eq'=([int[]]($AppName | ForEach-Object {$_ -as [int]}))}}}
+            if ($AppNameNot)      {$filterSet += @{'service'=@{'neq'=([int[]]($AppNameNot | ForEach-Object {$_ -as [int]}))}}}
 
             # Simple filters
-            If ($AppId)                {$FilterSet += @{'service'=                  @{'eq'=$AppId}}}
-            If ($AppIdNot)             {$FilterSet += @{'service'=                  @{'neq'=$AppIdNot}}}
-            If ($Extension)            {$FilterSet += @{'extension'=                @{'eq'=$Extension}}}
-            If ($ExtensionNot)         {$FilterSet += @{'extension'=                @{'neq'=$ExtensionNot}}}
-            If ($Domains)              {$FilterSet += @{'collaborators.withDomain'= @{'eq'=$Domains}}}
-            If ($DomainsNot)           {$FilterSet += @{'collaborators.withDomain'= @{'neq'=$DomainsNot}}}
-            If ($Collaborators)        {$FilterSet += @{'collaborators.users'=      @{'eq'=$Collaborators}}}
-            If ($CollaboratorsNot)     {$FilterSet += @{'collaborators.users'=      @{'neq'=$CollaboratorsNot}}}
-            If ($Owner)                {$FilterSet += @{'owner.username'=           @{'eq'=$Owner}}}
-            If ($OwnerNot)             {$FilterSet += @{'owner.username'=           @{'neq'=$OwnerNot}}}
-            If ($PolicyId)             {$FilterSet += @{'policy'=                   @{'eq'=$PolicyId}}}
-            If ($MIMEType)             {$FilterSet += @{'mimeType'=                 @{'eq'=$MIMEType}}}
-            If ($MIMETypeNot)          {$FilterSet += @{'mimeType'=                 @{'neq'=$MIMETypeNot}}}
-            If ($Name)                 {$FilterSet += @{'filename'=                 @{'eq'=$Name}}}
-            If ($NameWithoutExtension) {$FilterSet += @{'filename'=                 @{'text'=$NameWithoutExtension}}}
-            If ($Folders)              {$FilterSet += @{'folder'=                   @{'eq'=$true}}}
-            If ($FoldersNot)           {$FilterSet += @{'folder'=                   @{'eq'=$false}}}
-            If ($Quarantined)          {$FilterSet += @{'quarantined'=              @{'eq'=$true}}}
-            If ($QuarantinedNot)       {$FilterSet += @{'quarantined'=              @{'eq'=$false}}}
-            If ($Trashed)              {$FilterSet += @{'trashed'=                  @{'eq'=$true}}}
-            If ($TrashedNot)           {$FilterSet += @{'trashed'=                  @{'eq'=$false}}}
-            If ($FileLabel)            {$FilterSet += @{'fileLabels'=               @{'eq'=$FileLabel}}}
-            If ($FileLabelNot)         {$FilterSet += @{'fileLabels'=               @{'neq'=$FileLabel}}}
+            if ($AppId)                {$filterSet += @{'service'=                  @{'eq'=$AppId}}}
+            if ($AppIdNot)             {$filterSet += @{'service'=                  @{'neq'=$AppIdNot}}}
+            if ($Extension)            {$filterSet += @{'extension'=                @{'eq'=$Extension}}}
+            if ($ExtensionNot)         {$filterSet += @{'extension'=                @{'neq'=$ExtensionNot}}}
+            if ($Domains)              {$filterSet += @{'collaborators.withDomain'= @{'eq'=$Domains}}}
+            if ($DomainsNot)           {$filterSet += @{'collaborators.withDomain'= @{'neq'=$DomainsNot}}}
+            if ($Collaborators)        {$filterSet += @{'collaborators.users'=      @{'eq'=$Collaborators}}}
+            if ($CollaboratorsNot)     {$filterSet += @{'collaborators.users'=      @{'neq'=$CollaboratorsNot}}}
+            if ($Owner)                {$filterSet += @{'owner.username'=           @{'eq'=$Owner}}}
+            if ($OwnerNot)             {$filterSet += @{'owner.username'=           @{'neq'=$OwnerNot}}}
+            if ($PolicyId)             {$filterSet += @{'policy'=                   @{'eq'=$PolicyId}}}
+            if ($MIMEType)             {$filterSet += @{'mimeType'=                 @{'eq'=$MIMEType}}}
+            if ($MIMETypeNot)          {$filterSet += @{'mimeType'=                 @{'neq'=$MIMETypeNot}}}
+            if ($Name)                 {$filterSet += @{'filename'=                 @{'eq'=$Name}}}
+            if ($NameWithoutExtension) {$filterSet += @{'filename'=                 @{'text'=$NameWithoutExtension}}}
+            if ($Folders)              {$filterSet += @{'folder'=                   @{'eq'=$true}}}
+            if ($FoldersNot)           {$filterSet += @{'folder'=                   @{'eq'=$false}}}
+            if ($Quarantined)          {$filterSet += @{'quarantined'=              @{'eq'=$true}}}
+            if ($QuarantinedNot)       {$filterSet += @{'quarantined'=              @{'eq'=$false}}}
+            if ($Trashed)              {$filterSet += @{'trashed'=                  @{'eq'=$true}}}
+            if ($TrashedNot)           {$filterSet += @{'trashed'=                  @{'eq'=$false}}}
+            if ($FileLabel)            {$filterSet += @{'fileLabels'=               @{'eq'=$FileLabel}}}
+            if ($FileLabelNot)         {$filterSet += @{'fileLabels'=               @{'neq'=$FileLabel}}}
 
             #endregion ----------------------------FILTERING----------------------------
 
             # Get the matching items and handle errors
-            Try {
-                $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/v1/files/" -Body $Body -Method Post -Token $Token -FilterSet $FilterSet
+            try {
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/files/" -Body $body -Method Post -FilterSet $filterSet -Raw
             }
-                Catch {
-                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
-                }
+            catch {
+                throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+            }   
             
-            
-            $Response = $Response.Content
-            
-            Write-Verbose "Checking for property name collisions to handle"
-            $Response = Edit-MCASPropertyName -Data $Response -OldPropName '"Created":' -NewPropName '"Created_2":'
-            $Response = Edit-MCASPropertyName -Data $Response -OldPropName '"ftags":' -NewPropName '"ftags_2":'
-            
-            $Response = $Response | ConvertFrom-Json
-            
-            $Response = Invoke-MCASResponseHandling -Response $Response
+            $response = $response.Content
 
-            $Response
+            # Attempt the JSON conversion. If it fails due to property name collisions to to case insensitivity on Windows, attempt to resolve it by renaming the properties.
+            try {
+                $response = $response | ConvertFrom-Json
+            }
+            catch {
+                Write-Verbose "One or more property name collisions were detected in the response. An attempt will be made to resolve this by renaming any offending properties."
+                $response = $response.Replace('"Created":','"Created_2":')
+                $response = $response.Replace('"ftags":','"ftags_2":')
+                try {
+                    $response = $response | ConvertFrom-Json # Try the JSON conversion again, now that we hopefully fixed the property collisions
+                }
+                catch {
+                    throw $_
+                }
+                Write-Verbose "Any property name collisions appear to have been resolved."
+            }
+
+            $response = $response.data
+            
+            try {
+                Write-Verbose "Adding alias property to results, if appropriate"
+                $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
+            }
+            catch {}
+
+            $response
         }
     }
 }

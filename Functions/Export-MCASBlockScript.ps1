@@ -4,9 +4,9 @@
 .DESCRIPTION
    Exports a block script, in the specified firewall or proxy device type format, for the unsanctioned apps.
 
-   'Export-MCASBlockScript -Appliance <device format>' returns the text to be used in a Websense block script. Methods available are only those available to custom objects by default.
+   'Export-MCASBlockScript -DeviceType <device format>' returns the text to be used in a Websense block script. Methods available are only those available to custom objects by default.
 .EXAMPLE
-   Export-MCASBlockScript -Appliance WEBSENSE
+    PS C:\> Export-MCASBlockScript -DeviceType WEBSENSE
 
     dest_host=lawyerstravel.com action=deny
     dest_host=wellsfargo.com action=deny
@@ -18,10 +18,10 @@
     dest_host=zoovy.com action=deny
     dest_host=cars.com action=deny
 
-   This pulls back string to be used as a block script in Websense format.
+    This pulls back string to be used as a block script in Websense format.
 
 .EXAMPLE
-   Export-MCASBlockScript -Appliance BLUECOAT_PROXYSG
+    PS C:\> Export-MCASBlockScript -DeviceType BLUECOAT_PROXYSG
 
     url.domain=lawyerstravel.com deny
     url.domain=wellsfargo.com deny
@@ -33,51 +33,38 @@
     url.domain=zoovy.com deny
     url.domain=cars.com deny
 
-   This pulls back string to be used as a block script in BlueCoat format.
+    This pulls back string to be used as a block script in BlueCoat format.
 
 .EXAMPLE
-   Export-MCASBlockScript -Appliance WEBSENSE | Set-Content MyWebsenseBlockScript.txt -Encoding UTF8
+    PS C:\> Export-MCASBlockScript -DeviceType WEBSENSE | Set-Content MyWebsenseBlockScript.txt -Encoding UTF8
 
-   This pulls back a Websense block script in text string format and creates a new UTF-8 encoded text file out of it.
+    This pulls back a Websense block script in text string format and creates a new UTF-8 encoded text file out of it.
 .FUNCTIONALITY
    Export-MCASBlockScript is intended to function as an export mechanism for obtaining block scripts from Cloud App Security.
 
 #>
-function Export-MCASBlockScript
-{
+function Export-MCASBlockScript {
     [CmdletBinding()]
-    [Alias('Export-CASBlockScript')]
-    Param
+    param
     (
-        # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
-        [Parameter(Mandatory=$false)]
-        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
-        [string]$TenantUri,
-
-        # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
+        # Specifies the credential object containing tenant as username (e.g. 'contoso.us.portal.cloudappsecurity.com') and the 64-character hexadecimal Oauth token as the password.
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [System.Management.Automation.PSCredential]$Credential,
+        [System.Management.Automation.PSCredential]$Credential = $CASCredential,
 
-        # Specifies the appliance type to use for the format of the block script. Possible Values: BLUECOAT_PROXYSG, CISCO_ASA, FORTINET_FORTIGATE, PALO_ALTO, JUNIPER_SRX, WEBSENSE
+        # Specifies the device type to use for the format of the block script. Possible Values: BLUECOAT_PROXYSG,CISCO_ASA,FORTINET_FORTIGATE,PALO_ALTO,JUNIPER_SRX,WEBSENSE,ZSCALER
         [Parameter(Mandatory=$true,ValueFromPipeline=$false,Position=0)]
-        [blockscript_format]$Appliance
+        [ValidateSet('BLUECOAT','CISCO_ASA','FORTIGATE','PALO_ALTO','JUNIPER_SRX','WEBSENSE_V7_5','ZSCALER')]
+        [alias("Appliance")]
+        [device_type]$DeviceType
     )
 
-    Try {$TenantUri = Select-MCASTenantUri}
-        Catch {Throw $_}
-
-    Try {$Token = Select-MCASToken}
-        Catch {Throw $_}
-
-    Try {
-        $Response = Invoke-MCASRestMethod2 -Uri ("https://$TenantUri/api/discovery_block_scripts/?format="+($Appliance -as [int])) -Method Get -Token $Token
+    try {
+        $response = Invoke-MCASRestMethod -Credential $Credential -Path ("/api/discovery_block_scripts/?format="+($DeviceType -as [int])) -Method Get
     }
-        Catch {
-            Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
-        }
+    catch {
+        throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+    }
 
-    $Response = $Response.Content
-
-    $Response
+    $response
 }

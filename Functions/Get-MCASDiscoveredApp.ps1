@@ -4,7 +4,7 @@
 .DESCRIPTION
     This function retrives traffic and usage information about discovered apps.
 .EXAMPLE
-    Get-MCASDiscoveredApp -StreamId $streamid | select name -First 5
+    PS C:\> Get-MCASDiscoveredApp -StreamId $streamid | select name -First 5
 
     name
     ----
@@ -15,8 +15,9 @@
     AT&T
 
     Retrieves the first 5 app names sorted alphabetically.
+    
 .EXAMPLE
-    Get-MCASDiscoveredApp -StreamId $streamid -Category SECURITY | select name,@{N='Total (MB)';E={"{0:N2}" -f ($_.trafficTotalBytes/1MB)}}
+    PS C:\> Get-MCASDiscoveredApp -StreamId $streamid -Category SECURITY | select name,@{N='Total (MB)';E={"{0:N2}" -f ($_.trafficTotalBytes/1MB)}}
 
     name                   Total (MB)
     ----                   ----------
@@ -29,21 +30,14 @@
     In this example we pull back only discovered apps in the security category and display a table of names and Total traffic which we format to 2 decimal places and divide the totalTrafficBytes property by 1MB to show the traffic in MB.
 
 #>
-function Get-MCASDiscoveredApp
-{
+function Get-MCASDiscoveredApp {
     [CmdletBinding()]
-    [Alias('Get-CASDiscoveredApp')]
-    Param
+    param
     (
-        # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
-        [Parameter(Mandatory=$false)]
-        [ValidateScript({(($_.StartsWith('https://') -eq $false) -and ($_.EndsWith('.adallom.com') -or $_.EndsWith('.cloudappsecurity.com')))})]
-        [string]$TenantUri,
-
-        # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
+        # Specifies the credential object containing tenant as username (e.g. 'contoso.us.portal.cloudappsecurity.com') and the 64-character hexadecimal Oauth token as the password.
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [System.Management.Automation.PSCredential]$Credential,
+        [System.Management.Automation.PSCredential]$Credential = $CASCredential,
 
         # Specifies the property by which to sort the results. Set to 'Name' by default. Possible Values: 'UserName','LastSeen'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -95,57 +89,54 @@ function Get-MCASDiscoveredApp
         [int]$TimeFrame=90
     )
 
-    Try {$TenantUri = Select-MCASTenantUri}
-        Catch {Throw $_}
-
-    Try {$Token = Select-MCASToken}
-        Catch {Throw $_}
-
-    If ($StreamId) {
-        $Stream = $StreamId
+    if ($StreamId) {
+        $stream = $StreamId
     }
-    Else {
-        $Stream = (Get-MCASStream | Where-Object {$_.displayName -eq 'Global View'}).Identity
+    else {
+        $stream = (Get-MCASStream | Where-Object {$_.displayName -eq 'Global View'}).Identity
     } 
 
-    $Body = @{
+    $body = @{
         'skip'=$Skip;
         'limit'=$ResultSetSize;
         'score'=$ScoreRange;
         'timeframe'=$TimeFrame;
-        'streamId'=$Stream
+        'streamId'=$stream
     } # Base request body
 
-    If ($Category) {
-        $Body += @{'category'="SAASDB_CATEGORY_$Category"}
+    if ($Category) {
+        $body += @{'category'="SAASDB_CATEGORY_$Category"}
     }
 
-    If ($SortBy -xor $SortDirection) {Write-Error 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.' -ErrorAction Stop}
+    if ($SortBy -xor $SortDirection) {Write-Error 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.' -ErrorAction Stop}
 
     # Add sort direction to request body, if specified
-    If ($SortDirection) {$Body.Add('sortDirection',$SortDirection.TrimEnd('ending').ToLower())}
+    if ($SortDirection) {$Body.Add('sortDirection',$SortDirection.TrimEnd('ending').ToLower())}
 
     # Add sort field to request body, if specified
-    Switch ($SortBy) {
-        'Name'         {$Body.Add('sortField','name')}
-        'UserCount'    {$Body.Add('sortField','usersCount')}
-        'IpCount'      {$Body.Add('sortField','ipAddressesCount')}
-        'LastUsed'     {$Body.Add('sortField','lastUsed')}
-        'Upload'       {$Body.Add('sortField','trafficUploadedBytes')}
-        'Transactions' {$Body.Add('sortField','trafficTotalEvents')}
+    switch ($SortBy) {
+        'Name'         {$body.Add('sortField','name')}
+        'UserCount'    {$body.Add('sortField','usersCount')}
+        'IpCount'      {$body.Add('sortField','ipAddressesCount')}
+        'LastUsed'     {$body.Add('sortField','lastUsed')}
+        'Upload'       {$body.Add('sortField','trafficUploadedBytes')}
+        'Transactions' {$body.Add('sortField','trafficTotalEvents')}
     }
 
-    Try {
-        $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/cas/api/discovery/" -Method Post -Body $Body -Token $Token
+    try {
+        $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/discovery/" -Method Post -Body $body
     }
-    Catch {
-        Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+    catch {
+        throw "Error calling MCAS API. The exception was: $_"
     }
-    
-    # Get the response parts and format we need
-    $Response = $Response.content | ConvertFrom-Json
 
-    $Response = Invoke-MCASResponseHandling -Response $Response -IdentityProperty 'appId'
+    $response = $response.data
 
-    $Response
+    try {
+        Write-Verbose "Adding alias property to results, if appropriate"
+        $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value 'appId' -PassThru
+    }
+    catch {}
+
+    $response
 }

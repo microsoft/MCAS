@@ -8,17 +8,17 @@
 
    Get-MCASAlert returns a single custom PS Object or multiple PS Objects with all of the alert properties. Methods available are only those available to custom objects by default.
 .EXAMPLE
-   Get-MCASAlert -ResultSetSize 1
+    PS C:\> Get-MCASAlert -ResultSetSize 1
 
     This pulls back a single alert record and is part of the 'List' parameter set.
 
 .EXAMPLE
-   Get-MCASAlert -Identity 572caf4588011e452ec18ef0
+    PS C:\> Get-MCASAlert -Identity 572caf4588011e452ec18ef0
 
     This pulls back a single alert record using the GUID and is part of the 'Fetch' parameter set.
 
 .EXAMPLE
-   (Get-MCASAlert -ResolutionStatus Open -Severity High | where{$_.title -match "system alert"}).descriptionTemplate.parameters.LOGRABBER_SYSTEM_ALERT_MESSAGE_BASE.functionObject.parameters.appName
+    PS C:\> (Get-MCASAlert -ResolutionStatus Open -Severity High | where{$_.title -match "system alert"}).descriptionTemplate.parameters.LOGRABBER_SYSTEM_ALERT_MESSAGE_BASE.functionObject.parameters.appName
 
     ServiceNow
     Box
@@ -28,29 +28,22 @@
 .FUNCTIONALITY
    Get-MCASAlert is intended to function as a query mechanism for obtaining alert information from Cloud App Security.
 #>
-function Get-MCASAlert
-{
+function Get-MCASAlert {
     [CmdletBinding()]
-    [Alias('Get-CASAlert')]
-    Param
+    param
     (
+        # Specifies the credential object containing tenant as username (e.g. 'contoso.us.portal.cloudappsecurity.com') and the 64-character hexadecimal Oauth token as the password.
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [System.Management.Automation.PSCredential]$Credential = $CASCredential,
+        
         # Fetches an alert object by its unique identifier.
         [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
         [ValidateNotNullOrEmpty()]
-        #[ValidatePattern({^[A-Fa-f0-9]{24}$})]
+        [ValidatePattern({^[A-Fa-f0-9]{24}$})]
         [Alias("_id")]
         [string]$Identity,
-
-        # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
-        [Parameter(Mandatory=$false)]
-        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
-        [string]$TenantUri,
-
-        # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
-        [Parameter(Mandatory=$false)]
-        [ValidateNotNullOrEmpty()]
-        [System.Management.Automation.PSCredential]$Credential,
-
+        
         # Specifies the property by which to sort the results. Possible Values: 'Date','Severity', 'ResolutionStatus'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         #[ValidateSet('Date','Severity','ResolutionStatus')] # Additional sort fields removed by PG
@@ -71,7 +64,6 @@ function Get-MCASAlert
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateScript({$_ -gt -1})]
         [int]$Skip = 0,
-
 
 
         ##### FILTER PARAMS #####
@@ -139,107 +131,103 @@ function Get-MCASAlert
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [switch]$Unread
     )
-    Begin
-    {
-        Try {$TenantUri = Select-MCASTenantUri}
-            Catch {Throw $_}
-
-        Try {$Token = Select-MCASToken}
-            Catch {Throw $_}
+    begin {
     }
-    Process
-    {
+    process {
         # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
-        If ($PSCmdlet.ParameterSetName -eq 'Fetch')
+        if ($PSCmdlet.ParameterSetName -eq 'Fetch')
         {
-            Try {
+            try {
                 # Fetch the item by its id
-                $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/v1/alerts/$Identity/" -Method Get -Token $Token
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/alerts/$Identity/" -Method Get
             }
-                Catch {
-                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
-                }
-
-            $Response = $Response.content | ConvertFrom-Json
-            
-            If (($Response | Get-Member).name -contains '_id') {
-                $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
+            catch {
+                throw "Error calling MCAS API. The exception was: $_"
             }
             
-            $Response
+            try {
+                Write-Verbose "Adding alias property to results, if appropriate"
+                $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
+            }
+            catch {}
+            
+            $response
         }
     }
-    End
-    {
-        If ($PSCmdlet.ParameterSetName -eq  'List') # Only run remainder of this end block if not in fetch mode
+    end {
+        if ($PSCmdlet.ParameterSetName -eq  'List') # Only run remainder of this end block if not in fetch mode
         {
             # List mode logic only needs to happen once, so it goes in the 'End' block for efficiency
 
-            $Body = @{'skip'=$Skip;'limit'=$ResultSetSize} # Base request body
+            $body = @{'skip'=$Skip;'limit'=$ResultSetSize} # Base request body
 
             #region ----------------------------SORTING----------------------------
 
-            If ($SortBy -xor $SortDirection) {Throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'}
+            if ($SortBy -xor $SortDirection) {throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'}
 
             # Add sort direction to request body, if specified
-            If ($SortDirection) {$Body.Add('sortDirection',$SortDirection.TrimEnd('ending').ToLower())}
+            if ($SortDirection) {$body.Add('sortDirection',$SortDirection.TrimEnd('ending').ToLower())}
 
             # Add sort field to request body, if specified
-            If ($SortBy)
+            if ($SortBy)
             {
-                If ($SortBy -eq 'ResolutionStatus')
+                if ($SortBy -eq 'ResolutionStatus')
                 {
-                    $Body.Add('sortField','status') # Patch to convert 'resolutionStatus' to 'status', because the API is not using them consistently, but we are
+                    $body.Add('sortField','status') # Patch to convert 'resolutionStatus' to 'status', because the API is not using them consistently, but we are
                 }
-                Else
+                else
                 {
-                    $Body.Add('sortField',$SortBy.ToLower())
+                    $body.Add('sortField',$SortBy.ToLower())
                 }
             }
             #endregion ----------------------------SORTING----------------------------
 
             #region ----------------------------FILTERING----------------------------
-            $FilterSet = @() # Filter set array
+            $filterSet = @() # Filter set array
 
             # Additional parameter validations and mutexes
-            If ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
-            If ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
-            If ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
-            If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
-            If ($Read -and $Unread) {Throw 'Cannot reconcile -Read and -Unread parameters. Only use one of them at a time.'}
+            if ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            if ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            if ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            if ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            if ($Read -and $Unread) {throw 'Cannot reconcile -Read and -Unread parameters. Only use one of them at a time.'}
 
             # Value-mapped filters
-            If ($AppName)          {$FilterSet += @{'entity.service'=   @{'eq'=([int[]]($AppName | ForEach-Object {$_ -as [int]}))}}}
-            If ($AppNameNot)       {$FilterSet += @{'entity.service'=   @{'neq'=([int[]]($AppNameNot | ForEach-Object {$_ -as [int]}))}}}
-            If ($Severity)         {$FilterSet += @{'severity'=         @{'eq'=([int[]]($Severity | ForEach-Object {$_ -as [int]}))}}}
-            If ($ResolutionStatus) {$FilterSet += @{'resolutionStatus'= @{'eq'=([int[]]($ResolutionStatus | ForEach-Object {$_ -as [int]}))}}}
+            if ($AppName)          {$filterSet += @{'entity.service'=   @{'eq'=([int[]]($AppName | ForEach-Object {$_ -as [int]}))}}}
+            if ($AppNameNot)       {$filterSet += @{'entity.service'=   @{'neq'=([int[]]($AppNameNot | ForEach-Object {$_ -as [int]}))}}}
+            if ($Severity)         {$filterSet += @{'severity'=         @{'eq'=([int[]]($Severity | ForEach-Object {$_ -as [int]}))}}}
+            if ($ResolutionStatus) {$filterSet += @{'resolutionStatus'= @{'eq'=([int[]]($ResolutionStatus | ForEach-Object {$_ -as [int]}))}}}
 
             # Simple filters
-            If ($UserName)   {$FilterSet += @{'entity.user'=    @{'eq'=$UserName}}}
-            If ($AppId)      {$FilterSet += @{'entity.service'= @{'eq'=$AppId}}}
-            If ($AppIdNot)   {$FilterSet += @{'entity.service'= @{'neq'=$AppIdNot}}}
-            If ($Policy)     {$FilterSet += @{'entity.policy'=  @{'eq'=$Policy}}}
-            If ($Risk)       {$FilterSet += @{'risk'=           @{'eq'=$Risk}}}
-            If ($AlertType)  {$FilterSet += @{'id'=             @{'eq'=$AlertType}}}
-            If ($Source)     {$FilterSet += @{'source'=         @{'eq'=$Source}}}
-            If ($Read)       {$FilterSet += @{'read'=           @{'eq'=$true}}}
-            If ($Unread)     {$FilterSet += @{'read'=           @{'eq'=$false}}}
+            if ($UserName)   {$filterSet += @{'entity.user'=    @{'eq'=$UserName}}}
+            if ($AppId)      {$filterSet += @{'entity.service'= @{'eq'=$AppId}}}
+            if ($AppIdNot)   {$filterSet += @{'entity.service'= @{'neq'=$AppIdNot}}}
+            if ($Policy)     {$filterSet += @{'entity.policy'=  @{'eq'=$Policy}}}
+            if ($Risk)       {$filterSet += @{'risk'=           @{'eq'=$Risk}}}
+            if ($AlertType)  {$filterSet += @{'id'=             @{'eq'=$AlertType}}}
+            if ($Source)     {$filterSet += @{'source'=         @{'eq'=$Source}}}
+            if ($Read)       {$filterSet += @{'read'=           @{'eq'=$true}}}
+            if ($Unread)     {$filterSet += @{'read'=           @{'eq'=$false}}}
 
             #endregion ----------------------------FILTERING----------------------------
 
             # Get the matching items and handle errors
-            Try {
-                $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/v1/alerts/" -Body $Body -Method Post -Token $Token -FilterSet $FilterSet
+            try {
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/alerts/" -Body $body -Method Post -FilterSet $filterSet
             }
-                Catch {
-                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
-                }
+            catch {
+                throw "Error calling MCAS API. The exception was: $_"
+            }
 
-            $Response = $Response | ConvertFrom-Json
-            
-            $Response = Invoke-MCASResponseHandling -Response $Response
+            $response = $response.data
 
-            $Response
+            try {
+                Write-Verbose "Adding alias property to results, if appropriate"
+                $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
+            }
+            catch {}
+
+            $response
         }
     }
 }

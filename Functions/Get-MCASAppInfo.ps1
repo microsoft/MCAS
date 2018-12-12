@@ -6,14 +6,14 @@
     By passing in an App Id, the user can retrive information about those apps straight from the SaaS DB. This information is returned in an object format that can be formatted for the user's needs.
 
 .EXAMPLE
-    Get-MCASAppInfo -AppId 11114 | select name, category
+    PS C:\> Get-MCASAppInfo -AppId 11114 | select name, category
 
     name       category
     ----       --------
     Salesforce SAASDB_CATEGORY_CRM
 
 .EXAMPLE
-    Get-MCASAppInfo -AppId 18394 | select name, @{N='Compliance';E={"{0:N0}" -f $_.revised_score.compliance}}, @{N='Security';E={"{0:N0}" -f $_.revised_score.security}}, @{N='Provider';E={"{0:N0}" -f $_.revised_score.provider}}, @{N='Total';E={"{0:N0}" -f $_.revised_score.total}} | ft
+    PS C:\> Get-MCASAppInfo -AppId 18394 | select name, @{N='Compliance';E={"{0:N0}" -f $_.revised_score.compliance}}, @{N='Security';E={"{0:N0}" -f $_.revised_score.security}}, @{N='Provider';E={"{0:N0}" -f $_.revised_score.provider}}, @{N='Total';E={"{0:N0}" -f $_.revised_score.total}} | ft
 
     name        Compliance Security Provider Total
     ----        ---------- -------- -------- -----
@@ -22,24 +22,24 @@
     This example creates a table with just the app name and high level scores.
 
 .FUNCTIONALITY
-       Get-MCASAppInfo is designed to query the saasdb one service at a time, not in bulk fashion.
+    Get-MCASAppInfo is designed to query the saasdb one service at a time, not in bulk fashion.
 #>
-function Get-MCASAppInfo
-{
+function Get-MCASAppInfo {
     [CmdletBinding()]
-    [Alias('Get-CASAppInfo')]
-    Param
+    param
     (
-        # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
-        [Parameter(Mandatory=$false)]
-        [ValidateScript({(($_.StartsWith('https://') -eq $false) -and ($_.EndsWith('.adallom.com') -or $_.EndsWith('.cloudappsecurity.com')))})]
-        [string]$TenantUri,
-
-        # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
+        # Specifies the credential object containing tenant as username (e.g. 'contoso.us.portal.cloudappsecurity.com') and the 64-character hexadecimal Oauth token as the password.
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [System.Management.Automation.PSCredential]$Credential,
+        [System.Management.Automation.PSCredential]$Credential = $CASCredential,
 
+        # Limits the results to items related to the specified service IDs, such as 11161,11770 (for Office 365 and Google Apps, respectively).
+        [Parameter(ParameterSetName='List', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
+        [ValidateNotNullOrEmpty()]
+        [ValidatePattern('^\d{5}$')]
+        [Alias("Service","Services")]
+        [int[]]$AppId,
+                
         # Specifies the maximum number of results to retrieve when listing items matching the specified filter criteria.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateRange(1,100)]
@@ -48,51 +48,38 @@ function Get-MCASAppInfo
         # Specifies the number of records, from the beginning of the result set, to skip.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateScript({$_ -gt -1})]
-        [int]$Skip = 0,
-
-        # Limits the results to items related to the specified service IDs, such as 11161,11770 (for Office 365 and Google Apps, respectively).
-        [Parameter(ParameterSetName='List', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
-        [ValidateNotNullOrEmpty()]
-        [ValidatePattern('^\d{5}$')]
-        [Alias("Service","Services")]
-        [int[]]$AppId
+        [int]$Skip = 0
     )
-    Begin {
-        Try {$TenantUri = Select-MCASTenantUri}
-            Catch {Throw $_}
-
-        Try {$Token = Select-MCASToken}
-            Catch {Throw $_}
-
-        $AppIdList = @()
+    begin {
+        $appIdList = @()
     }
-    Process {
-        $AppIdList += $AppId
+    process {
+        $appIdList += $AppId
     }
-    End {
-        $Body = @{'skip'=$Skip;'limit'=$ResultSetSize} # Base request body
+    end {
+        $body = @{'skip'=$Skip;'limit'=$ResultSetSize} # Base request body
         
-        $FilterSet = @() # Filter set array
+        $filterSet = @() # Filter set array
 
         # Simple filters
-        If ($AppIdList.Count -gt 0) {$FilterSet += @{'appId'= @{'eq'=$AppIdList}}}
+        if ($appIdList.Count -gt 0) {$filterSet += @{'appId'= @{'eq'=$AppIdList}}}
 
         # Get the matching alerts and handle errors
-        Try {
-            $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/v1/saasdb/" -Method Post -Body $Body -Token $Token -FilterSet $FilterSet
-            
+        try {
+            $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/saasdb/" -Method Post -Body $body -FilterSet $filterSet
         }
-        Catch {
-            Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+        catch {
+            throw "Error calling MCAS API. The exception was: $_"
         }
 
-        # Get the response parts and format we need
-        $Response = $Response.content
+        $response = $response.data
 
-        $Response = $Response | ConvertFrom-Json
+        try {
+            Write-Verbose "Adding alias property to results, if appropriate"
+            $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value 'appId' -PassThru
+        }
+        catch {}
 
-        $Response = Invoke-MCASResponseHandling -Response $Response -IdentityProperty 'appId'
-
-        $Response
+        $response
     }
 }

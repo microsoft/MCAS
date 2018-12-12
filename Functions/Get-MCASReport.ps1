@@ -1,38 +1,51 @@
-function Get-MCASReport
-{
-    [CmdletBinding()]
-    [Alias('Get-CASReport')]
-    Param
-    (
-        # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
-        [Parameter(Mandatory=$false)]
-        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
-        [string]$TenantUri,
+<#
+.Synopsis
+    Get-MCASReport retrieves a list of built-in reports from the Cloud App Security tenant.
+.DESCRIPTION
+    Retrieves a reports list from the built-in reports of an MCAS tenant.
+.EXAMPLE
+    PS C:\> Get-MCASReport | select FriendlyName,report_category
 
-        # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
+    FriendlyName                           report_category
+    ------------                           ---------------
+    Privileged Users                       User Management
+    Browser Use                            Security
+    Outbound Sharing by Domain             Data Management
+    Data Sharing Overview                  Data Management
+    Salesforce Special Privileged Accounts User Management
+    Owners of Shared Files                 Data Management
+    Inactive Accounts
+
+    This example retrives the reports list, showing the friendly name of the report and its category.
+
+.EXAMPLE
+    PS C:\> Get-MCASReport | Get-MCASReportContent
+
+    This example retrives the reports list and pipes the list into the Get-MCASReportContent command to get the data for each one.
+#>function Get-MCASReport {
+    [CmdletBinding()]
+    param
+    (
+        # Specifies the credential object containing tenant as username (e.g. 'contoso.us.portal.cloudappsecurity.com') and the 64-character hexadecimal Oauth token as the password.
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [System.Management.Automation.PSCredential]$Credential
+        [System.Management.Automation.PSCredential]$Credential = $CASCredential
     )
 
-    Try {$TenantUri = Select-MCASTenantUri}
-        Catch {Throw $_}
-
-    Try {$Token = Select-MCASToken}
-        Catch {Throw $_}
-
     # Get the matching items and handle errors
-    Try {
-        $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/reports/" -Method Post -Token $Token
+    try {
+        $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/reports/" -Method Get
     }
-        Catch {
-            Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
-        }
+    catch {
+        throw "Error calling MCAS API. The exception was: $_"
+    }
 
-    $Response = ($Response | ConvertFrom-Json).data
+    $response = $response.data
 
-    # Add 'Identity' alias property and 'FriendlyName' note property
-    $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru | ForEach-Object {Add-Member -InputObject $_ -MemberType NoteProperty -Name FriendlyName -Value $ReportsListReverse.Get_Item($_.report_name) -PassThru}
-
-    $Response    
+    try {
+        $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru | ForEach-Object {Add-Member -InputObject $_ -MemberType NoteProperty -Name FriendlyName -Value $ReportsListReverse.Get_Item($_.non_entities_report) -PassThru}
+    }
+    catch {}
+    
+    $response
 }

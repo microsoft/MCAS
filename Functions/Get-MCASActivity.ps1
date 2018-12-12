@@ -8,17 +8,17 @@
 
    Get-MCASActivity returns a single custom PS Object or multiple PS Objects with all of the activity properties. Methods available are only those available to custom objects by default.
 .EXAMPLE
-   Get-MCASActivity -ResultSetSize 1
+    PS C:\> Get-MCASActivity -ResultSetSize 1
 
     This pulls back a single activity record and is part of the 'List' parameter set.
 
 .EXAMPLE
-   Get-MCASActivity -Identity 572caf4588011e452ec18ef0
+    PS C:\> Get-MCASActivity -Identity 572caf4588011e452ec18ef0
 
     This pulls back a single activity record using the GUID and is part of the 'Fetch' parameter set.
 
 .EXAMPLE
-   (Get-MCASActivity -AppName Box).rawJson | ?{$_.event_type -match "upload"} | select ip_address -Unique
+    PS C:\> (Get-MCASActivity -AppName Box).rawJson | ?{$_.event_type -match "upload"} | select ip_address -Unique
 
     ip_address
     ----------
@@ -30,11 +30,9 @@
 .FUNCTIONALITY
    Get-MCASActivity is intended to function as a query mechanism for obtaining activity information from Cloud App Security.
 #>
-function Get-MCASActivity
-{
+function Get-MCASActivity {
     [CmdletBinding()]
-    [Alias('Get-CASActivity')]
-    Param
+    param
     (
         # Fetches an activity object by its unique identifier.
         [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
@@ -43,15 +41,10 @@ function Get-MCASActivity
         [alias("_id")]
         [string]$Identity,
 
-        # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
-        [Parameter(Mandatory=$false)]
-        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
-        [string]$TenantUri,
-
-        # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
+        # Specifies the credential object containing tenant as username (e.g. 'contoso.us.portal.cloudappsecurity.com') and the 64-character hexadecimal Oauth token as the password.
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [System.Management.Automation.PSCredential]$Credential,
+        [System.Management.Automation.PSCredential]$Credential = $CASCredential,
 
         # Specifies the property by which to sort the results. Possible Values: 'Date','Created'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -117,6 +110,16 @@ function Get-MCASActivity
         [ValidateNotNullOrEmpty()]
         [string[]]$EventTypeNameNot,
 
+        # Limits the results to items of specified action type name, such as '11161:EVENT_AAD_LOGIN:OAuth2:Authorize'
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string[]]$ActionTypeName,
+
+        # Limits the results to items not of specified action type name, such as '11161:EVENT_AAD_LOGIN:OAuth2:Authorize'
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string[]]$ActionTypeNameNot,
+
         # Limits the results by ip category. Possible Values: 'None','Internal','Administrative','Risky','VPN','Cloud_Provider'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -130,7 +133,7 @@ function Get-MCASActivity
         # Limits the results to items without the specified IP leading digits, such as 10.0.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateLength(1,45)]
-        [string]$IpDoesNotStartWith,
+        [string[]]$IpDoesNotStartWith,
 
         # Limits the results to items found before specified date. Use Get-Date.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -141,6 +144,11 @@ function Get-MCASActivity
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [datetime]$DateAfter,
+
+        # Limits the results by device type. Possible Values: 'Desktop','Mobile','Tablet','Other'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Desktop','Mobile','Tablet','Other')]
+        [string[]]$DeviceTypeNot,
 
         # Limits the results by device type. Possible Values: 'Desktop','Mobile','Tablet','Other'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -172,12 +180,34 @@ function Get-MCASActivity
         # Limits the results to events listed for the specified IP Tags.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [validateset("Anonymous_Proxy","Botnet","Darknet_Scanning_IP","Exchange_Online","Exchang_Online_Protection","Malware_CnC_Server","Microsoft_Cloud","Microsoft_Authentication_and_Identity","Office_365","Office_365_Planner","Office_365_ProPlus","Office_Online","Office_Sway","Office_Web_Access_Companion","OneNote","Remote_Connectivity_Analyzer","Satellite_Provider","SharePoint_Online","Skype_for_Business_Online","Smart_Proxy_and_Access_Proxy_Network","Tor","Yammer","Zscaler")]
+        [validateset('Akamai_Technologies','Amazon_Web_Services','Anonymous_proxy','Ascenty_Data_Centers','Botnet','Brute_force_attacker','Cisco_CWS','Cloud_App_Security_network','Darknet_scanning_IP','Exchange_Online','Exchange_Online_Protection','Google_Cloud_Platform','Internal_Network_IP','Malware_CnC_server','Masergy_Communications','McAfee_Web_Gateway','Microsoft_Azure','Microsoft_Cloud','Microsoft_Hosting','Microsoft_authentication_and_identity','Office_365','Office_365_Planner','Office_365_ProPlus','Office_Online','Office_Sway','Office_Web_Access_Companion','OneNote','Remote_Connectivity_Analyzer','Salesforce_Cloud','Satellite_provider','ScanSafe','SharePoint_Online','Skype_for_Business_Online','Symantec_Cloud','Tor','Yammer','Zscaler')]
         [string[]]$IPTag,
+
+        # Limits the results to events listed for the specified IP Tags.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [validateset('Akamai_Technologies','Amazon_Web_Services','Anonymous_proxy','Ascenty_Data_Centers','Botnet','Brute_force_attacker','Cisco_CWS','Cloud_App_Security_network','Darknet_scanning_IP','Exchange_Online','Exchange_Online_Protection','Google_Cloud_Platform','Internal_Network_IP','Malware_CnC_server','Masergy_Communications','McAfee_Web_Gateway','Microsoft_Azure','Microsoft_Cloud','Microsoft_Hosting','Microsoft_authentication_and_identity','Office_365','Office_365_Planner','Office_365_ProPlus','Office_Online','Office_Sway','Office_Web_Access_Companion','OneNote','Remote_Connectivity_Analyzer','Salesforce_Cloud','Satellite_provider','ScanSafe','SharePoint_Online','Skype_for_Business_Online','Symantec_Cloud','Tor','Yammer','Zscaler')]
+        [string[]]$IPTagNot,
 
         # Limits the results to events that include a country code value.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [switch]$CountryCodePresent,
+
+        # Limits the results to events that include a country code value.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [switch]$CountryCodeNotPresent,
+
+        # Limits the results to events that include a country code value.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [ValidateLength(2,2)]
+        [string[]]$CountryCode,
+
+        # Limits the results to events that include a country code value.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [ValidateLength(2,2)]
+        [string[]]$CountryCodeNot,
         
         # Limits the results to events listed for the specified IP Tags.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -204,124 +234,150 @@ function Get-MCASActivity
 
         # Limits the results to non-impersonated events if specified.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$ImpersonatedNot
-    )
-    Begin
-    {
-        Try {$TenantUri = Select-MCASTenantUri}
-            Catch {Throw $_}
+        [switch]$ImpersonatedNot,
 
-        Try {$Token = Select-MCASToken}
-            Catch {Throw $_}
-    }
-    Process
+        # Limits the results to those with user agent strings containing the specified substring.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]$UserAgentContains,
+
+        # Limits the results to those with user agent strings not containing the specified substring.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]$UserAgentNotContains,
+
+        # Limits the results to those with user agent tags equal to the specified value(s).
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [validateset('Native_client','Outdated_browser','Outdated_operating_system','Robot')]
+        [string[]]$UserAgentTag,
+
+        # Limits the results to those with user agent tags not equal to the specified value(s).
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [validateset('Native_client','Outdated_browser','Outdated_operating_system','Robot')]
+        [string[]]$UserAgentTagNot
+    )
+    begin {}
+    process
     {
         # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
-        If ($PSCmdlet.ParameterSetName -eq 'Fetch')
+        if ($PSCmdlet.ParameterSetName -eq 'Fetch')
         {
-            Try {
+            try {
                 # Fetch the item by its id
-                $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/v1/activities/$Identity/" -Method Get -Token $Token
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities/$Identity/" -Method Get
             }
-                Catch {
-                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
-                }
+            catch {
+                throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+            }
 
-            $Response = $Response.content | ConvertFrom-Json
-            
-            If (($Response | Get-Member).name -contains '_id') {
-                $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value _id -PassThru
+            try {
+                Write-Verbose "Adding alias property to results, if appropriate"
+                $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
             }
+            catch {}
             
-            $Response
+            $response
         }
     }
-    End
+    end
     {
-        If ($PSCmdlet.ParameterSetName -eq  'List') # Only run remainder of this end block if not in fetch mode
+        if ($PSCmdlet.ParameterSetName -eq  'List') # Only run remainder of this end block if not in fetch mode
         {
             # List mode logic only needs to happen once, so it goes in the 'End' block for efficiency
 
-            $Body = @{'skip'=$Skip;'limit'=$ResultSetSize} # Base request body
+            $body = @{'skip'=$Skip;'limit'=$ResultSetSize} # Base request body
 
             #region ----------------------------SORTING----------------------------
 
-            If ($SortBy -xor $SortDirection) {Throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'}
+            if ($SortBy -xor $SortDirection) {throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'}
 
             # Add sort direction to request body, if specified
-            If ($SortDirection) {$Body.Add('sortDirection',$SortDirection.TrimEnd('ending').ToLower())}
+            if ($SortDirection) {$Body.Add('sortDirection',$SortDirection.TrimEnd('ending').ToLower())}
 
             # Add sort field to request body, if specified
-            If ($SortBy)
+            if ($SortBy)
             {
-                $Body.Add('sortField',$SortBy.ToLower())
+                $body.Add('sortField',$SortBy.ToLower())
             }
             #endregion ----------------------------SORTING----------------------------
 
             #region ----------------------------FILTERING----------------------------
-            $FilterSet = @() # Filter set array
+            $filterSet = @() # Filter set array
 
             # Additional function for date conversion to unix format.
-            If ($DateBefore) {$DateBefore2 = ([int](Get-Date -Date $DateBefore -UFormat %s)*1000)}
-            If ($DateAfter) {$DateAfter2 = ([int](Get-Date -Date $DateAfter -UFormat %s)*1000)}
+            if ($DateBefore) {$DateBefore2 = ([int](Get-Date -Date $DateBefore -UFormat %s)*1000)}
+            if ($DateAfter) {$DateAfter2 = ([int](Get-Date -Date $DateAfter -UFormat %s)*1000)}
 
             # Additional parameter validations and mutual exclusions
-            If ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
-            If ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
-            If ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
-            If ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {Throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
-            If (($DateBefore -and $DateAfter) -or ($DateBefore -and $DaysAgo) -or ($DateAfter -and $DaysAgo)){Throw 'Cannot reconcile app parameters. Only use one date parameter.'}
-            If ($Impersonated -and $ImpersonatedNot){Throw 'Cannot reconcile app parameters. Do not combine Impersonated and ImpersonatedNot parameters.'}
+            if ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            if ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            if ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            if ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
+            if (($DateBefore -and $DateAfter) -or ($DateBefore -and $DaysAgo) -or ($DateAfter -and $DaysAgo)){throw 'Cannot reconcile app parameters. Only use one date parameter.'}
+            if ($Impersonated -and $ImpersonatedNot){throw 'Cannot reconcile app parameters. Do not combine Impersonated and ImpersonatedNot parameters.'}
 
             # Value-mapped filters
-            If ($IpCategory) {$FilterSet += @{'ip.category'=@{'eq'=([int[]]($IpCategory | ForEach-Object {$_ -as [int]}))}}}
-            If ($AppName)    {$FilterSet += @{'service'=@{'eq'=([int[]]($AppName | ForEach-Object {$_ -as [int]}))}}}
-            If ($AppNameNot) {$FilterSet += @{'service'=@{'neq'=([int[]]($AppNameNot | ForEach-Object {$_ -as [int]}))}}}
-            If ($IPTag)      {$FilterSet += @{'ip.tags'=    @{'eq'=($IPTag.GetEnumerator() | ForEach-Object {$IPTagsList.$_ -join ','})}}}
+            if ($IpCategory)        {$filterSet += @{'ip.category'=@{'eq'=([int[]]($IpCategory | ForEach-Object {$_ -as [int]}))}}}
+            if ($AppName)           {$filterSet += @{'service'=@{'eq'=([int[]]($AppName | ForEach-Object {$_ -as [int]}))}}}
+            if ($AppNameNot)        {$filterSet += @{'service'=@{'neq'=([int[]]($AppNameNot | ForEach-Object {$_ -as [int]}))}}}
+            if ($IPTag)             {$filterSet += @{'ip.tags'=@{'eq'=($IPTag.GetEnumerator() | ForEach-Object {$IPTagsList.$_ -join ','})}}}
+            if ($IPTagNot)          {$filterSet += @{'ip.tags'=@{'neq'=($IPTagNot.GetEnumerator() | ForEach-Object {$IPTagsList.$_ -join ','})}}}
+            if ($UserAgentTag)      {$filterSet += @{'userAgent.tags'=@{'eq'=($UserAgentTag.GetEnumerator() | ForEach-Object {$UserAgentTagsList.$_ -join ','})}}}
+            if ($UserAgentTagNot)   {$filterSet += @{'userAgent.tags'=@{'neq'=($UserAgentTagNot.GetEnumerator() | ForEach-Object {$UserAgentTagsList.$_ -join ','})}}}
 
             # Simple filters
-            If ($UserName)             {$FilterSet += @{'user.username'=          @{'eq'=$UserName}}}
-            If ($AppId)                {$FilterSet += @{'service'=                @{'eq'=$AppId}}}
-            If ($AppIdNot)             {$FilterSet += @{'service'=                @{'neq'=$AppIdNot}}}
-            If ($EventTypeName)        {$FilterSet += @{'activity.actionType'=    @{'eq'=$EventTypeName}}}
-            If ($EventTypeNameNot)     {$FilterSet += @{'activity.actionType'=    @{'neq'=$EventTypeNameNot}}}
-            If ($CountryCodePresent)   {$FilterSet += @{'location.country'=       @{'isset'=$true}}}
-            If ($DeviceType)           {$FilterSet += @{'device.type'=            @{'eq'=$DeviceType.ToUpper()}}} # CAS API expects upper case here
-            If ($UserAgentContains)    {$FilterSet += @{'userAgent.userAgent'=    @{'contains'=$UserAgentContains}}}
-            If ($UserAgentNotContains) {$FilterSet += @{'userAgent.userAgent'=    @{'ncontains'=$UserAgentNotContains}}}
-            If ($IpStartsWith)         {$FilterSet += @{'ip.address'=             @{'startswith'=$IpStartsWith}}}
-            If ($IpDoesNotStartWith)   {$FilterSet += @{'ip.address'=             @{'doesnotstartwith'=$IpStartsWith}}}
-            If ($Text)                 {$FilterSet += @{'text'=                   @{'text'=$Text}}}
-            If ($DaysAgo)              {$FilterSet += @{'date'=                   @{'gte_ndays'=$DaysAgo}}}
-            If ($Impersonated)         {$FilterSet += @{'activity.impersonated' = @{'eq'=$true}}}
-            If ($ImpersonatedNot)      {$FilterSet += @{'activity.impersonated' = @{'eq'=$false}}}
-            If ($FileID)               {$FilterSet += @{'fileSelector'=           @{'eq'=$FileID}}}
-            If ($FileLabel)            {$FilterSet += @{'fileLabels'=             @{'eq'=$FileLabel}}}
-            If ($PolicyId)             {$FilterSet += @{'policy'=                 @{'eq'=$PolicyId}}}
-            If ($DateBefore -and (-not $DateAfter)) {$FilterSet += @{'date'= @{'lte'=$DateBefore2}}}
-            If ($DateAfter -and (-not $DateBefore)) {$FilterSet += @{'date'= @{'gte'=$DateAfter2}}}
+            if ($UserName)             {$filterSet += @{'user.username'=          @{'eq'=$UserName}}}
+            if ($AppId)                {$filterSet += @{'service'=                @{'eq'=$AppId}}}
+            if ($AppIdNot)             {$filterSet += @{'service'=                @{'neq'=$AppIdNot}}}
+            if ($EventTypeName)        {$filterSet += @{'activity.eventType'=    @{'eq'=$EventTypeName}}}
+            if ($EventTypeNameNot)     {$filterSet += @{'activity.eventType'=    @{'neq'=$EventTypeNameNot}}}
+            if ($ActionTypeName)       {$filterSet += @{'activity.actionType'=    @{'eq'=$ActionTypeName}}}
+            if ($ActionTypeNameNot)    {$filterSet += @{'activity.actionType'=    @{'neq'=$ActionTypeNameNot}}}
+            if ($CountryCodePresent)   {$filterSet += @{'location.country'=       @{'isset'=$true}}}
+            if ($CountryCodeNotPresent){$filterSet += @{'location.country'=       @{'isnotset'=$true}}}
+            if ($CountryCode)          {$filterSet += @{'location.country'=       @{'eq'=$CountryCode}}}
+            if ($CountryCodeNot)       {$filterSet += @{'location.country'=       @{'neq'=$CountryCodeNot}}}
+            if ($DeviceType)           {$filterSet += @{'device.type'=            @{'eq'=$DeviceType.ToUpper()}}} # CAS API expects upper case here
+            if ($DeviceTypeNot)        {$filterSet += @{'device.type'=            @{'neq'=$DeviceTypeNot.ToUpper()}}} # CAS API expects upper case here
+            if ($UserAgentContains)    {$filterSet += @{'userAgent.userAgent'=    @{'contains'=$UserAgentContains}}}
+            if ($UserAgentNotContains) {$filterSet += @{'userAgent.userAgent'=    @{'ncontains'=$UserAgentNotContains}}}
+            if ($IpStartsWith)         {$filterSet += @{'ip.address'=             @{'startswith'=$IpStartsWith}}}
+            if ($IpDoesNotStartWith)   {$filterSet += @{'ip.address'=             @{'doesnotstartwith'=$IpDoesNotStartWith}}}
+            if ($Text)                 {$filterSet += @{'text'=                   @{'text'=$Text}}}
+            if ($DaysAgo)              {$filterSet += @{'date'=                   @{'gte_ndays'=$DaysAgo}}}
+            if ($Impersonated)         {$filterSet += @{'activity.impersonated' = @{'eq'=$true}}}
+            if ($ImpersonatedNot)      {$filterSet += @{'activity.impersonated' = @{'eq'=$false}}}
+            if ($FileID)               {$filterSet += @{'fileSelector'=           @{'eq'=$FileID}}}
+            if ($FileLabel)            {$filterSet += @{'fileLabels'=             @{'eq'=$FileLabel}}}
+            if ($PolicyId)             {$filterSet += @{'policy'=                 @{'eq'=$PolicyId}}}
+            if ($DateBefore -and (-not $DateAfter)) {$filterSet += @{'date'= @{'lte'=$DateBefore2}}}
+            if ($DateAfter -and (-not $DateBefore)) {$filterSet += @{'date'= @{'gte'=$DateAfter2}}}
 
             # boolean filters
-            If ($AdminEvents)    {$FilterSet += @{'activity.type'= @{'eq'=$true}}}
-            If ($NonAdminEvents) {$FilterSet += @{'activity.type'= @{'eq'=$false}}}
+            if ($AdminEvents)    {$filterSet += @{'activity.type'= @{'eq'=$true}}}
+            if ($NonAdminEvents) {$filterSet += @{'activity.type'= @{'eq'=$false}}}
 
             #endregion ----------------------------FILTERING----------------------------
 
             # Get the matching items and handle errors
-            Try {
-                $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/v1/activities/" -Body $Body -Method Post -Token $Token -FilterSet $FilterSet
+            try {
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities/" -Body $body -Method Post -FilterSet $filterSet
             }
-                Catch {
-                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
-                }
+            catch {
+                throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+            }
 
-            $Response = $Response.content 
+            $response = $response.data 
             
-            $Response = $Response | ConvertFrom-Json
-
-            $Response = Invoke-MCASResponseHandling -Response $Response
+            try {
+                Write-Verbose "Adding alias property to results, if appropriate"
+                $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
+            }
+            catch {}
             
-            $Response
+            $response
         }
     }
 }

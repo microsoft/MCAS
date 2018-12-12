@@ -13,90 +13,95 @@
    An alert identity is always required to be specified either explicity or implicitly from the pipeline.
 
 .EXAMPLE
-   Set-MCASAlert -Identity cac1d0ec5734e596e6d785cc -MarkAs Read
+    PS C:\> Set-MCASAlert -Identity cac1d0ec5734e596e6d785cc -MarkAs Read
 
     This marks a single specified alert as 'Read'.
 
 .EXAMPLE
-   Set-MCASAlert -Identity cac1d0ec5734e596e6d785cc -Dismiss
+    PS C:\> Set-MCASAlert -Identity cac1d0ec5734e596e6d785cc -Dismiss
 
     This will set the status of the specified alert as "Dismissed".
 
 .FUNCTIONALITY
    Set-MCASAlert is intended to function as a mechanism for setting the status of alerts Cloud App Security.
 #>
-function Set-MCASAlert
-{
+function Set-MCASAlert {
     [CmdletBinding()]
-    [Alias('Set-CASAlert')]
-    Param
+    param
     (
-        # Specifies an alert object by its unique identifier.
-        [Parameter(Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
+        # Fetches an alert object by its unique identifier.
+        [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
         [ValidateNotNullOrEmpty()]
-        #[ValidatePattern({^[A-Fa-f0-9]{24}$})]
-        [alias("_id")]
+        [ValidatePattern({^[A-Fa-f0-9]{24}$})]
+        [Alias("_id")]
         [string]$Identity,
 
+        # Specifies the credential object containing tenant as username (e.g. 'contoso.us.portal.cloudappsecurity.com') and the 64-character hexadecimal Oauth token as the password.
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [System.Management.Automation.PSCredential]$Credential = $CASCredential,
+
         # Specifies how to mark the alert. Possible Values: 'Read', 'Unread'.
-        [Parameter(ParameterSetName='MarkAs',Mandatory=$true, Position=1)]
+        [Parameter(Mandatory=$false)]
         [ValidateSet('Read','Unread')]
         [string]$MarkAs,
 
         # Specifies that the alert should be dismissed.
-        [Parameter(ParameterSetName='Dismiss',Mandatory=$true)]
+        [Parameter(Mandatory=$false)]
         [switch]$Dismiss,
 
-        # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
+        # Specifies that the alert should be resolved.
         [Parameter(Mandatory=$false)]
-        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
-        [string]$TenantUri,
-
-        # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
-        [Parameter(Mandatory=$false)]
-        [ValidateNotNullOrEmpty()]
-        [System.Management.Automation.PSCredential]$Credential,
+        [switch]$Resolve,
 
         [Parameter(Mandatory=$false)]
         [Switch]$Quiet
     )
-    Begin
+    process
     {
-        Try {$TenantUri = Select-MCASTenantUri}
-            Catch {Throw $_}
+        if (!($MarkAs -or $Dismiss -or $Resolve)) {
+            throw "You must specify at least one action: MarkAs, Dismiss, or Resolve."
+        }
 
-        Try {$Token = Select-MCASToken}
-            Catch {Throw $_}
-    }
-    Process
-    {
-        If ($Dismiss) {$Action = 'dismiss'}
-        If ($MarkAs)  {$Action = $MarkAs.ToLower()} # Convert -MarkAs to lower case, as expected by the CAS API
+        if ($Dismiss -and $Resolve) {
+            throw "You may not mark an alert as both dismissed and resolved. Please choose only one action."
+        }
 
-        Try {
+        if ($Dismiss) {
+            $Action = 'dismiss'
+            try {
                 # Set the alert's state by its id
-                $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/api/v1/alerts/$Identity/$Action/" -Token $Token -Method Post
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/alerts/$Identity/$Action/" -Method Post
             }
-            Catch {
-                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
-                }
-            
-            Write-Verbose "Checking response for success" 
-            If ($Response.StatusCode -eq '200') {
-                $Success = $true
-                Write-Verbose "Successfully modified alert $Identity" 
+            catch {
+                throw "Error calling MCAS API. The exception was: $_"
             }
-            Else {
-                $Success = $false
-                Write-Verbose "Something went wrong attempting to modify alert $Identity" 
-                Write-Error "Something went wrong attempting to modify alert $Identity"
+        }
+        if ($MarkAs)  {
+            $Action = $MarkAs.ToLower() # Convert -MarkAs to lower case, as expected by the CAS API
+            try {
+                # Set the alert's state by its id
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/alerts/$Identity/$Action/" -Method Post
             }
+            catch {
+                throw "Error calling MCAS API. The exception was: $_"
+            }
+        }
 
-            If (!$Quiet) {
-                $Success
+        if ($Resolve)  {
+            $Action = 'resolve'
+            try {
+                # Set the alert's state by its id
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/alerts/$Identity/$Action/" -Method Post
             }
-    }
-    End
-    {
+            catch {
+                throw "Error calling MCAS API. The exception was: $_"
+            }
+        }
+
+
+        if (!$Quiet) {
+            $Success
+        }
     }
 }

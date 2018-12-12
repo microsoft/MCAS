@@ -1,20 +1,29 @@
-﻿function Add-MCASAdminAccess
-{
-    [CmdletBinding()]
-    [Alias('Add-CASAdminAccess')]
-    Param
-    (
-        # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
-        [Parameter(Mandatory=$false)]
-        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
-        [string]$TenantUri,
+﻿<#
+.Synopsis
+   Adds administrators to the MCAS portal. 
+.DESCRIPTION
+   Add-MCASAdminAccess grants existing user accounts the MCAS full admin or read-only admin role within MCAS.
 
-        # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
+.EXAMPLE
+    C:\>Add-MCASAdminAccess -Username 'alice@contoso.com' -PermissionType FULL_ACCESS
+
+.EXAMPLE
+    C:\>Add-MCASAdminAccess 'bob@contoso.com' READ_ONLY
+    WARNING: READ_ONLY acces includes the ability to manage MCAS alerts.
+
+.FUNCTIONALITY
+   Add-MCASAdminAccess is intended to add administrators to an MCAS tenant.
+#>
+function Add-MCASAdminAccess {
+    [CmdletBinding()]
+    param
+    (
+        # Specifies the credential object containing tenant as username (e.g. 'contoso.us.portal.cloudappsecurity.com') and the 64-character hexadecimal Oauth token as the password.
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [System.Management.Automation.PSCredential]$Credential,
+        [System.Management.Automation.PSCredential]$Credential = $CASCredential,
 
-        [Parameter(Mandatory=$true,ValueFromPipeline=$true,Position=0)]
+        [Parameter(Mandatory=$true,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true,Position=0)]
         [ValidateNotNullOrEmpty()]
         [string]$Username,
 
@@ -22,46 +31,35 @@
         [ValidateNotNullOrEmpty()]
         [permission_type]$PermissionType
     )
-    Begin
-    {
-        Try {$TenantUri = Select-MCASTenantUri}
-            Catch {Throw $_}
+    begin {
+        # Keep track if any read-only access is added
+        $readOnlyAdded = $false
 
-        Try {$Token = Select-MCASToken}
-            Catch {Throw $_}
-
-        $ReadOnlyAdded = $false
+        Write-Verbose "Checking current admin list."
+        $preExistingAdmins = Get-MCASAdminAccess -Credential $Credential
     }
-    Process
-    {
-        If ((Get-MCASAdminAccess -TenantUri $TenantUri).username -contains $Username) {
-            Write-Warning "Add-MCASAdminAccess: $Username is already listed as an administrator of Cloud App Security. No changes were made."
+    process {
+        if ($preExistingAdmins.username -contains $Username) {
+            Write-Warning "$Username is already listed as an administrator of Cloud App Security."
             }
-        Else {
-            $Body = [ordered]@{'username'=$Username;'permissionType'=($PermissionType -as [string])}
+        else {
+            $body = [ordered]@{'username'=$Username;'permissionType'=($PermissionType -as [string])}
 
-            Try {
-                $Response = Invoke-MCASRestMethod2 -Uri "https://$TenantUri/cas/api/v1/manage_admin_access/" -Token $Token -Method Post -Body $Body
+            try {
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path '/cas/api/v1/manage_admin_access/' -Method Post -Body $body
             }
-                Catch {
-                    Throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
-                }
-                      
-            If ($Response.StatusCode -eq '200') {
-                Write-Verbose "$Username was added to MCAS admin list with $PermissionType permission"
-                If ($PermissionType -eq 'READ_ONLY') {
-                    $ReadOnlyAdded = $true
-                }
+            catch {
+                throw "Error calling MCAS API. The exception was: $_"
             }
-            Else {
-                Write-Error "Something went wrong when attempting to add $Username to MCAS admin list with $PermissionType permission"
+
+            if ($PermissionType -eq 'READ_ONLY') {
+                $readOnlyAdded = $true
             }
         }
     }
-    End
-    {
-        If ($ReadOnlyAdded) {
-            Write-Warning "Add-MCASAdminAccess: READ_ONLY acces includes the ability to manage alerts."
+    end {
+        if ($readOnlyAdded) {
+            Write-Warning "READ_ONLY acces includes the ability to manage MCAS alerts."
         }
     }
 }

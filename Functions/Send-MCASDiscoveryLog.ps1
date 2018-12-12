@@ -9,22 +9,27 @@
    Send-MCASDiscoveryLog does not return any value
 
 .EXAMPLE
-   Send-MCASDiscoveryLog -LogFile C:\Users\Alice\MyFirewallLog.log -LogType CISCO_IRONPORT_PROXY -DiscoveryDataSource 'My CAS Discovery Data Source'
+   PS C:\> Send-MCASDiscoveryLog -LogFile C:\Users\Alice\MyFirewallLog.log -LogType CISCO_IRONPORT_PROXY -DiscoveryDataSource 'My CAS Discovery Data Source'
 
    This uploads the MyFirewallLog.log file to CAS for discovery, indicating that it is of the CISCO_IRONPORT_PROXY log format, and associates it with the data source name called 'My CAS Discovery Data Source'
 
 .FUNCTIONALITY
    Uploads a proxy/firewall log file to a Cloud App Security tenant for discovery.
 #>
-function Send-MCASDiscoveryLog
-{
+function Send-MCASDiscoveryLog {
     [CmdletBinding()]
-    [Alias('Send-CASDiscoveryLog')]
-    Param
+    param
     (
+        # Specifies the credential object containing tenant as username (e.g. 'contoso.us.portal.cloudappsecurity.com') and the 64-character hexadecimal Oauth token as the password.
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [System.Management.Automation.PSCredential]$Credential = $CASCredential,
+                
         # The full path of the Log File to be uploaded, such as 'C:\mylogfile.log'.
         [Parameter(Mandatory=$true, ValueFromPipeline=$true, Position=0)]
         [Validatescript({Test-Path $_})]
+        [Validatescript({(Get-Item $_).Length -le 5GB})]
+        [alias("FullName")]
         [string]$LogFile,
 
         # Specifies the source device type of the log file.
@@ -37,156 +42,90 @@ function Send-MCASDiscoveryLog
         [ValidateNotNullOrEmpty()]
         [string]$DiscoveryDataSource,
 
+        # Specifies that the uploaded log file should be made into a snapshot report, in which case the value provided for -DiscoveryDataSource will become the snapshot report name.
+        [switch]$UploadAsSnapshot,
+
         # Specifies that the uploaded log file should be deleted after the upload operation completes.
         [alias("dts")]
-        [switch]$Delete,
-
-        # Specifies the URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
-        [Parameter(Mandatory=$false)]
-        [ValidateScript({($_.EndsWith('.portal.cloudappsecurity.com') -or $_.EndsWith('.adallom.com'))})]
-        [string]$TenantUri,
-
-        # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
-        [Parameter(Mandatory=$false)]
-        [ValidateNotNullOrEmpty()]
-        [System.Management.Automation.PSCredential]$Credential
+        [switch]$Delete
     )
-    Begin
+    begin {}
+    process
     {
-        Try {$TenantUri = Select-MCASTenantUri}
-            Catch {Throw $_}
+        Write-Verbose "Checking for the file $LogFile"
+        try {            
+            $fileName = (Get-Item $LogFile).Name
+            $fileSize = (Get-Item $LogFile).Length
+        }
+        catch {
+            throw "Could not get $LogFile : $_"
+        }
 
-        Try {$Token = Select-MCASToken}
-            Catch {Throw $_}
+
+        Write-Verbose "Requesting a target URL to which $LogFile can be uploaded"
+        try {            
+            $getUploadUrlResponse = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/discovery/upload_url/?filename=$fileName&source=$LogType" -Method Get
+
+            $uploadUrl = $getUploadUrlResponse.url            
+        }
+        catch {
+            throw "Something went wrong trying to get the target URL for $LogFile. The exception was: $_"
+        }
+        Write-Verbose "The target URL to which $LogFile will be uploaded is $uploadUrl"
+        
+
+        Write-Verbose "Setting the transfer mode based on log file size"
+        if (($getUploadUrlResponse.provider -eq 'azure') -and ($fileSize -le 64mb)) {
+            $fileUploadHeader = @{'x-ms-blob-type'='BlockBlob'}
+            Write-Verbose "The file is 64MB or smaller, so the following header and value will be used: x-ms-blob-type: BlockBlob"
+        }
+        elseif (($getUploadUrlResponse.provider -eq 'azure') -and ($fileSize -gt 64mb)) {
+            $fileUploadHeader = @{'Transfer-Encoding'='chunked'}
+            Write-Verbose "The file is larger than 64MB, so the following header and value will be used: Transfer-Encoding: chunked"
+        }
+
+
+        Write-Verbose "The file $LogFile will now be uploaded to $uploadUrl"
+        try
+        {            
+            $fileUploadResponse = Invoke-RestMethod -Uri $uploadUrl -InFile $LogFile -Headers $fileUploadHeader -Method Put -UseBasicParsing
+        }
+        catch {
+            throw "File upload failed. The exception was: $_"
+        }
+        Write-Verbose "The upload of file $LogFile seems to have succeeded"
+
+
+        if ($UploadAsSnapshot) {
+            Write-Verbose 'The parameter -UploadAsSnapshot was specified, so the message body will include the "uploadAsSnapshot" parameter'
+            $body = @{'uploadUrl'=$uploadUrl;'inputStreamName'=$DiscoveryDataSource;'uploadAsSnapshot'=$true}
+        }
+        else {
+            Write-Verbose 'The parameter -UploadAsSnapshot was not specified, so the message body will not include the "uploadAsSnapshot" parameter'
+            $body = @{'uploadUrl'=$uploadUrl;'inputStreamName'=$DiscoveryDataSource}
+        }
+
+
+        Write-Verbose "The upload of $LogFile will now be finalized"
+        try {
+            $finalizeUploadResponse = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/discovery/done_upload/" -Body $body -Method Post
+        }
+        catch {
+            throw "Something went wrong trying to finalize the upload of $LogFile. The exception was: $_"
+        }
+        Write-Verbose "The finalizing of the upload of $LogFile seems to have succeeded"
+
+
+        if ($Delete) {
+            Write-Verbose "The -Delete parameter was specified, so $LogFile will now be deleted"
+            try {
+                Remove-Item $LogFile -Force
+            }
+            catch {
+                Write-Warning "The file $LogFile could not be deleted. The exception was: $_"
+            }
+            Write-Verbose "The deletion of $LogFile seems to have succeeded"
+        }
     }
-    Process
-    {
-        # Get just the file name, for when full path is specified
-        Try
-        {
-            $FileName = (Get-Item $LogFile).Name
-        }
-            Catch
-            {
-                Throw "Could not get $LogFile : $_"
-            }
-
-        #region GET UPLOAD URL
-        Try
-        {
-            # Get an upload URL for the file
-            $GetUploadUrlResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/discovery/upload_url/?filename=$FileName&source=$LogType" -Headers @{Authorization = "Token $Token"} -Method Get -UseBasicParsing
-
-            $UploadUrl = $GetUploadUrlResponse.url
-        }
-            Catch
-            {
-                If ($_ -like 'The remote server returned an error: (404) Not Found.')
-                {
-                    Throw "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
-                }
-                ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
-                {
-                    Throw '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified credential is authorized to perform the requested action.'
-                }
-                ElseIf ($_ -match "The remote name could not be resolved: ")
-                {
-                    Throw "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
-                }
-                Else
-                {
-                    Throw "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
-                }
-            }
-        #endregion GET UPLOAD URL
-
-        #region UPLOAD LOG FILE
-
-        # Set appropriate transfer encoding header info based on log file size
-        If (($GetUploadUrlResponse.provider -eq 'azure') -and ($LogFileBlob.Length -le 64mb))
-        {
-            $FileUploadHeader = @{'x-ms-blob-type'='BlockBlob'}
-        }
-        ElseIf (($GetUploadUrlResponse.provider -eq 'azure') -and ($LogFileBlob.Length -gt 64mb))
-        {
-            $FileUploadHeader = @{'Transfer-Encoding'='chunked'}
-        }
-
-        Try
-        {
-            # Upload the log file to the target URL obtained earlier, using appropriate headers
-            If ($FileUploadHeader)
-            {
-                If (Test-Path $LogFile) {Invoke-RestMethod -Uri $UploadUrl -InFile $LogFile -Headers $FileUploadHeader -Method Put -UseBasicParsing -ErrorAction Stop}
-            }
-            Else
-            {
-                If (Test-Path $LogFile) {Invoke-RestMethod -Uri $UploadUrl -InFile $LogFile -Method Put -UseBasicParsing -ErrorAction Stop}
-            }
-        }
-            Catch
-            {
-                If ($_ -like 'The remote server returned an error: (404) Not Found.')
-                {
-                    Throw "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
-                }
-                ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
-                {
-                    Throw '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified credential is authorized to perform the requested action.'
-                }
-                ElseIf ($_ -match "The remote name could not be resolved: ")
-                {
-                    Throw "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
-                }
-                Else
-                {
-                    Throw "File upload failed: $_"
-                }
-            }
-        #endregion UPLOAD LOG FILE
-
-        #region FINALIZE UPLOAD
-        Try
-        {
-            # Finalize the upload
-            $FinalizeUploadResponse = Invoke-RestMethod -Uri "https://$TenantUri/api/v1/discovery/done_upload/" -Headers @{Authorization = "Token $Token"} -Body @{'uploadUrl'=$UploadUrl;'inputStreamName'=$DiscoveryDataSource} -Method Post -UseBasicParsing -ErrorAction Stop
-        }
-            Catch
-            {
-                If ($_ -like 'The remote server returned an error: (404) Not Found.')
-                {
-                    Throw "404 - Not Found: $Identity. Check to ensure the -Identity and -TenantUri parameters are valid."
-                }
-                ElseIf ($_ -like 'The remote server returned an error: (403) Forbidden.')
-                {
-                    Throw '403 - Forbidden: Check to ensure the -Credential and -TenantUri parameters are valid and that the specified credential is authorized to perform the requested action.'
-                }
-                ElseIf ($_ -match "The remote name could not be resolved: ")
-                {
-                    Throw "The remote name could not be resolved: '$TenantUri' Check to ensure the -TenantUri parameter is valid."
-                }
-                ElseIf ($_ -match "The remote server returned an error: (400) Bad Request.")
-                {
-                    Throw "400 - Bad Request: Ensure the -DiscoveryDataSource parameter specifies a valid data source name that you have created in the CAS web console."
-                }
-                Else
-                {
-                    Throw "Unknown exception when attempting to contact the Cloud App Security REST API: $_"
-                }
-            }
-        #endregion FINALIZE UPLOAD
-
-        Try
-        {
-            # Delete the file
-            If ($Delete) {Remove-Item $LogFile -Force -ErrorAction Stop}
-        }
-            Catch
-            {
-                Throw "Could not delete $LogFile : $_"
-            }
-    }
-    End
-    {
-    }
+    end {}
 }

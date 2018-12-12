@@ -1,16 +1,4 @@
-﻿<#
-.Synopsis
-    Get-MCASStream retrieves a list of available discovery streams.
-.DESCRIPTION
-    Discovery streams are used to separate or aggregate discovery data. Stream ID's are needed when pulling discovered app data.
-.EXAMPLE
-    PS C:\> (Get-MCASStream | ?{$_.displayName -eq 'Global View'})._id
-
-    57869acdb4b3d5154f095af7
-
-    This example retrives the global stream ID.
-#>
-function Get-MCASStream {
+function Get-MCASDiscoveryDataSource {
     [CmdletBinding()]
     param
     (
@@ -21,19 +9,19 @@ function Get-MCASStream {
     )
     
     try {
-        $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/discovery/streams/" -Method Get
+        $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/v1/discovery/data_sources/?skip=0&limit=100&sortField=created&sortDirection=desc" -Method Get        
     }
     catch {
         throw "Error calling MCAS API. The exception was: $_"
     }
 
-    $response = $response.streams
-    
+    $response = $response.data
+
     try {
         Write-Verbose "Adding alias property to results, if appropriate"
         $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
     }
     catch {}
-        
+
     $response
 }
