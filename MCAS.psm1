@@ -9,6 +9,11 @@ GENERAL CODING STANDARDS TO BE FOLLOWED IN THIS MODULE:
     https://msdn.microsoft.com/en-us/library/dd878270%28v=vs.85%29.aspx?f=255&MSPPError=-2147217396 
 
 #>
+#----------------------------Constants----------------------------
+$MCAS_TOKEN_VALIDATION_PATTERN = '^[0-9a-zA-Z=]{64,192}$'
+
+
+
 
 #----------------------------Enum Types----------------------------
 enum mcas_app {
@@ -16,6 +21,7 @@ enum mcas_app {
     Box = 10489
     Dropbox = 11627
     Google_Apps = 11770
+    Microsoft_Azure = 12260
     Microsoft_OneDrive_for_Business = 15600
     Microsoft_Cloud_App_Security = 20595
     Microsoft_Sharepoint_Online = 20892
@@ -44,10 +50,12 @@ enum device_type {
     CISCO_IRONPORT_PROXY = 106          # CiscoIronPort WSA
     CISCO_SCAN_SAFE = 124               # Cisco ScanSafe
     CLAVISTER = 164                     # Clavister NGFW (Syslog)
+    FORCEPOINT = 202                    # Forcepoint Web Security Cloud
     FORTIGATE = 108                     # Fortinet Fortigate
     GENERIC_CEF = 179                   # Generic CEF log
     GENERIC_LEEF = 181                  # Generic LEEF log
     GENERIC_W3C = 183                   # Generic W3C log
+    IBOSS = 200                         # Iboss Secure Cloud Gateway
     I_FILTER = 185                      # Digital Arts i-FILTER
     JUNIPER_SRX = 129                   # Juniper SRX
     JUNIPER_SRX_SD = 172                # Juniper SRX SD
@@ -61,12 +69,14 @@ enum device_type {
     SONICWALL_SYSLOG = 160              # (Dell) SonicWALL
     SOPHOS_CYBEROAM = 162               # Sophos Cyberoam Web Filter and Firewall log
     SOPHOS_SG = 130                     # Sophos SG
+    SOPHOS_XG = 198                     # Sophos XG
     SQUID = 114                         # Squid (Common)
     SQUID_NATIVE = 155                  # Squid (Native)
     WEBSENSE_SIEM_CEF = 138             # (WebSense) Web Security solutions - Internet Activity log (CEF)
     WEBSENSE_V7_5 = 135                 # (WebSense) Web Security solutions - Investigative detail report (CSV)
     ZSCALER = 120                       # Zscaler - Default CSV
     ZSCALER_QRADAR = 170                # Zscaler - QRadar LEEF
+    ZSCALER_CEF = 196                   # Zscaler - CEF
 }
 
 enum ip_category {
@@ -275,16 +285,20 @@ $ExportedCommands = @(
     'Get-MCASLogCollector',
     'Get-MCASPolicy',
     'Get-MCASPortalSettings',
+    'Get-MCASSiemAgent',
     'Get-MCASStream',
     'Get-MCASSubnetCollection',
     'Get-MCASUserGroup',
+    'Install-MCASSiemAgent',
     'New-MCASDiscoveryDataSource',
+    'New-MCASSiemAgentToken',
     'New-MCASSubnetCollection',
     'Remove-MCASAdminAccess',
     'Remove-MCASDiscoveryDataSource',
     'Remove-MCASSubnetCollection',
     'Send-MCASDiscoveryLog',
-    'Set-MCASAlert'
+    'Set-MCASAlert',
+    'Set-MCASDiscoveredApp'
     )
 
     $ExportedCommands | ForEach-Object {

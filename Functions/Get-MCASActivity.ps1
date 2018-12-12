@@ -363,10 +363,28 @@ function Get-MCASActivity {
 
             # Get the matching items and handle errors
             try {
-                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities/" -Body $body -Method Post -FilterSet $filterSet
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities/" -Body $body -Method Post -FilterSet $filterSet -Raw
             }
             catch {
                 throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+            }
+
+            $response = $response.Content
+
+            # Attempt the JSON conversion. If it fails due to property name collisions to to case insensitivity on Windows, attempt to resolve it by renaming the properties.
+            try {
+                $response = $response | ConvertFrom-Json
+            }
+            catch {
+                Write-Verbose "One or more property name collisions were detected in the response. An attempt will be made to resolve this by renaming any offending properties."
+                $response = $response.Replace('"Level":','"Level_2":')
+                try {
+                    $response = $response | ConvertFrom-Json # Try the JSON conversion again, now that we hopefully fixed the property collisions
+                }
+                catch {
+                    throw $_
+                }
+                Write-Verbose "Any property name collisions appear to have been resolved."
             }
 
             $response = $response.data 

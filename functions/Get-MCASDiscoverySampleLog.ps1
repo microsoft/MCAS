@@ -52,10 +52,12 @@ function Get-MCASDiscoverySampleLog {
             'CISCO_IRONPORT_PROXY'          {$fileName = 'cisco-ironport-wsa_demo_log.log'}
             'CISCO_SCAN_SAFE'               {$fileName = 'cisco-scansafe_demo_log.log'}
             'CLAVISTER'                     {$fileName = 'clavister-ngfw-syslog_demo_log.log'}
+            'FORCEPOINT'                    {$fileName = 'forcepoint-web-security-cloud_demo_log.log'} # NEW
             'FORTIGATE'                     {$fileName = 'fortinet-fortigate_demo_log.log'}
             'GENERIC_CEF'                   {$fileName = 'generic-cef-log_demo_log.log'}
             'GENERIC_LEEF'                  {$fileName = 'generic-leef-log_demo_log.log'} 
-            'GENERIC_W3C'                   {$fileName = 'generic-w3c-log_demo_log.log'}  
+            'GENERIC_W3C'                   {$fileName = 'generic-w3c-log_demo_log.log'}
+            'IBOSS'                         {$fileName = 'iboss-secure-cloud-gateway_demo_log.log'} # NEW
             'I_FILTER'                      {$fileName = 'digital-arts-i-filter_demo_log.log'}
             'JUNIPER_SRX'                   {$fileName = 'juniper-srx_demo_log.log'}
             'JUNIPER_SRX_SD'                {$fileName = 'juniper-srx-sd_demo_log.log'}
@@ -69,12 +71,14 @@ function Get-MCASDiscoverySampleLog {
             'SONICWALL_SYSLOG'              {$fileName = 'sonicwall_demo_log.log'}
             'SOPHOS_CYBEROAM'               {$fileName = 'sophos-cyberoam-web-filter-and-firewall-log_demo_log.log'}
             'SOPHOS_SG'                     {$fileName = 'sophos-sg_demo_log.log'}
+            'SOPHOS_XG'                     {$fileName = 'sophos-xg_demo_log.log'}  # NEW
             'SQUID'                         {$fileName = 'squid-common_demo_log.log'}
             'SQUID_NATIVE'                  {$fileName = 'squid-native_demo_log.log'}
             'WEBSENSE_SIEM_CEF'             {$fileName = 'web-security-solutions-internet-activity-log-cef_demo_log.log'}
             'WEBSENSE_V7_5'                 {$fileName = 'web-security-solutions-investigative-detail-report-csv_demo_log.log'}
             'ZSCALER'                       {$fileName = 'zscaler-default-csv_demo_log.log'}
             'ZSCALER_QRADAR'                {$fileName = 'zscaler-qradar-leef_demo_log.log'}
+            'ZSCALER_CEF'                   {$fileName = 'zscaler-cef_demo_log.log'}
         }
 
         $zipFile = "$fileName.zip"

@@ -50,21 +50,13 @@ function Set-MCASAlert {
         [Parameter(Mandatory=$false)]
         [switch]$Dismiss,
 
-        # Specifies that the alert should be resolved.
-        [Parameter(Mandatory=$false)]
-        [switch]$Resolve,
-
         [Parameter(Mandatory=$false)]
         [Switch]$Quiet
     )
     process
     {
-        if (!($MarkAs -or $Dismiss -or $Resolve)) {
-            throw "You must specify at least one action: MarkAs, Dismiss, or Resolve."
-        }
-
-        if ($Dismiss -and $Resolve) {
-            throw "You may not mark an alert as both dismissed and resolved. Please choose only one action."
+        if (!($MarkAs -or $Dismiss)) {
+            throw "You must specify one or both of the -MarkAs and -Dismiss parameters"
         }
 
         if ($Dismiss) {
@@ -87,18 +79,6 @@ function Set-MCASAlert {
                 throw "Error calling MCAS API. The exception was: $_"
             }
         }
-
-        if ($Resolve)  {
-            $Action = 'resolve'
-            try {
-                # Set the alert's state by its id
-                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/alerts/$Identity/$Action/" -Method Post
-            }
-            catch {
-                throw "Error calling MCAS API. The exception was: $_"
-            }
-        }
-
 
         if (!$Quiet) {
             $Success

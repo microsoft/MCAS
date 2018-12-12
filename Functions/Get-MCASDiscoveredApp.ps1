@@ -39,6 +39,7 @@ function Get-MCASDiscoveredApp {
         [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential = $CASCredential,
 
+        <#
         # Specifies the property by which to sort the results. Set to 'Name' by default. Possible Values: 'UserName','LastSeen'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('IpCount','LastUsed','Name','Transactions','Upload','UserCount')]
@@ -50,6 +51,7 @@ function Get-MCASDiscoveredApp {
         [ValidateSet('Ascending','Descending')]
         [ValidateNotNullOrEmpty()]
         [string]$SortDirection='Ascending',
+        #>
 
         # Specifies the maximum number of results to retrieve when listing items matching the specified filter criteria. Set to 100 by default.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -64,17 +66,32 @@ function Get-MCASDiscoveredApp {
 
         ##### FILTER PARAMS #####
 
+        <#
         # Limits results by category type. A preset list of categories are included.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        #[app_category[]]$Category, # I dont think an array will work here, so i am commmenting this out for now
         [app_category]$Category,
+        #>
         
+        <#
         # Limits the results by risk score range, for example '3-9'. Set to '1-10' by default.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidatePattern('^([1-9]0?)-([1-9]0?)$')]
+        [ValidatePattern('^([1-9]|10)-([1-9]|10)$')]
         [ValidateNotNullOrEmpty()]
-        [string]$ScoreRange='1-10',
+        [string]$ScoreRangeMin='1-10',
+        #>
+                 
+        <#
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateRange(1,10)]
+        [ValidateNotNullOrEmpty()]
+        [string]$ScoreRangeMin='1',
+
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateRange(1,10)]
+        [ValidateNotNullOrEmpty()]
+        [string]$ScoreRangeMax='10',
+        #>
 
         # Limits the results by stream ID, for example '577d49d72b1c51a0762c61b0'. The stream ID can be found in the URL bar of the console when looking at the Discovery dashboard.
         [Parameter(ParameterSetName='List', Mandatory=$false, Position=0)]
@@ -86,7 +103,13 @@ function Get-MCASDiscoveredApp {
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('7','30','90')]
         [ValidateNotNullOrEmpty()]
-        [int]$TimeFrame=90
+        [int]$TimeFrame=90,
+
+        # Limits the results to apps with the specified tag(s).
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet('Sanctioned','Unsanctioned')]
+        [ValidateNotNullOrEmpty()]
+        [string[]]$Tag
     )
 
     if ($StreamId) {
@@ -96,22 +119,32 @@ function Get-MCASDiscoveredApp {
         $stream = (Get-MCASStream | Where-Object {$_.displayName -eq 'Global View'}).Identity
     } 
 
+    #$body = @{'skip'=$Skip;'limit'=$ResultSetSize;'streamId'=$stream;'timeframe'=$TimeFrame} # Base request body
+
+    
     $body = @{
         'skip'=$Skip;
         'limit'=$ResultSetSize;
-        'score'=$ScoreRange;
+        #'score'=$ScoreRange;
         'timeframe'=$TimeFrame;
         'streamId'=$stream
     } # Base request body
+    
 
+    <#
     if ($Category) {
         $body += @{'category'="SAASDB_CATEGORY_$Category"}
     }
+    #>
 
-    if ($SortBy -xor $SortDirection) {Write-Error 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.' -ErrorAction Stop}
 
+
+    #region ----------------------------SORTING----------------------------
+<#
+    if ($SortBy -xor $SortDirection) {throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'}
+    
     # Add sort direction to request body, if specified
-    if ($SortDirection) {$Body.Add('sortDirection',$SortDirection.TrimEnd('ending').ToLower())}
+    if ($SortDirection) {$body.Add('sortDirection',$SortDirection.TrimEnd('ending').ToLower())}
 
     # Add sort field to request body, if specified
     switch ($SortBy) {
@@ -122,9 +155,22 @@ function Get-MCASDiscoveredApp {
         'Upload'       {$body.Add('sortField','trafficUploadedBytes')}
         'Transactions' {$body.Add('sortField','trafficTotalEvents')}
     }
+    #if ($SortBy) {$body.Add('sortField',$SortBy)}
+#>
+    #endregion ----------------------------SORTING----------------------------
+
+    
+    #region ----------------------------FILTERING----------------------------
+
+    $filterSet = @() # Filter set array
+
+    if ($Tag) {$filterSet += @{'tag'=    @{'eq'=$Tag}}} # Not working
+    
+    #endregion ----------------------------FILTERING----------------------------
 
     try {
-        $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/discovery/" -Method Post -Body $body
+        #$response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/discovery/" -Method Post -Body $body #-FilterSet $filterSet 
+        $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/discovery/" -Method Post -Body $body -FilterSet $filterSet 
     }
     catch {
         throw "Error calling MCAS API. The exception was: $_"
