@@ -2,46 +2,46 @@
     [CmdletBinding()]
     param (
         # Specifies the credential object containing tenant as username (e.g. 'contoso.us.portal.cloudappsecurity.com') and the 64-character hexadecimal Oauth token as the password.
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
-        [ValidateScript({
-            ($_.GetNetworkCredential().username).EndsWith('.portal.cloudappsecurity.com')
-        })]
-        [ValidateScript({
-            $_.GetNetworkCredential().Password -match ($MCAS_TOKEN_VALIDATION_PATTERN)
-        })]
+        [ValidateScript( {
+                ($_.GetNetworkCredential().username).EndsWith('.portal.cloudappsecurity.com')
+            })]
+        [ValidateScript( {
+                $_.GetNetworkCredential().Password -match ($MCAS_TOKEN_VALIDATION_PATTERN)
+            })]
         [System.Management.Automation.PSCredential]$Credential,
 
         # Specifies the relative path of the full uri being invoked (e.g. - '/api/v1/alerts/')
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
-        [ValidateScript({
-            $_.StartsWith('/')
-        })]
+        [ValidateScript( {
+                $_.StartsWith('/')
+            })]
         [string]$Path,
 
         # Specifies the HTTP method to be used for the request
-        [Parameter(Mandatory=$true)]
-        [ValidateSet('Get','Post','Put','Delete')]
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('Get', 'Post', 'Put', 'Delete')]
         [string]$Method,
 
         # Specifies the body of the request, not including MCAS query filters, which should be specified separately in the -FilterSet parameter
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [ValidateNotNullOrEmpty()]
         $Body,
 
         # Specifies the content type to be used for the request
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [ValidateNotNullOrEmpty()]
         [string]$ContentType = 'application/json',
 
         # Specifies the MCAS query filters to be used, which will be added to the body of the message
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [ValidateNotNull()]
         $FilterSet,
 
         # Specifies the retry interval, in seconds, if a call to the MCAS web API is throttled. Default = 5 (seconds)
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [ValidateNotNullOrEmpty()]
         [int]$RetryInterval = 5,
 
@@ -114,19 +114,25 @@
             Write-Verbose "Attempting call to MCAS..."
             $response = Invoke-Expression -Command $mcasCall
         }
-            catch {
-                if ($_ -like 'The remote server returned an error: (429) TOO MANY REQUESTS.') {
-                    $retryCall = $true
-
-                    Write-Warning "429 - Too many requests. The MCAS API throttling limit has been hit, the call will be retried in $RetryInterval second(s)..."
-
-                    Write-Verbose "Sleeping for $RetryInterval seconds"
-                    Start-Sleep -Seconds $RetryInterval
-                }
-                else {
-                    throw $_
-                }
+        catch {
+            if ($_ -like 'The remote server returned an error: (429) TOO MANY REQUESTS.') {
+                   
+                Write-Warning "429 - Too many requests. The MCAS API throttling limit has been hit, the call will be retried in $RetryInterval second(s)..."
+                $retryCall = $true
+                Write-Verbose "Sleeping for $RetryInterval seconds"
+                Start-Sleep -Seconds $RetryInterval
             }
+            ElseIf ($_ -like 'The remote server returned an error: (504)') {
+                Write-Warning "504 - Gateway Timeout. The call will be retried in $RetryInterval second(s)..."
+                $retryCall = $true
+                Write-Verbose "Sleeping for $RetryInterval seconds"
+                Start-Sleep -Seconds $RetryInterval 
+            }
+    
+            else {
+                throw $_
+            }
+        }
 
         # Uncomment following two lines if you want to see raw responses in -Verbose output
         #Write-Verbose 'MCAS response to follow:'
@@ -135,7 +141,7 @@
     while ($retryCall)
 
     # Provide the total record count in -Verbose output and as InformationVariable, if appropriate
-    if (@('Get','Post') -contains $Method) {
+    if (@('Get', 'Post') -contains $Method) {
         if ($response.total) {
             Write-Verbose 'Checking total matching record count via the response properties...'
             $recordTotal = $response.total
@@ -147,7 +153,7 @@
             }
             catch {
                 Write-Verbose 'JSON conversion failed. Checking total matching record count via raw response string extraction...'
-                $recordTotal = ($response.Content.Split(',',3) | Where-Object {$_.StartsWith('"total"')} | Select-Object -First 1).Split(':')[1]
+                $recordTotal = ($response.Content.Split(',', 3) | Where-Object {$_.StartsWith('"total"')} | Select-Object -First 1).Split(':')[1]
             } 
         }
         else {
