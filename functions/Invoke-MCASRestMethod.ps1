@@ -116,7 +116,6 @@
         }
         catch {
             if ($_ -like 'The remote server returned an error: (429) TOO MANY REQUESTS.') {
-                   
                 Write-Warning "429 - Too many requests. The MCAS API throttling limit has been hit, the call will be retried in $RetryInterval second(s)..."
                 $retryCall = $true
                 Write-Verbose "Sleeping for $RetryInterval seconds"
@@ -126,9 +125,8 @@
                 Write-Warning "504 - Gateway Timeout. The call will be retried in $RetryInterval second(s)..."
                 $retryCall = $true
                 Write-Verbose "Sleeping for $RetryInterval seconds"
-                Start-Sleep -Seconds $RetryInterval 
+                Start-Sleep -Seconds $RetryInterval
             }
-    
             else {
                 throw $_
             }
@@ -149,7 +147,7 @@
         elseif ($response.Content) {
             try {
                 Write-Verbose 'Checking total matching record count via raw JSON response...'
-                $recordTotal = ($response.Content | ConvertFrom-Json).total   
+                $recordTotal = (($response.content).Replace('"Level":','"Level_2":') | ConvertFrom-Json).total
             }
             catch {
                 Write-Verbose 'JSON conversion failed. Checking total matching record count via raw response string extraction...'
@@ -164,6 +162,5 @@
         Write-Verbose ('The total number of matching records was {0}' -f $recordTotal)
         Write-Information $recordTotal 
     }
-    
     $response
 }
