@@ -58,7 +58,7 @@ function Get-MCASActivity {
 
         # Specifies the maximum number of results to retrieve when listing items matching the specified filter criteria.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateRange(1,100)]
+        [ValidateRange(1,100000)]
         [int]$ResultSetSize = 100,
 
         # Specifies the number of records, from the beginning of the result set, to skip.
@@ -258,7 +258,12 @@ function Get-MCASActivity {
         [validateset('Native_client','Outdated_browser','Outdated_operating_system','Robot')]
         [string[]]$UserAgentTagNot
     )
-    begin {}
+    begin {
+        if ($ResultSetSize -gt 100){
+            $ResultSetSizeSecondaryChunks = $ResultSetSize % 100
+        }
+
+    }
     process
     {
         # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
@@ -360,8 +365,105 @@ function Get-MCASActivity {
             if ($NonAdminEvents) {$filterSet += @{'activity.type'= @{'eq'=$false}}}
 
             #endregion ----------------------------FILTERING----------------------------
+            
+            
+            $collection = @()
+            $i = 0
 
-            # Get the matching items and handle errors
+
+            if ($ResultSetSize -gt 100){
+            
+            do{
+                $body = @{'skip'=$i;'limit'=100} # Base request body
+
+                try {
+                    $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities/" -Body $body -Method Post -FilterSet $filterSet -Raw
+                }
+                catch {
+                    throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+                }
+
+                $response = $response.Content
+
+                # Attempt the JSON conversion. If it fails due to property name collisions to to case insensitivity on Windows, attempt to resolve it by renaming the properties.
+                try {
+                    $response = $response | ConvertFrom-Json
+                }
+                catch {
+                    Write-Verbose "One or more property name collisions were detected in the response. An attempt will be made to resolve this by renaming any offending properties."
+                    $response = $response.Replace('"Level":','"Level_2":')
+                    try {
+                        $response = $response | ConvertFrom-Json # Try the JSON conversion again, now that we hopefully fixed the property collisions
+                    }
+                    catch {
+                        throw $_
+                    }
+                    Write-Verbose "Any property name collisions appear to have been resolved."
+                }
+
+                $response = $response.data 
+            
+                try {
+                    Write-Verbose "Adding alias property to results, if appropriate"
+                    $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
+                }
+                catch {}
+            
+                $collection += $response
+
+                $i+= 100
+
+                }
+            while($i -lt $ResultSetSize - $ResultSetSizeSecondaryChunks)
+
+            if ($ResultSetSizeSecondaryChunks -gt 0){
+                $body = @{'skip'=($ResultSetSize - $ResultSetSizeSecondaryChunks);'limit'=$ResultSetSizeSecondaryChunks}
+
+               try {
+                    $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities/" -Body $body -Method Post -FilterSet $filterSet -Raw
+                }
+                catch {
+                    throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+                }
+
+                $response = $response.Content
+
+                # Attempt the JSON conversion. If it fails due to property name collisions to to case insensitivity on Windows, attempt to resolve it by renaming the properties.
+                try {
+                    $response = $response | ConvertFrom-Json
+                }
+                catch {
+                    Write-Verbose "One or more property name collisions were detected in the response. An attempt will be made to resolve this by renaming any offending properties."
+                    $response = $response.Replace('"Level":','"Level_2":')
+                    try {
+                        $response = $response | ConvertFrom-Json # Try the JSON conversion again, now that we hopefully fixed the property collisions
+                    }
+                    catch {
+                        throw $_
+                    }
+                    Write-Verbose "Any property name collisions appear to have been resolved."
+                }
+
+                $response = $response.data 
+            
+                try {
+                    Write-Verbose "Adding alias property to results, if appropriate"
+                    $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
+                }
+                catch {}
+            
+                $collection += $response
+
+                }
+
+            
+                $collection
+            }
+
+
+else{
+            
+           # Get the matching items and handle errors
             try {
                 $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities/" -Body $body -Method Post -FilterSet $filterSet -Raw
             }
@@ -396,6 +498,8 @@ function Get-MCASActivity {
             catch {}
             
             $response
+            }
+
         }
     }
 }
