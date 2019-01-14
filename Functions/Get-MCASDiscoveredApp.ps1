@@ -15,7 +15,7 @@
     AT&T
 
     Retrieves the first 5 app names sorted alphabetically.
-    
+
 .EXAMPLE
     PS C:\> Get-MCASDiscoveredApp -StreamId $streamid -Category SECURITY | select name,@{N='Total (MB)';E={"{0:N2}" -f ($_.trafficTotalBytes/1MB)}}
 
@@ -72,7 +72,7 @@ function Get-MCASDiscoveredApp {
         [ValidateNotNullOrEmpty()]
         [app_category]$Category,
         #>
-        
+
         <#
         # Limits the results by risk score range, for example '3-9'. Set to '1-10' by default.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -80,7 +80,7 @@ function Get-MCASDiscoveredApp {
         [ValidateNotNullOrEmpty()]
         [string]$ScoreRangeMin='1-10',
         #>
-                 
+
         <#
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateRange(1,10)]
@@ -117,11 +117,11 @@ function Get-MCASDiscoveredApp {
     }
     else {
         $stream = (Get-MCASStream | Where-Object {$_.displayName -eq 'Global View'}).Identity
-    } 
+    }
 
     #$body = @{'skip'=$Skip;'limit'=$ResultSetSize;'streamId'=$stream;'timeframe'=$TimeFrame} # Base request body
 
-    
+
     $body = @{
         'skip'=$Skip;
         'limit'=$ResultSetSize;
@@ -129,7 +129,7 @@ function Get-MCASDiscoveredApp {
         'timeframe'=$TimeFrame;
         'streamId'=$stream
     } # Base request body
-    
+
 
     <#
     if ($Category) {
@@ -142,7 +142,7 @@ function Get-MCASDiscoveredApp {
     #region ----------------------------SORTING----------------------------
 <#
     if ($SortBy -xor $SortDirection) {throw 'Error: When specifying either the -SortBy or the -SortDirection parameters, you must specify both parameters.'}
-    
+
     # Add sort direction to request body, if specified
     if ($SortDirection) {$body.Add('sortDirection',$SortDirection.TrimEnd('ending').ToLower())}
 
@@ -159,18 +159,18 @@ function Get-MCASDiscoveredApp {
 #>
     #endregion ----------------------------SORTING----------------------------
 
-    
+
     #region ----------------------------FILTERING----------------------------
 
     $filterSet = @() # Filter set array
 
     if ($Tag) {$filterSet += @{'tag'=    @{'eq'=$Tag}}} # Not working
-    
+
     #endregion ----------------------------FILTERING----------------------------
 
     try {
-        #$response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/discovery/" -Method Post -Body $body #-FilterSet $filterSet 
-        $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/discovery/" -Method Post -Body $body -FilterSet $filterSet 
+        #$response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/discovery/" -Method Post -Body $body #-FilterSet $filterSet
+        $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/v1/discovery/discovered_apps/" -Method Post -Body $body -FilterSet $filterSet
     }
     catch {
         throw "Error calling MCAS API. The exception was: $_"

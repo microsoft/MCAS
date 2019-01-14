@@ -46,9 +46,9 @@
         [int]$RetryInterval = 5,
 
         # Specifies that a single item is to be fetched, skipping any processing for lists, such as checking result count totals
-        #[switch]$Fetch, 
-                
-        # Specifies use Invoke-WebRequest instead of Invoke-RestMethod, enabling the caller to get the raw response from the MCAS API without any JSON conversion 
+        #[switch]$Fetch,
+
+        # Specifies use Invoke-WebRequest instead of Invoke-RestMethod, enabling the caller to get the raw response from the MCAS API without any JSON conversion
         [switch]$Raw
     )
 
@@ -152,15 +152,16 @@
             catch {
                 Write-Verbose 'JSON conversion failed. Checking total matching record count via raw response string extraction...'
                 $recordTotal = ($response.Content.Split(',', 3) | Where-Object {$_.StartsWith('"total"')} | Select-Object -First 1).Split(':')[1]
-            } 
+            }
         }
         else {
             Write-Verbose 'Could not check total matching record count, perhaps because zero or one records were returned. Zero will be returned as the matching record count.'
-            $recordTotal = 0 
+            $recordTotal = 0
         }
 
         Write-Verbose ('The total number of matching records was {0}' -f $recordTotal)
-        Write-Information $recordTotal 
+        #removing the below line because it is now breaking certain cmdlets such as Get-MCASFile when retriving a file by identity
+        #Write-Information $recordTotal
     }
     $response
 }

@@ -66,6 +66,10 @@ function Get-MCASActivity {
         [ValidateScript({$_ -gt -1})]
         [int]$Skip = 0,
 
+        # Periodically writes the activities returned in JSON format to a specified file. Useful for large queries. (Example: -PeriodicWriteToFile "C:\path\to\file.txt")
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [string]$PeriodicWriteToFile,
+
 
 
         ##### FILTER PARAMS #####
@@ -208,7 +212,7 @@ function Get-MCASActivity {
         [ValidateNotNullOrEmpty()]
         [ValidateLength(2,2)]
         [string[]]$CountryCodeNot,
-        
+
         # Limits the results to events listed for the specified IP Tags.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -263,6 +267,8 @@ function Get-MCASActivity {
             $ResultSetSizeSecondaryChunks = $ResultSetSize % 100
         }
 
+        if ($PeriodicWriteToFile -and $ResultSetSize -le 100){throw 'Error: You cannot use periodic file writing with a resultsetsize <= 100. Either remove periodicwritetofile or set your resultsetsize greater than 100.'}
+
     }
     process
     {
@@ -282,7 +288,7 @@ function Get-MCASActivity {
                 $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
             }
             catch {}
-            
+
             $response
         }
     }
@@ -365,14 +371,14 @@ function Get-MCASActivity {
             if ($NonAdminEvents) {$filterSet += @{'activity.type'= @{'eq'=$false}}}
 
             #endregion ----------------------------FILTERING----------------------------
-            
-            
+
+
             $collection = @()
             $i = 0
 
 
             if ($ResultSetSize -gt 100){
-            
+
             do{
                 $body = @{'skip'=$i;'limit'=100} # Base request body
 
@@ -401,16 +407,19 @@ function Get-MCASActivity {
                     Write-Verbose "Any property name collisions appear to have been resolved."
                 }
 
-                $response = $response.data 
-            
+                $response = $response.data
+
                 try {
                     Write-Verbose "Adding alias property to results, if appropriate"
                     $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
                 }
                 catch {}
-            
-                $collection += $response
 
+                $collection += $response
+                if ($PeriodicWriteToFile){
+                    Write-Verbose "Writing response output to $PeriodicWriteToFile"
+                    $collection | ConvertTo-Json -depth 10 | Out-File $PeriodicWriteToFile
+                }
                 $i+= 100
 
                 }
@@ -444,25 +453,29 @@ function Get-MCASActivity {
                     Write-Verbose "Any property name collisions appear to have been resolved."
                 }
 
-                $response = $response.data 
-            
+                $response = $response.data
+
                 try {
                     Write-Verbose "Adding alias property to results, if appropriate"
                     $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
                 }
                 catch {}
-            
+
                 $collection += $response
+                if ($PeriodicWriteToFile){
+                    Write-Verbose "Writing response output to $PeriodicWriteToFile"
+                    $collection | ConvertTo-Json -depth 10 | Out-File $PeriodicWriteToFile
+                }
 
                 }
 
-            
+
                 $collection
             }
 
 
 else{
-            
+
            # Get the matching items and handle errors
             try {
                 $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities/" -Body $body -Method Post -FilterSet $filterSet -Raw
@@ -489,14 +502,14 @@ else{
                 Write-Verbose "Any property name collisions appear to have been resolved."
             }
 
-            $response = $response.data 
-            
+            $response = $response.data
+
             try {
                 Write-Verbose "Adding alias property to results, if appropriate"
                 $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
             }
             catch {}
-            
+
             $response
             }
 
