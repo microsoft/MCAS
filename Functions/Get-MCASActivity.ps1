@@ -268,7 +268,7 @@ function Get-MCASActivity {
         }
 
         if ($PeriodicWriteToFile -and $ResultSetSize -le 100){throw 'Error: You cannot use periodic file writing with a resultsetsize <= 100. Either remove periodicwritetofile or set your resultsetsize greater than 100.'}
-
+        if ($Skip -and $ResultSetSize -gt 100){throw 'Error: You cannot use the skip parameter when specifying more than 100 records. Large pull requests will skip for you automatically. Either remove the skip parameter or reduce your resultsetsize to 100 or less.'}
     }
     process
     {
@@ -398,6 +398,7 @@ function Get-MCASActivity {
                 catch {
                     Write-Verbose "One or more property name collisions were detected in the response. An attempt will be made to resolve this by renaming any offending properties."
                     $response = $response.Replace('"Level":','"Level_2":')
+                    $response = $response.Replace('"EventName":','"EventName_2":')
                     try {
                         $response = $response | ConvertFrom-Json # Try the JSON conversion again, now that we hopefully fixed the property collisions
                     }
@@ -444,6 +445,7 @@ function Get-MCASActivity {
                 catch {
                     Write-Verbose "One or more property name collisions were detected in the response. An attempt will be made to resolve this by renaming any offending properties."
                     $response = $response.Replace('"Level":','"Level_2":')
+                    $response = $response.Replace('"EventName":','"EventName_2":')
                     try {
                         $response = $response | ConvertFrom-Json # Try the JSON conversion again, now that we hopefully fixed the property collisions
                     }
@@ -493,6 +495,7 @@ else{
             catch {
                 Write-Verbose "One or more property name collisions were detected in the response. An attempt will be made to resolve this by renaming any offending properties."
                 $response = $response.Replace('"Level":','"Level_2":')
+                $response = $response.Replace('"EventName":','"EventName_2":')
                 try {
                     $response = $response | ConvertFrom-Json # Try the JSON conversion again, now that we hopefully fixed the property collisions
                 }
