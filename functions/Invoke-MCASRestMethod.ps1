@@ -70,7 +70,8 @@
     Write-Verbose "Method is $Method"
 
     $token = $Credential.GetNetworkCredential().Password
-    Write-Verbose "OAuth token is $token"
+    #MK - Commenting out this line for security reasons. Not sure I like having the raw token in the verbose output.
+    #Write-Verbose "OAuth token is $token"
 
     $headers = 'Authorization = "Token {0}"' -f $token | ForEach-Object {
         "@{$_}"
@@ -102,7 +103,9 @@
     }
 
     Write-Verbose "Constructed call to MCAS is to follow:"
-    Write-Verbose $mcasCall
+    $mcasCall2 = '{0} -Uri ''https://{1}{2}'' -Method {3} -ContentType {5} -UseBasicParsing' -f $cmd, $tenant, $Path, $Method, $headers, $ContentType
+
+    Write-Verbose $mcasCall2
 
     Write-Verbose "Retry interval if MCAS call is throttled is $RetryInterval seconds"
 
