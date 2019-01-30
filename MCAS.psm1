@@ -6,7 +6,7 @@ GENERAL CODING STANDARDS TO BE FOLLOWED IN THIS MODULE:
 
     and
 
-    https://msdn.microsoft.com/en-us/library/dd878270%28v=vs.85%29.aspx?f=255&MSPPError=-2147217396 
+    https://msdn.microsoft.com/en-us/library/dd878270%28v=vs.85%29.aspx?f=255&MSPPError=-2147217396
 
 #>
 #----------------------------Constants----------------------------
@@ -64,7 +64,7 @@ enum device_type {
     MACHINE_ZONE_MERAKI = 153           # Meraki - URLs log
     MCAFEE_SWG = 121                    # McAfee Web Gateway
     MICROSOFT_ISA_W3C = 159             # Microsoft Forefront Threat Management Gateway (W3C)
-    PALO_ALTO = 112                     # PA Series Firewall 
+    PALO_ALTO = 112                     # PA Series Firewall
     # PALO_ALTO_SYSLOG not available here
     SONICWALL_SYSLOG = 160              # (Dell) SonicWALL
     SOPHOS_CYBEROAM = 162               # Sophos Cyberoam Web Filter and Firewall log
