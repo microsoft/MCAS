@@ -119,7 +119,7 @@ function Get-MCASFile {
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [string[]]$PolicyId,
-        
+
         # Limits the results to items with the specified MIME Type, such as 'text/plain', 'image/vnd.adobe.photoshop'.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -216,7 +216,7 @@ function Get-MCASFile {
         {
             try {
                 # Fetch the item by its id
-                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/files/$Identity/" -Method Get -Raw         
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/files/$Identity/" -Method Get -Raw
             }
             catch {
                 throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
@@ -240,7 +240,7 @@ function Get-MCASFile {
                 }
                 Write-Verbose "Any property name collisions appear to have been resolved."
             }
-            
+
             try {
                 Write-Verbose "Adding alias property to results, if appropriate"
                 $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
@@ -310,7 +310,7 @@ function Get-MCASFile {
             if ($CollaboratorsNot)     {$filterSet += @{'collaborators.users'=      @{'neq'=$CollaboratorsNot}}}
             if ($Owner)                {$filterSet += @{'owner.username'=           @{'eq'=$Owner}}}
             if ($OwnerNot)             {$filterSet += @{'owner.username'=           @{'neq'=$OwnerNot}}}
-            if ($PolicyId)             {$filterSet += @{'policy'=                   @{'eq'=$PolicyId}}}
+            if ($PolicyId)             {$filterSet += @{'policy'=                   @{'cabinetmatchedrulesequals'=$PolicyId}}}
             if ($MIMEType)             {$filterSet += @{'mimeType'=                 @{'eq'=$MIMEType}}}
             if ($MIMETypeNot)          {$filterSet += @{'mimeType'=                 @{'neq'=$MIMETypeNot}}}
             if ($Name)                 {$filterSet += @{'filename'=                 @{'eq'=$Name}}}
@@ -332,8 +332,8 @@ function Get-MCASFile {
             }
             catch {
                 throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
-            }   
-            
+            }
+
             $response = $response.Content
 
             # Attempt the JSON conversion. If it fails due to property name collisions to to case insensitivity on Windows, attempt to resolve it by renaming the properties.
@@ -354,7 +354,7 @@ function Get-MCASFile {
             }
 
             $response = $response.data
-            
+
             try {
                 Write-Verbose "Adding alias property to results, if appropriate"
                 $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
