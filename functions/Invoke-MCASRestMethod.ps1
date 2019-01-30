@@ -151,7 +151,8 @@
             }
             catch {
                 Write-Verbose 'JSON conversion failed. Checking total matching record count via raw response string extraction...'
-                $recordTotal = ($response.Content.Split(',', 3) | Where-Object {$_.StartsWith('"total"')} | Select-Object -First 1).Split(':')[1]
+                #below linew as commented out as it breaks with the new activities_kusto endpoint.
+                #$recordTotal = ($response.Content.Split(',', 3) | Where-Object {$_.StartsWith('"total"')} | Select-Object -First 1).Split(':')[1]
             }
         }
         else {
