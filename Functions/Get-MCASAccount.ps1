@@ -151,7 +151,7 @@ function Get-MCASAccount {
             catch {
                 throw "Error calling MCAS API. The exception was: $_"
             }
-            
+
             $response = $response.content
 
             # Attempt the JSON conversion. If it fails due to property name collisions to to case insensitivity on Windows, attempt to resolve it by renaming the properties.
@@ -236,12 +236,12 @@ function Get-MCASAccount {
 
             # Get the matching items and handle errors
             try {
-                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/accounts/" -Body $body -Method Post -FilterSet $filterSet -Raw
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/entities/" -Body $body -Method Post -FilterSet $filterSet -Raw
             }
             catch {
                 throw "Error calling MCAS API. The exception was: $_"
             }
-            
+
             $response = $response.content
 
             # Attempt the JSON conversion. If it fails due to property name collisions to to case insensitivity on Windows, attempt to resolve it by renaming the properties.
@@ -259,7 +259,7 @@ function Get-MCASAccount {
                 }
                 Write-Verbose "Any property name collisions appear to have been resolved."
             }
-            
+
             $response = $response.data
 
             try {
