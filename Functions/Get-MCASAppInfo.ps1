@@ -6,14 +6,14 @@
     By passing in an App Id, the user can retrive information about those apps straight from the SaaS DB. This information is returned in an object format that can be formatted for the user's needs.
 
 .EXAMPLE
-    PS C:\> Get-MCASAppInfo -AppId 11114 | select name, category
+    PS C:\> Get-MCASAppInfo -AppId @(11114,11161) | select name, category
 
     name       category
     ----       --------
     Salesforce SAASDB_CATEGORY_CRM
 
 .EXAMPLE
-    PS C:\> Get-MCASAppInfo -AppId 18394 | select name, @{N='Compliance';E={"{0:N0}" -f $_.revised_score.compliance}}, @{N='Security';E={"{0:N0}" -f $_.revised_score.security}}, @{N='Provider';E={"{0:N0}" -f $_.revised_score.provider}}, @{N='Total';E={"{0:N0}" -f $_.revised_score.total}} | ft
+    PS C:\> Get-MCASAppInfo -AppId @(18394) | select name, @{N='Compliance';E={"{0:N0}" -f $_.revised_score.compliance}}, @{N='Security';E={"{0:N0}" -f $_.revised_score.security}}, @{N='Provider';E={"{0:N0}" -f $_.revised_score.provider}}, @{N='Total';E={"{0:N0}" -f $_.revised_score.total}} | ft
 
     name        Compliance Security Provider Total
     ----        ---------- -------- -------- -----
@@ -29,57 +29,40 @@ function Get-MCASAppInfo {
     param
     (
         # Specifies the credential object containing tenant as username (e.g. 'contoso.us.portal.cloudappsecurity.com') and the 64-character hexadecimal Oauth token as the password.
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential = $CASCredential,
 
         # Limits the results to items related to the specified service IDs, such as 11161,11770 (for Office 365 and Google Apps, respectively).
-        [Parameter(ParameterSetName='List', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
+        [Parameter(ParameterSetName = 'List', Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0)]
         [ValidateNotNullOrEmpty()]
         [ValidatePattern('^\d{5}$')]
-        [Alias("Service","Services")]
-        [int[]]$AppId,
-                
-        # Specifies the maximum number of results to retrieve when listing items matching the specified filter criteria.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateRange(1,100)]
-        [int]$ResultSetSize = 100,
-
-        # Specifies the number of records, from the beginning of the result set, to skip.
-        [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateScript({$_ -gt -1})]
-        [int]$Skip = 0
+        [Alias("Service", "Services")]
+        [array]$AppId
     )
     begin {
-        $appIdList = @()
+        $collection = @()
     }
     process {
-        $appIdList += $AppId
     }
     end {
-        $body = @{'skip'=$Skip;'limit'=$ResultSetSize} # Base request body
-        
-        $filterSet = @() # Filter set array
-
         # Simple filters
-        if ($appIdList.Count -gt 0) {$filterSet += @{'appId'= @{'eq'=$AppIdList}}}
+        if ($AppId.Count -gt 0) {
 
-        # Get the matching alerts and handle errors
-        try {
-            $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/saasdb/" -Method Post -Body $body -FilterSet $filterSet
+            $AppId | ForEach-Object {
+                $curAppId = $_
+                Write-Warning "$curAppId"
+                # Get the matching alerts and handle errors
+                try {
+                    $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/saasdb/$curAppId/" -Method Get
+                }
+                catch {
+                    throw "Error calling MCAS API. The exception was: $_"
+                }
+
+                $collection += $response
+            }
         }
-        catch {
-            throw "Error calling MCAS API. The exception was: $_"
-        }
-
-        $response = $response.data
-
-        try {
-            Write-Verbose "Adding alias property to results, if appropriate"
-            $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value 'appId' -PassThru
-        }
-        catch {}
-
-        $response
+        $collection
     }
 }
