@@ -59,13 +59,17 @@ function Get-MCASFile {
 
         # Specifies the maximum number of results to retrieve when listing items matching the specified filter criteria.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateRange(1,100)]
+        [ValidateRange(1,100000)]
         [int]$ResultSetSize = 100,
 
         # Specifies the number of records, from the beginning of the result set, to skip.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateScript({$_ -gt -1})]
         [int]$Skip = 0,
+
+        # Periodically writes the activities returned in JSON format to a specified file. Useful for large queries. (Example: -PeriodicWriteToFile "C:\path\to\file.txt")
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [string]$PeriodicWriteToFile,
 
 
         ##### FILTER PARAMS #####
@@ -208,7 +212,12 @@ function Get-MCASFile {
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [switch]$FoldersNot
     )
-    begin {}
+    begin {
+        if ($ResultSetSize -gt 100){
+            $ResultSetSizeSecondaryChunks = $ResultSetSize % 100
+        }
+
+    }
     process
     {
         # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
@@ -326,6 +335,12 @@ function Get-MCASFile {
 
             #endregion ----------------------------FILTERING----------------------------
 
+            $collection = @()
+            $i = $Skip
+            if ($ResultSetSize -gt 100){
+            do{
+
+            $body = @{'skip'=$i;'limit'=100} # Base request body
             # Get the matching items and handle errors
             try {
                 $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/files/" -Body $body -Method Post -FilterSet $filterSet -Raw
@@ -361,7 +376,109 @@ function Get-MCASFile {
             }
             catch {}
 
-            $response
+            $collection += $response
+            if ($PeriodicWriteToFile){
+                Write-Verbose "Writing response output to $PeriodicWriteToFile"
+                $collection | ConvertTo-Json -depth 10 | Out-File $PeriodicWriteToFile
+            }
+            $i+= 100
+
+        }
+        while($i -lt $ResultSetSize + $skip - $ResultSetSizeSecondaryChunks)
+    }
+
+
+
+        if ($ResultSetSizeSecondaryChunks -gt 0){
+            $body = @{'skip'=($ResultSetSize - $ResultSetSizeSecondaryChunks);'limit'=$ResultSetSizeSecondaryChunks}
+            try {
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/files/" -Body $body -Method Post -FilterSet $filterSet -Raw
+            }
+            catch {
+                throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+            }
+
+            $response = $response.Content
+
+            # Attempt the JSON conversion. If it fails due to property name collisions to to case insensitivity on Windows, attempt to resolve it by renaming the properties.
+            try {
+                $response = $response | ConvertFrom-Json
+            }
+            catch {
+                Write-Verbose "One or more property name collisions were detected in the response. An attempt will be made to resolve this by renaming any offending properties."
+                $response = $response.Replace('"Created":','"Created_2":')
+                $response = $response.Replace('"ftags":','"ftags_2":')
+                try {
+                    $response = $response | ConvertFrom-Json # Try the JSON conversion again, now that we hopefully fixed the property collisions
+                }
+                catch {
+                    throw $_
+                }
+                Write-Verbose "Any property name collisions appear to have been resolved."
+            }
+
+            $response = $response.data
+
+            try {
+                Write-Verbose "Adding alias property to results, if appropriate"
+                $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
+            }
+            catch {}
+
+            $collection += $response
+            if ($PeriodicWriteToFile){
+                Write-Verbose "Writing response output to $PeriodicWriteToFile"
+                $collection | ConvertTo-Json -depth 10 | Out-File $PeriodicWriteToFile
+            }
+
+        }
+
+        else{
+
+            # Get the matching items and handle errors
+            try {
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/files/" -Body $body -Method Post -FilterSet $filterSet -Raw
+            }
+            catch {
+                throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+            }
+
+            $response = $response.Content
+
+            # Attempt the JSON conversion. If it fails due to property name collisions to to case insensitivity on Windows, attempt to resolve it by renaming the properties.
+            try {
+                $response = $response | ConvertFrom-Json
+            }
+            catch {
+                Write-Verbose "One or more property name collisions were detected in the response. An attempt will be made to resolve this by renaming any offending properties."
+                $response = $response.Replace('"Created":','"Created_2":')
+                $response = $response.Replace('"ftags":','"ftags_2":')
+                try {
+                    $response = $response | ConvertFrom-Json # Try the JSON conversion again, now that we hopefully fixed the property collisions
+                }
+                catch {
+                    throw $_
+                }
+                Write-Verbose "Any property name collisions appear to have been resolved."
+            }
+
+            $response = $response.data
+
+            try {
+                Write-Verbose "Adding alias property to results, if appropriate"
+                $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
+            }
+            catch {}
+
+            $collection += $response
+
+            if ($PeriodicWriteToFile){
+                Write-Verbose "Writing response output to $PeriodicWriteToFile"
+                $collection | ConvertTo-Json -depth 10 | Out-File $PeriodicWriteToFile
+            }
+             }
+
+$collection
         }
     }
 }
