@@ -142,7 +142,7 @@ function Get-MCASActivity {
         # Limits the results to items found before specified date. Use Get-Date.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [datetime]$DateBefore,
+        [datetime]$DateBefore = (Get-Date),
 
         # Limits the results to items found after specified date. Use Get-Date.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -268,7 +268,9 @@ function Get-MCASActivity {
         }
 
         if ($PeriodicWriteToFile -and $ResultSetSize -le 100){throw 'Error: You cannot use periodic file writing with a resultsetsize <= 100. Either remove periodicwritetofile or set your resultsetsize greater than 100.'}
-        if ($Skip -and $ResultSetSize -gt 100){throw 'Error: You cannot use the skip parameter when specifying more than 100 records. Large pull requests will skip for you automatically. Either remove the skip parameter or reduce your resultsetsize to 100 or less.'}
+        #if ($Skip -and $ResultSetSize -gt 100){throw 'Error: You cannot use the skip parameter when specifying more than 100 records. Large pull requests will skip for you automatically. Either remove the skip parameter or reduce your resultsetsize to 100 or less.'}
+        if (($Skip + $ResultSetSize -gt 5000) -and $Skip -gt 0){throw 'Error: You cannot pull more than 5000 records when using the -Skip parameter. Either remove -Skip or reduce your -ResultSetSize such that -Skip + -ResultSetSize is less than 5000.'}
+        if ($ResultSetSize -gt 5000 -and $ResultSetSize%100 -ne 0){throw 'Error: When pulling more than 5000 records, you must keep ResultSetSize as a multiple of 100'}
     }
     process
     {
@@ -277,7 +279,7 @@ function Get-MCASActivity {
         {
             try {
                 # Fetch the item by its id
-                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities/$Identity/" -Method Get
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities_kusto/$Identity/" -Method Get
             }
             catch {
                 throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
@@ -318,8 +320,8 @@ function Get-MCASActivity {
             $filterSet = @() # Filter set array
 
             # Additional function for date conversion to unix format.
-            if ($DateBefore) {$DateBefore2 = ([int](Get-Date -Date $DateBefore -UFormat %s)*1000)}
-            if ($DateAfter) {$DateAfter2 = ([int](Get-Date -Date $DateAfter -UFormat %s)*1000)}
+            if ($DateBefore) {$DateBefore2 = ([int64]((Get-Date -Date $DateBefore)-(get-date "1/1/1970")).TotalMilliseconds)}
+            if ($DateAfter) {$DateAfter2 = ([int64]((Get-Date -Date $DateAfter)-(get-date "1/1/1970")).TotalMilliseconds)}
 
             # Additional parameter validations and mutual exclusions
             if ($AppName    -and ($AppId   -or $AppNameNot -or $AppIdNot)) {throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
@@ -374,16 +376,16 @@ function Get-MCASActivity {
 
 
             $collection = @()
-            $i = 0
+            $i = $Skip
+            $latestTimestamp = $DateBefore2
 
-
-            if ($ResultSetSize -gt 100){
+            if ($ResultSetSize -gt 100 -and $ResultSetSize -lt 5000 -and $skip -gt 0){
 
             do{
                 $body = @{'skip'=$i;'limit'=100} # Base request body
 
                 try {
-                    $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities/" -Body $body -Method Post -FilterSet $filterSet -Raw
+                    $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities_kusto/" -Body $body -Method Post -FilterSet $filterSet -Raw
                 }
                 catch {
                     throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
@@ -424,13 +426,13 @@ function Get-MCASActivity {
                 $i+= 100
 
                 }
-            while($i -lt $ResultSetSize - $ResultSetSizeSecondaryChunks)
+            while($i -lt $ResultSetSize + $skip - $ResultSetSizeSecondaryChunks)
 
             if ($ResultSetSizeSecondaryChunks -gt 0){
                 $body = @{'skip'=($ResultSetSize - $ResultSetSizeSecondaryChunks);'limit'=$ResultSetSizeSecondaryChunks}
 
                try {
-                    $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities/" -Body $body -Method Post -FilterSet $filterSet -Raw
+                    $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities_kusto/" -Body $body -Method Post -FilterSet $filterSet -Raw
                 }
                 catch {
                     throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
@@ -476,11 +478,117 @@ function Get-MCASActivity {
             }
 
 
+
+        if ($ResultSetSize -gt 5000 -and $skip -eq 0){
+            do{
+                $body = @{'skip'=0;'limit'=100} # Base request body
+                $filterSet = @{'date'= @{'lte'=$latestTimestamp}}
+
+
+                try {
+                    $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities_kusto/" -Body $body -Method Post -FilterSet $filterSet -Raw
+                }
+                catch {
+                    throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+                }
+
+                $response = $response.Content
+
+                # Attempt the JSON conversion. If it fails due to property name collisions to to case insensitivity on Windows, attempt to resolve it by renaming the properties.
+                try {
+                    $response = $response | ConvertFrom-Json
+                }
+                catch {
+                    Write-Verbose "One or more property name collisions were detected in the response. An attempt will be made to resolve this by renaming any offending properties."
+                    $response = $response.Replace('"Level":','"Level_2":')
+                    $response = $response.Replace('"EventName":','"EventName_2":')
+                    try {
+                        $response = $response | ConvertFrom-Json # Try the JSON conversion again, now that we hopefully fixed the property collisions
+                    }
+                    catch {
+                        throw $_
+                    }
+                    Write-Verbose "Any property name collisions appear to have been resolved."
+                }
+
+                $response = $response.data
+
+                try {
+                    Write-Verbose "Adding alias property to results, if appropriate"
+                    $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
+                }
+                catch {}
+
+                $collection += $response
+                if ($PeriodicWriteToFile){
+                    Write-Verbose "Writing response output to $PeriodicWriteToFile"
+                    $collection | ConvertTo-Json -depth 10 | Out-File $PeriodicWriteToFile
+                }
+                $i+= 100
+                $latestTimestamp = ($response | Select-Object -Last 1).timestamp
+                Write-Verbose "$i records pulled so far."
+                }
+            while($i -lt $ResultSetSize - $ResultSetSizeSecondaryChunks)
+
+            if ($ResultSetSizeSecondaryChunks -gt 0){
+                $body = @{'skip'=($ResultSetSize - $ResultSetSizeSecondaryChunks);'limit'=$ResultSetSizeSecondaryChunks}
+
+               try {
+                    $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities_kusto/" -Body $body -Method Post -FilterSet $filterSet -Raw
+                }
+                catch {
+                    throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+                }
+
+                $response = $response.Content
+
+                # Attempt the JSON conversion. If it fails due to property name collisions to to case insensitivity on Windows, attempt to resolve it by renaming the properties.
+                try {
+                    $response = $response | ConvertFrom-Json
+                }
+                catch {
+                    Write-Verbose "One or more property name collisions were detected in the response. An attempt will be made to resolve this by renaming any offending properties."
+                    $response = $response.Replace('"Level":','"Level_2":')
+                    $response = $response.Replace('"EventName":','"EventName_2":')
+                    try {
+                        $response = $response | ConvertFrom-Json # Try the JSON conversion again, now that we hopefully fixed the property collisions
+                    }
+                    catch {
+                        throw $_
+                    }
+                    Write-Verbose "Any property name collisions appear to have been resolved."
+                }
+
+                $response = $response.data
+
+                try {
+                    Write-Verbose "Adding alias property to results, if appropriate"
+                    $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
+                }
+                catch {}
+
+                $collection += $response
+                if ($PeriodicWriteToFile){
+                    Write-Verbose "Writing response output to $PeriodicWriteToFile"
+                    $collection | ConvertTo-Json -depth 10 | Out-File $PeriodicWriteToFile
+                }
+
+                }
+
+
+                $collection
+            }
+
+
+
+
+
+
 else{
 
            # Get the matching items and handle errors
             try {
-                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities/" -Body $body -Method Post -FilterSet $filterSet -Raw
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities_kusto/" -Body $body -Method Post -FilterSet $filterSet -Raw
             }
             catch {
                 throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
