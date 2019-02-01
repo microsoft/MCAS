@@ -291,6 +291,26 @@ function Get-MCASActivity {
             }
             catch {}
 
+
+                            # Attempt the JSON conversion. If it fails due to property name collisions to to case insensitivity on Windows, attempt to resolve it by renaming the properties.
+                            try {
+                                $response = $response | ConvertFrom-Json
+                            }
+                            catch {
+                                Write-Verbose "One or more property name collisions were detected in the response. An attempt will be made to resolve this by renaming any offending properties."
+                                $response = $response.Replace('"Level":','"Level_2":')
+                                $response = $response.Replace('"EventName":','"EventName_2":')
+                                try {
+                                    $response = $response | ConvertFrom-Json # Try the JSON conversion again, now that we hopefully fixed the property collisions
+                                }
+                                catch {
+                                    throw $_
+                                }
+                                Write-Verbose "Any property name collisions appear to have been resolved."
+                            }
+
+
+
             $response
         }
     }
@@ -379,7 +399,8 @@ function Get-MCASActivity {
             $i = $Skip
             $latestTimestamp = $DateBefore2
 
-            if ($ResultSetSize -gt 100 -and $ResultSetSize -lt 5000 -and $skip -gt 0){
+            if ($ResultSetSize -gt 100 -and $ResultSetSize -lt 5000){
+                Write-Verbose "Running loop A."
 
             do{
                 $body = @{'skip'=$i;'limit'=100} # Base request body
@@ -429,6 +450,7 @@ function Get-MCASActivity {
             while($i -lt $ResultSetSize + $skip - $ResultSetSizeSecondaryChunks)
 
             if ($ResultSetSizeSecondaryChunks -gt 0){
+                Write-Verbose "Running loop B."
                 $body = @{'skip'=($ResultSetSize - $ResultSetSizeSecondaryChunks);'limit'=$ResultSetSizeSecondaryChunks}
 
                try {
@@ -480,6 +502,7 @@ function Get-MCASActivity {
 
 
         if ($ResultSetSize -gt 5000 -and $skip -eq 0){
+            Write-Verbose "Running loop C."
             do{
                 $body = @{'skip'=0;'limit'=100} # Base request body
                 $filterSet = @{'date'= @{'lte'=$latestTimestamp}}
@@ -531,6 +554,7 @@ function Get-MCASActivity {
             while($i -lt $ResultSetSize - $ResultSetSizeSecondaryChunks)
 
             if ($ResultSetSizeSecondaryChunks -gt 0){
+                Write-Verbose "Running loop D."
                 $body = @{'skip'=($ResultSetSize - $ResultSetSizeSecondaryChunks);'limit'=$ResultSetSizeSecondaryChunks}
 
                try {
@@ -584,8 +608,8 @@ function Get-MCASActivity {
 
 
 
-else{
-
+            if ($ResultSetSize -le 100){
+    Write-Verbose "Running loop E."
            # Get the matching items and handle errors
             try {
                 $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities_kusto/" -Body $body -Method Post -FilterSet $filterSet -Raw
