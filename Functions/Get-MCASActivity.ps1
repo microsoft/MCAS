@@ -270,7 +270,7 @@ function Get-MCASActivity {
         if ($PeriodicWriteToFile -and $ResultSetSize -le 100){throw 'Error: You cannot use periodic file writing with a resultsetsize <= 100. Either remove periodicwritetofile or set your resultsetsize greater than 100.'}
         #if ($Skip -and $ResultSetSize -gt 100){throw 'Error: You cannot use the skip parameter when specifying more than 100 records. Large pull requests will skip for you automatically. Either remove the skip parameter or reduce your resultsetsize to 100 or less.'}
         if (($Skip + $ResultSetSize -gt 5000) -and $Skip -gt 0){throw 'Error: You cannot pull more than 5000 records when using the -Skip parameter. Either remove -Skip or reduce your -ResultSetSize such that -Skip + -ResultSetSize is less than 5000.'}
-        if ($ResultSetSize -gt 5000 -and $ResultSetSize/100 -ne 0){throw 'Error: When pulling more than 5000 records, you must keep ResultSetSize as a multiple of 100'}
+        if ($ResultSetSize -gt 5000 -and $ResultSetSize%100 -ne 0){throw 'Error: When pulling more than 5000 records, you must keep ResultSetSize as a multiple of 100'}
     }
     process
     {
