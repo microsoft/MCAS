@@ -266,6 +266,7 @@ $ExportedCommands = @(
     'Add-MCASAdminAccess',
     'ConvertFrom-MCASTimestamp',
     'Export-MCASBlockScript',
+    'Export-MCASCredential',
     'Get-MCASAccount',
     'Get-MCASActivity',
     'Get-MCASActivityType',
