@@ -1,6 +1,5 @@
 <#
 .Synopsis
-<<<<<<< refs/remotes/origin/PSCore-nonWindows-CASCredential-handling
    Exports an MCAS credential (usually from the $CASCredential session variable) to a local file
 
 .DESCRIPTION
@@ -11,20 +10,17 @@
 
 .FUNCTIONALITY
    Export-MCASCredential returns nothing.
-=======
     Exports an MCAS credential object (usually from the $CASCredential variable) to a file on non-Windows machines running Powershell (Core)
 .DESCRIPTION
     <ADD DESCRIPTION HERE>
 .EXAMPLE
     PS C:\> Export-MCASCredential
 
->>>>>>> new file and related exports
 #>
 function Export-MCASCredential {
     [CmdletBinding()]
     param
     (
-<<<<<<< refs/remotes/origin/PSCore-nonWindows-CASCredential-handling
         # Specifies the app for which to retrieve the integer id value.
         [Parameter(Mandatory=$true, ValueFromPipeline=$false, Position=0)]
         [ValidateNotNullOrEmpty()]
@@ -57,8 +53,4 @@ function Export-MCASCredential {
             throw "The following error occurred when trying to export the credential object: $_"
         }
     }
-=======
-    )
-
->>>>>>> new file and related exports
 }
