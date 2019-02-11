@@ -29,22 +29,16 @@ function Export-MCASCredential {
         # Specifies the app for which to retrieve the integer id value.
         [Parameter(Mandatory=$false, ValueFromPipeline=$true)]
         [ValidateNotNullOrEmpty()]
-        $test = $CASCredential
+        $MCASCredential = $CASCredential
     )
     process {
-
-        #$Key = (3,4,2,3,56,34,254,222,1,1,2,23,42,54,33,233,1,34,2,7,6,5,35,43)       
-        #$s  | ConvertFrom-SecureString -Key $Key 
-
-        $uri = $test.UserName
-        $p = ($test.GetNetworkCredential().Password)
+        $uri = $MCASCredential.UserName
+        $p = ($MCASCredential.GetNetworkCredential().Password)
 
         Write-Verbose "Tenant URI is $uri"
         Write-Verbose "Token is $p"
         
-        #[string]$uri = $CASCredential.UserName
-        #[string]$p = $CASCredential.GetNetworkCredential().Password
-        
+        <#
         $nonWindowsCredential = New-Object -TypeName psobject -Property @{
             UserName = $uri
             Password = $p
@@ -52,20 +46,20 @@ function Export-MCASCredential {
             #GetNetworkCredential().username
             #GetNetworkCredential().Passsword
         }
+        #>
 
-        #Add-Member ScriptMethod ToString { $this.Name }
-
-        Write-Verbose ($nonWindowsCredential.Password)
-
+        $nonWindowsCredential = [MCASCredential]@{
+            username = $MCASCredential.UserName
+            Password = ($MCASCredential.GetNetworkCredential().Password)
+        }
+       
         Write-Verbose "Export path is $Path"
-        Export-Clixml -InputObject $nonWindowsCredential -Path $Path
-        <#
+
         try {
-            Export-Clixml -Path $Path -InputObject $nonWindowsCredential
+            Export-Clixml -InputObject $nonWindowsCredential -Path $Path
         }
         catch {
             throw "The following error occurred when trying to export the credential object: $_"
         }
-        #>
     }
 }
