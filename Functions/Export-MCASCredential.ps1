@@ -29,7 +29,7 @@ function Export-MCASCredential {
         # Specifies the app for which to retrieve the integer id value.
         [Parameter(Mandatory=$false, ValueFromPipeline=$true)]
         [ValidateNotNullOrEmpty()]
-        $MCASCredential = $CASCredential
+        [System.Management.Automation.PSCredential]$MCASCredential = $CASCredential
     )
     process {
         $uri = $MCASCredential.UserName
