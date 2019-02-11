@@ -35,7 +35,7 @@ function Get-MCASAlert {
         # Specifies the credential object containing tenant as username (e.g. 'contoso.us.portal.cloudappsecurity.com') and the 64-character hexadecimal Oauth token as the password.
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [System.Management.Automation.PSCredential]$Credential = $CASCredential,
+        $Credential = $CASCredential,
         
         # Fetches an alert object by its unique identifier.
         [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]

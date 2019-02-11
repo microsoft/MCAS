@@ -38,7 +38,7 @@ function Export-MCASCredential {
         Write-Verbose "Tenant URI is $uri"
         Write-Verbose "Token is $p"
         
-        <#
+        
         $nonWindowsCredential = New-Object -TypeName psobject -Property @{
             UserName = $uri
             Password = $p
@@ -46,12 +46,14 @@ function Export-MCASCredential {
             #GetNetworkCredential().username
             #GetNetworkCredential().Passsword
         }
-        #>
+        
 
+        <#
         $nonWindowsCredential = [MCASCredential]@{
             username = $MCASCredential.UserName
             Password = ($MCASCredential.GetNetworkCredential().Password)
         }
+        #>
        
         Write-Verbose "Export path is $Path"
 
