@@ -9,10 +9,17 @@ GENERAL CODING STANDARDS TO BE FOLLOWED IN THIS MODULE:
     https://msdn.microsoft.com/en-us/library/dd878270%28v=vs.85%29.aspx?f=255&MSPPError=-2147217396
 
 #>
-#----------------------------Constants----------------------------
+#----------------------------Constants-----------------------------
 $MCAS_TOKEN_VALIDATION_PATTERN = '^[0-9a-zA-Z=]{64,192}$'
 
 
+#----------------------------Classes-------------------------------
+class MCASCredential
+{
+    [ValidateNotNullOrEmpty()][string]$username
+    [ValidateNotNullOrEmpty()][string]$Password
+    GetNetworkCredential() {$this}
+}
 
 
 #----------------------------Enum Types----------------------------
