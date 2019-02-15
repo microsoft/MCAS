@@ -14,12 +14,14 @@ $MCAS_TOKEN_VALIDATION_PATTERN = '^[0-9a-zA-Z=]{64,192}$'
 
 
 #----------------------------Classes-------------------------------
+<#
 class MCASCredential
 {
     [ValidateNotNullOrEmpty()][string]$username
     [ValidateNotNullOrEmpty()][string]$Password
     GetNetworkCredential() {$this}
 }
+#>
 
 
 #----------------------------Enum Types----------------------------

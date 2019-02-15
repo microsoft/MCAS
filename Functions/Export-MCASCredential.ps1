@@ -29,24 +29,21 @@ function Export-MCASCredential {
         # Specifies the app for which to retrieve the integer id value.
         [Parameter(Mandatory=$false, ValueFromPipeline=$true)]
         [ValidateNotNullOrEmpty()]
-        [System.Management.Automation.PSCredential]$MCASCredential = $CASCredential
+        $MCASCredential = $CASCredential
     )
     process {
         $uri = $MCASCredential.UserName
         $p = ($MCASCredential.GetNetworkCredential().Password)
 
         Write-Verbose "Tenant URI is $uri"
-        Write-Verbose "Token is $p"
-        
+        Write-Verbose "Token is $p"  
         
         $nonWindowsCredential = New-Object -TypeName psobject -Property @{
             UserName = $uri
             Password = $p
-            
-            #GetNetworkCredential().username
-            #GetNetworkCredential().Passsword
         }
-        
+        $nonWindowsCredential = Add-Member -InputObject $nonWindowsCredential -MemberType ScriptMethod GetNetworkCredential {$this} -Force -PassThru
+
 
         <#
         $nonWindowsCredential = [MCASCredential]@{
