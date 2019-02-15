@@ -11,7 +11,7 @@ function Import-MCASCredential {
         Write-Verbose "Attempting to import MCAS credential from $Path"
 
         try {
-            $imported = Import-Clixml -Path $Path
+            $importCred = Import-Clixml -Path $Path
         }
         catch {
             throw "The following error occurred when trying to import the credential object: $_"
@@ -19,7 +19,7 @@ function Import-MCASCredential {
 
         #$pw = ConvertTo-SecureString -String ($imported.Password) -AsPlainText -Force
 
-        $MCASCredential = New-Object -TypeName System.Management.Automation.PSCredential(($imported.UserName),(ConvertTo-SecureString -String ($imported.Password) -AsPlainText -Force)) 
+        $MCASCredential = New-Object -TypeName System.Management.Automation.PSCredential(($importCred.UserName),(ConvertTo-SecureString -String ($importCred.Password) -AsPlainText -Force)) 
 
         $MCASCredential
     }
