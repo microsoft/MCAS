@@ -10,7 +10,7 @@
         [ValidateScript( {
                 $_.GetNetworkCredential().Password -match ($MCAS_TOKEN_VALIDATION_PATTERN)
             })]
-        $Credential,
+        [System.Management.Automation.PSCredential]$Credential,
 
         # Specifies the relative path of the full uri being invoked (e.g. - '/api/v1/alerts/')
         [Parameter(Mandatory = $true)]

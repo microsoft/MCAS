@@ -13,17 +13,6 @@ GENERAL CODING STANDARDS TO BE FOLLOWED IN THIS MODULE:
 $MCAS_TOKEN_VALIDATION_PATTERN = '^[0-9a-zA-Z=]{64,192}$'
 
 
-#----------------------------Classes-------------------------------
-<#
-class MCASCredential
-{
-    [ValidateNotNullOrEmpty()][string]$username
-    [ValidateNotNullOrEmpty()][string]$Password
-    GetNetworkCredential() {$this}
-}
-#>
-
-
 #----------------------------Enum Types----------------------------
 enum mcas_app {
     Amazon_Web_Services = 11599
@@ -299,6 +288,7 @@ $ExportedCommands = @(
     'Get-MCASStream',
     'Get-MCASSubnetCollection',
     'Get-MCASUserGroup',
+    'Import-MCASCredential',
     'Install-MCASSiemAgent',
     'New-MCASDiscoveryDataSource',
     'New-MCASSiemAgentToken',
