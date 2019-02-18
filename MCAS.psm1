@@ -284,17 +284,19 @@ $ExportedCommands = @(
     'Get-MCASLogCollector',
     'Get-MCASPolicy',
     'Get-MCASPortalSettings',
+    'Get-MCASSiemAgent',
     'Get-MCASStream',
     'Get-MCASSubnetCollection',
     'Get-MCASUserGroup',
     'Import-MCASCredential',
+    'Install-MCASSiemAgent',
     'New-MCASDiscoveryDataSource',
     'New-MCASSubnetCollection',
     'Remove-MCASAdminAccess',
     'Remove-MCASDiscoveryDataSource',
     'Remove-MCASSubnetCollection',
     'Send-MCASDiscoveryLog',
-    'Set-MCASAlert',
+    'Set-MCASAlert'
     )
 
     $ExportedCommands | ForEach-Object {
