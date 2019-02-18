@@ -294,7 +294,7 @@ $ExportedCommands = @(
     'Remove-MCASDiscoveryDataSource',
     'Remove-MCASSubnetCollection',
     'Send-MCASDiscoveryLog',
-    'Set-MCASAlert',
+    'Set-MCASAlert'
     )
 
     $ExportedCommands | ForEach-Object {
