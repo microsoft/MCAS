@@ -19,7 +19,7 @@ function Install-MCASSiemAgent {
     param
     (
         # Token to be used by this SIEM agent to communicate with MCAS (provided during SIEM Agent creation in the MCAS console)
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$true, Position=0)]
         [ValidateNotNullOrEmpty()]
         [ValidateScript({$_  -match $MCAS_TOKEN_VALIDATION_PATTERN})]
         [string]$Token,
@@ -151,6 +151,10 @@ function Install-MCASSiemAgent {
     # Create a scheduled task to auto-run the MCAS SIEM Agent
     Write-Verbose 'Creating an MCAS SIEM Agent scheduled task that will automatically run at startup on this host.'
     try {
+        
+        $trigger = New-JobTrigger -AtStartup -RandomDelay 00:00:30
+        #Register-ScheduledJob -Trigger $trigger -FilePath C:\fso\Get-BatteryStatus.ps1 -Name GetBatteryStatus
+        
         $scheduledTask = @{}
         $scheduledTask.TaskName = 'MCAS SIEM Agent'
         $scheduledTask.Actions = New-ScheduledTaskAction -Execute $javaExePath -WorkingDirectory $TargetFolder -Argument $javaArgs
@@ -158,7 +162,7 @@ function Install-MCASSiemAgent {
         $scheduledTask.Principal = New-ScheduledTaskPrincipal -Id Author -LogonType S4U -ProcessTokenSidType Default -UserId SYSTEM
         $scheduledTask.Settings = New-ScheduledTaskSettingsSet -DontStopIfGoingOnBatteries -DontStopOnIdleEnd
         
-        New-ScheduledTask $scheduledTask
+        #New-ScheduledTask $scheduledTask
     }
     catch {
         throw ('Something went wrong when creating the scheduled task named {0}' -f $scheduledTask.TaskName)
