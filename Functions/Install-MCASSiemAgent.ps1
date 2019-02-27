@@ -1,3 +1,4 @@
+#requires –runasadministrator
 <#
 .Synopsis
     Install-MCASSiemAgent downloads and installs Java, downloads and unzips the MCAS SIEM Agent JAR file, and creates a scheduled task to auto-start the agent on startup. (This works on 64-bit Windows hosts only.)
@@ -21,7 +22,7 @@ function Install-MCASSiemAgent {
         # Token to be used by this SIEM agent to communicate with MCAS (provided during SIEM Agent creation in the MCAS console)
         [Parameter(Mandatory=$true, Position=0)]
         [ValidateNotNullOrEmpty()]
-        [ValidateScript({$_  -match $MCAS_TOKEN_VALIDATION_PATTERN})]
+        [ValidateScript({$_ -match $MCAS_TOKEN_VALIDATION_PATTERN})]
         [string]$Token,
 
         # Proxy address to be used for this SIEM agent for outbound communication to the MCAS service in the cloud
@@ -43,7 +44,10 @@ function Install-MCASSiemAgent {
         [switch]$UseInteractiveJavaSetup,
 
         # Specifies whether to auto-download and silently install Java, if Java is not found on the machine
-        [switch]$Force
+        [switch]$Force,
+
+        # Specifies whether to start the SIEM Agent after installation
+        [switch]$StartNow
     )
 
     # Check system requirements
@@ -136,35 +140,46 @@ function Install-MCASSiemAgent {
 
 
     # Check again for Java, which should be there now
+    Write-Verbose "Checking again for Java, which should be there now"
     if (-not $javaExePath) {
         throw "There seems to still be a problem with the Java installation, it could not be found"
     }
 
+    # Assemble the Java arguments
     if ($ProxyHost) {
         $javaArgs = '-jar {0} --logsDirectory {1} --token {2} --proxy {3}:{4} ' -f "$TargetFolder\$jarFile","$TargetFolder\Logs",$Token,$ProxyHost,$ProxyPort
     }
     else {
         $javaArgs = '-jar {0} --logsDirectory {1} --token {2}' -f "$TargetFolder\$jarFile","$TargetFolder\Logs",$Token
     }
+    Write-Verbose "Arguments to be used for Java will be $javaArgs"
 
 
     # Create a scheduled task to auto-run the MCAS SIEM Agent
-    Write-Verbose 'Creating an MCAS SIEM Agent scheduled task that will automatically run at startup on this host.'
-    try {
+    Write-Verbose 'Creating an MCAS SIEM Agent scheduled task that will automatically run as SYSTEM upon startup on this host'
+    try {               
+        # Assemble the components of the scheduled task
+        $taskName = 'MCAS SIEM Agent'     
+        $taskAction = New-ScheduledTaskAction -Execute $javaExePath -WorkingDirectory $TargetFolder -Argument $javaArgs
+        $taskPrincipal = New-ScheduledTaskPrincipal -Id Author -LogonType S4U -ProcessTokenSidType Default -UserId SYSTEM
+        $taskTrigger = New-ScheduledTaskTrigger -AtStartup
+        $taskSettings = New-ScheduledTaskSettingsSet -DontStopIfGoingOnBatteries -DontStopOnIdleEnd -AllowStartIfOnBatteries -ExecutionTimeLimit 0
         
-        $trigger = New-JobTrigger -AtStartup -RandomDelay 00:00:30
-        #Register-ScheduledJob -Trigger $trigger -FilePath C:\fso\Get-BatteryStatus.ps1 -Name GetBatteryStatus
-        
-        $scheduledTask = @{}
-        $scheduledTask.TaskName = 'MCAS SIEM Agent'
-        $scheduledTask.Actions = New-ScheduledTaskAction -Execute $javaExePath -WorkingDirectory $TargetFolder -Argument $javaArgs
-        $scheduledTask.Triggers = New-ScheduledTaskTrigger -AtStartup
-        $scheduledTask.Principal = New-ScheduledTaskPrincipal -Id Author -LogonType S4U -ProcessTokenSidType Default -UserId SYSTEM
-        $scheduledTask.Settings = New-ScheduledTaskSettingsSet -DontStopIfGoingOnBatteries -DontStopOnIdleEnd
-        
-        #New-ScheduledTask $scheduledTask
+        # Create the scheduled task in the root folder of the tasks library
+        $task = Register-ScheduledTask -TaskName $taskName -Action $taskAction -Principal $taskPrincipal -Description $taskName -Trigger $taskTrigger -Settings $taskSettings
     }
     catch {
-        throw ('Something went wrong when creating the scheduled task named {0}' -f $scheduledTask.TaskName)
+        throw ('Something went wrong when creating the scheduled task named {0}' -f $taskName)
+    }
+
+    # Start the scheduled task
+    if ($StartNow -and $task) {
+        Write-Verbose 'Starting the MCAS SIEM Agent scheduled task'
+        try {
+            Start-ScheduledTask $task
+        }
+        catch {
+            throw ('Something went wrong when starting the scheduled task named {0}' -f $taskName)
+        }    
     }
 }

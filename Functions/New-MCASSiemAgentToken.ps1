@@ -15,7 +15,7 @@ function New-MCASSiemAgentToken {
         [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credential = $CASCredential,
 
-        # Fetches an alert object by its unique identifier.
+        # Fetches a SIEM object by its unique identifier.
         [Parameter(Mandatory=$true, Position=0)]
         [ValidateNotNullOrEmpty()]
         [ValidatePattern({^[A-Fa-f0-9]{24}$})]
