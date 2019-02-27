@@ -27,12 +27,14 @@ function Remove-MCASAdminAccess {
         [string]$Username
     )
 
-    if ((Get-MCASAdminAccess -Credential $Credential).username -notcontains $Username) {
+    $objectIdToRemove = (Get-MCASAdminAccess | Where-Object {$_.username -eq $Username}).objectId
+
+    if ($objectIdToRemove.count -eq 0) {
         Write-Warning "$Username is not listed as an administrator of Cloud App Security."
         }
     else {
         try {
-            $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/v1/manage_admin_access/$Username/" -Method Delete
+            $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/v1/manage_admin_access/$objectIdToRemove/" -Method Delete
         }
         catch {
             throw "Error calling MCAS API. The exception was: $_"
