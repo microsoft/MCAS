@@ -43,7 +43,7 @@ We use the [SemVer](http://semver.org/) scheme for versioning.
 
 ## Authors
 
-* **Mike Kassis** - *Co-Lead Dev* - [LinkedIn](https://linkedin.com/)
+* **Mike Kassis** - *Co-Lead Dev* - [LinkedIn](www.linkedin.com/in/mrkassis)
 * **Jared Poeppelman** - *Co-Lead Dev* - [LinkedIn](https://linkedin.com/)
 * **Anisha Gupta** - *Test design* - [LinkedIn](https://linkedin.com)
 
