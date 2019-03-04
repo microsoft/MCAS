@@ -348,7 +348,7 @@ function Get-MCASActivity {
             if ($AppId      -and ($AppName -or $AppNameNot -or $AppIdNot)) {throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
             if ($AppNameNot -and ($AppId   -or $AppName    -or $AppIdNot)) {throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
             if ($AppIdNot   -and ($AppId   -or $AppNameNot -or $AppName))  {throw 'Cannot reconcile app parameters. Only use one of them at a time.'}
-            if (($DateBefore -and $DateAfter) -or ($DateBefore -and $DaysAgo) -or ($DateAfter -and $DaysAgo)){throw 'Cannot reconcile app parameters. Only use one date parameter.'}
+            if (($DateBefore -and $DaysAgo) -or ($DateAfter -and $DaysAgo)){throw 'Cannot reconcile app parameters. Only use one date parameter.'}
             if ($Impersonated -and $ImpersonatedNot){throw 'Cannot reconcile app parameters. Do not combine Impersonated and ImpersonatedNot parameters.'}
 
             # Value-mapped filters
