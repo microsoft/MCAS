@@ -1,4 +1,3 @@
-#requires –runasadministrator
 <#
 .Synopsis
     Install-MCASSiemAgent downloads and installs Java, downloads and unzips the MCAS SIEM Agent JAR file, and creates a scheduled task to auto-start the agent on startup. (This works on 64-bit Windows hosts only.)
