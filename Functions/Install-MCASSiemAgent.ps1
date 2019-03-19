@@ -145,11 +145,12 @@ function Install-MCASSiemAgent {
     }
 
     # Assemble the Java arguments
+    $jarPath =  
     if ($ProxyHost) {
-        $javaArgs = '-jar {0} --logsDirectory {1} --token {2} --proxy {3}:{4} ' -f "$TargetFolder\$jarFile","$TargetFolder\Logs",$Token,$ProxyHost,$ProxyPort
+        $javaArgs = '-jar {0}\{1} --logsDirectory {2} --token {3} --proxy {4}:{5} ' -f $TargetFolder,$jarFile.name,"$TargetFolder\Logs",$Token,$ProxyHost,$ProxyPort
     }
     else {
-        $javaArgs = '-jar {0} --logsDirectory {1} --token {2}' -f "$TargetFolder\$jarFile","$TargetFolder\Logs",$Token
+        $javaArgs = '-jar {0}\{1} --logsDirectory {2} --token {3}' -f $TargetFolder,$jarFile.name,"$TargetFolder\Logs",$Token
     }
     Write-Verbose "Arguments to be used for Java will be $javaArgs"
 
@@ -175,7 +176,7 @@ function Install-MCASSiemAgent {
     if ($StartNow -and $task) {
         Write-Verbose 'Starting the MCAS SIEM Agent scheduled task'
         try {
-            Start-ScheduledTask $task
+            Start-ScheduledTask $taskName
         }
         catch {
             throw ('Something went wrong when starting the scheduled task named {0}' -f $taskName)
