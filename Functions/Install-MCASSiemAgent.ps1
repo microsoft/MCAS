@@ -117,7 +117,7 @@ function Install-MCASSiemAgent {
             }
             else {
                 Write-Verbose "Starting silent Java setup"
-                Start-Process "$$javaSetupFileName" -ArgumentList '/s' -Wait
+                Start-Process "$javaSetupFileName" -ArgumentList '/s' -Wait
             }
         }
         catch {
