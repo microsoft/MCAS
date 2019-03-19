@@ -87,7 +87,8 @@ function Install-MCASSiemAgent {
         $jarFile = Get-MCASSiemAgentJarFile
 
         Write-Verbose "Moving the MCAS SIEM Agent JAR file to $TargetFolder"
-        Move-Item -Path "$jarFile" -Destination $TargetFolder -Force
+        $jarFinalPath = (Move-Item -Path "$jarFile" -Destination $TargetFolder -Force -PassThru).FullName
+        Write-Verbose "Final jar file path is $jarFinalPath"
     }
 
 
