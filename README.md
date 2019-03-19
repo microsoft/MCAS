@@ -43,7 +43,7 @@ We use the [SemVer](http://semver.org/) scheme for versioning.
 
 ## Authors
 
-* **Mike Kassis** - *Co-Lead Dev* - [Github](https://github.com/Javanite), [LinkedIn](https://www.linkedin.com)
+* **Mike Kassis** - *Co-Lead Dev* - [Github](https://github.com/Javanite), [LinkedIn](https://www.linkedin.com/in/mrkassis)
 * **Jared Poeppelman** - *Co-Lead Dev* - [Github](https://github.com/powershellshock), [LinkedIn](https://www.linkedin.com/in/jaredpoeppelman/)
 * **Anisha Gupta** - *Test design* - [LinkedIn](https://linkedin.com)
 

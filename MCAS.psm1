@@ -159,8 +159,12 @@ enum app_category {
 }
 
 enum permission_type {
-    READ_ONLY
-    FULL_ACCESS
+    FULL_ACCESS = 0
+    READ_ONLY = 1
+    COMPLIANCE_READ_ONLY = 2
+    #INSTANCE_ADMIN = 3
+    #GROUP_ADMIN = 4
+    #DISCOVERY_ADMIN = 5
 }
 
 

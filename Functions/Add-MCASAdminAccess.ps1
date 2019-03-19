@@ -37,13 +37,17 @@ function Add-MCASAdminAccess {
 
         Write-Verbose "Checking current admin list."
         $preExistingAdmins = Get-MCASAdminAccess -Credential $Credential
+
+        #{"username":"adelev@jpdemo18.onmicrosoft.com","permissionType":3,"saasIds":[10489]}: 
+        #"permissionType":4,"groups":["5bd3716a3b4601b70a804675"]}:
+        #{"username":"adelev@jpdemo18.onmicrosoft.com","permissionType":5,"allowed_anonymization":false}: 
     }
     process {
         if ($preExistingAdmins.username -contains $Username) {
             Write-Warning "$Username is already listed as an administrator of Cloud App Security."
             }
         else {
-            $body = [ordered]@{'username'=$Username;'permissionType'=($PermissionType -as [string])}
+            $body = [ordered]@{'username'=$Username;'permissionType'=($PermissionType -as [int])}
 
             try {
                 $response = Invoke-MCASRestMethod -Credential $Credential -Path '/cas/api/v1/manage_admin_access/' -Method Post -Body $body
