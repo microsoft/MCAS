@@ -147,10 +147,10 @@ function Install-MCASSiemAgent {
 
     # Assemble the Java arguments
     if ($ProxyHost) {
-        $javaArgs = '-jar "{0}\{1}" --logsDirectory {2} --token {3} --proxy {4}:{5} ' -f $TargetFolder,($jarFile.name),"$TargetFolder\Logs",$Token,$ProxyHost,$ProxyPort
+        $javaArgs = '-jar {0} --logsDirectory {1} --token {2} --proxy {3}:{4} ' -f $jarFinalPath,"$TargetFolder\Logs",$Token,$ProxyHost,$ProxyPort
     }
     else {
-        $javaArgs = '-jar "{0}\{1}" --logsDirectory {2} --token {3}' -f $TargetFolder,($jarFile.name),"$TargetFolder\Logs",$Token
+        $javaArgs = '-jar {0} --logsDirectory {1} --token {2}' -f $jarFinalPath,"$TargetFolder\Logs",$Token
     }
     Write-Verbose "Arguments to be used for Java will be $javaArgs"
 
