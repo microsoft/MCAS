@@ -59,7 +59,7 @@ function Install-MCASSiemAgent {
     catch {
         throw 'Error detecting host information. This command only works on 64-bit Windows hosts.'
     } 
-    if (-not ($isWindows -ne $true -and $is64Bit -ne $true)) {
+    if (-not ($isWindows -and $is64Bit)) {
         throw 'This does not appear to be a 64-bit Windows host. This command only works on 64-bit Windows hosts.'
     }
     Write-Verbose 'This host does appear to be running 64-bit Windows. Proceeding'
@@ -75,7 +75,7 @@ function Install-MCASSiemAgent {
             if (-not (Test-Path $_)) {
                 Write-Verbose "$_ was not found, creating it"
                 try {
-                    New-Item -ItemType Directory -Path $_ -Force
+                    New-Item -ItemType Directory -Path $_ -Force | Out-Null
                 }
                 catch {
                     throw "An error occurred creating $_. The error was $_"
@@ -87,7 +87,7 @@ function Install-MCASSiemAgent {
         $jarFile = Get-MCASSiemAgentJarFile
 
         Write-Verbose "Moving the MCAS SIEM Agent JAR file to $TargetFolder"
-        Move-Item -Path "$pwd\$jarFile" -Destination $TargetFolder -Force
+        Move-Item -Path "$jarFile" -Destination $TargetFolder -Force
     }
 
 
@@ -113,11 +113,11 @@ function Install-MCASSiemAgent {
         try {
             if ($UseInteractiveJavaSetup) {
                 Write-Verbose "Starting interactive Java setup"
-                Start-Process  "$pwd\$javaSetupFileName" -Wait
+                Start-Process  "$javaSetupFileName" -Wait
             }
             else {
                 Write-Verbose "Starting silent Java setup"
-                Start-Process "$pwd\$javaSetupFileName" -ArgumentList '/s' -Wait
+                Start-Process "$$javaSetupFileName" -ArgumentList '/s' -Wait
             }
         }
         catch {
@@ -127,10 +127,10 @@ function Install-MCASSiemAgent {
         
         Write-Verbose "Cleaning up the Java setup package"
         try {
-            Remove-Item "$pwd\$javaSetupFileName" -Force
+            Remove-Item "$javaSetupFileName" -Force
         }
         catch {
-            Write-Warning ('Failed to clean up the Java setup exe file ({0})' -f "$pwd\$javaSetupFileName")
+            Write-Warning ('Failed to clean up the Java setup exe file ({0})' -f "$javaSetupFileName")
         }
 
         # Get the installation location of the newly installed Java engine
