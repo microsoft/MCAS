@@ -43,7 +43,7 @@ We use the [SemVer](http://semver.org/) scheme for versioning.
 
 ## Authors
 
-* **Mike Kassis** - *Co-Lead Dev* - [Github](https://github.com/Javanite)
+* **Mike Kassis** - *Co-Lead Dev* - [Github](https://github.com/Javanite), [LinkedIn](https://www.linkedin.com)
 * **Jared Poeppelman** - *Co-Lead Dev* - [Github](https://github.com/powershellshock), [LinkedIn](https://www.linkedin.com/in/jaredpoeppelman/)
 * **Anisha Gupta** - *Test design* - [LinkedIn](https://linkedin.com)
 
@@ -58,4 +58,5 @@ This project has adopted the [Microsoft Open Source Code of Conduct](http://micr
 * Microsoft C+Ai CxE Security engineering team for testing.
 * All the customers who have provided great feedback.
 * Niv & Team for providing such a robust API and building such an awesome product!
+* Security Global Black Belt (GBB) team and Cybersecurity Solutions Group (CSG)
 
