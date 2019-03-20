@@ -46,10 +46,12 @@ enum device_type {
     CISCO_ASA_FIREPOWER = 177           # Cisco ASA FirePOWER
     CISCO_FWSM = 157                    # Cisco FWSM
     CISCO_IRONPORT_PROXY = 106          # CiscoIronPort WSA
+    CISCO_IRONPORT_WSA_II = 206         # CiscoIronPort WSA II
     CISCO_SCAN_SAFE = 124               # Cisco ScanSafe
     CLAVISTER = 164                     # Clavister NGFW (Syslog)
     FORCEPOINT = 202                    # Forcepoint Web Security Cloud
     FORTIGATE = 108                     # Fortinet Fortigate
+    FORTIOS = 204                       # FortiOS
     GENERIC_CEF = 179                   # Generic CEF log
     GENERIC_LEEF = 181                  # Generic LEEF log
     GENERIC_W3C = 183                   # Generic W3C log

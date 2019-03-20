@@ -54,7 +54,7 @@ function Export-MCASBlockScript {
 
         # Specifies the device type to use for the format of the block script. Possible Values: BLUECOAT_PROXYSG,CISCO_ASA,FORTINET_FORTIGATE,PALO_ALTO,JUNIPER_SRX,WEBSENSE,ZSCALER
         [Parameter(Mandatory=$true,ValueFromPipeline=$false,Position=0)]
-        [ValidateSet('BLUECOAT','CISCO_ASA','FORTIGATE','PALO_ALTO','JUNIPER_SRX','WEBSENSE_V7_5','ZSCALER')]
+        [ValidateSet('BLUECOAT','CISCO_ASA','FORCEPOINT','FORTIGATE','FORTIOS','JUNIPER_SRX','PALO_ALTO','WEBSENSE_V7_5','ZSCALER')]
         [alias("Appliance")]
         [device_type]$DeviceType
     )
