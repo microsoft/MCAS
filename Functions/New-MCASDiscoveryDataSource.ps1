@@ -27,7 +27,14 @@ function New-MCASDiscoveryDataSource {
         [switch]$AnonymizeUsers
     )
 
-    $body = [ordered]@{'anonymizeUsers'=$AnonymizeUsers;'displayName'=$Name;'logType'=($DeviceType -as [int]);}
+    if ($AnonymizeUsers) {
+        $body = [ordered]@{'anonymizeUsers'='True';'displayName'=$Name;'logType'=($DeviceType -as [int]);}
+    }
+    else {
+        $body = [ordered]@{'anonymizeUsers'='False';'displayName'=$Name;'logType'=($DeviceType -as [int]);}
+    }
+
+    #$body = [ordered]@{'anonymizeUsers'=$AnonymizeUsers;'displayName'=$Name;'logType'=($DeviceType -as [int]);}
     
     switch ($ReceiverType) {
         'FTP' {
@@ -56,7 +63,7 @@ function New-MCASDiscoveryDataSource {
     }
 
     try {
-        $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/v1/discovery/data_sources/" -Method Post -Body $body
+        $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/v1/discovery/data_sources/" -Method Post -Body $body -ContentType 'application/json'
     }
     catch {
         throw "Error calling MCAS API. The exception was: $_"
