@@ -210,13 +210,34 @@ function Get-MCASFile {
 
         # Limits the results to items that CAS has marked as not a folder.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [switch]$FoldersNot
+        [switch]$FoldersNot,
+
+        # Limits the results to items that were created before the specified date.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [datetime]$CreatedDateBefore,
+
+        # Limits the results to items that were created after the specified date.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [datetime]$CreatedDateAfter,
+
+        # Limits the results to items that were modified before the specified date.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [datetime]$ModifiedDateBefore,
+
+        # Limits the results to items that were modified after the specified date.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [datetime]$ModifiedDateAfter
     )
     begin {
         if ($ResultSetSize -gt 100){
             $ResultSetSizeSecondaryChunks = $ResultSetSize % 100
         }
 
+
+        if ($CreatedDateBefore) {$CreatedDateBefore2 = ([int64]((Get-Date -Date $CreatedDateBefore)-(get-date "1/1/1970")).TotalMilliseconds)}
+        if ($CreatedDateAfter) {$CreatedDateAfter2 = ([int64]((Get-Date -Date $CreatedDateAfter)-(get-date "1/1/1970")).TotalMilliseconds)}
+        if ($ModifiedDateBefore) {$ModifiedDateBefore2 = ([int64]((Get-Date -Date $ModifiedDateBefore)-(get-date "1/1/1970")).TotalMilliseconds)}
+        if ($ModifiedDateAfter) {$ModifiedDateAfter2 = ([int64]((Get-Date -Date $ModifiedDateAfter)-(get-date "1/1/1970")).TotalMilliseconds)}
     }
     process
     {
@@ -332,6 +353,10 @@ function Get-MCASFile {
             if ($TrashedNot)           {$filterSet += @{'trashed'=                  @{'eq'=$false}}}
             if ($FileLabel)            {$filterSet += @{'fileLabels'=               @{'eq'=$FileLabel}}}
             if ($FileLabelNot)         {$filterSet += @{'fileLabels'=               @{'neq'=$FileLabel}}}
+            if ($CreatedDateBefore)    {$filterSet += @{'modifiedDate'=             @{'lte'=$CreatedDateBefore2}}}
+            if ($CreatedDateAfter)     {$filterSet += @{'modifiedDate'=             @{'gte'=$CreatedDateAfter2}}}
+            if ($ModifiedDateBefore)   {$filterSet += @{'modifiedDate'=             @{'lte'=$ModifiedDateBefore2}}}
+            if ($ModifiedDateAfter)    {$filterSet += @{'modifiedDate'=             @{'gte'=$ModifiedDateAfter2}}}
 
             #endregion ----------------------------FILTERING----------------------------
 
