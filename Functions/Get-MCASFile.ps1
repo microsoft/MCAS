@@ -59,8 +59,8 @@ function Get-MCASFile {
 
         # Specifies the maximum number of results to retrieve when listing items matching the specified filter criteria.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateRange(1,100000)]
-        [int]$ResultSetSize = 100,
+        [ValidateRange(1,1000000)]
+        [int]$ResultSetSize,
 
         # Specifies the number of records, from the beginning of the result set, to skip.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -229,15 +229,21 @@ function Get-MCASFile {
         [datetime]$ModifiedDateAfter
     )
     begin {
-        if ($ResultSetSize -gt 100){
-            $ResultSetSizeSecondaryChunks = $ResultSetSize % 100
-        }
+        #below lines are used to find the max amount of records that can be returned from a single API call. 
 
+            $CallLimit = (Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/files/" -Method Post).max
+            Write-Verbose "Call Limit: $CallLimit"
+
+        #calculating if we need to do a final call for the remaining records.
+        if ($ResultSetSize -and $ResultSetSize -gt $CallLimit){
+            $ResultSetSizeSecondaryChunks = $ResultSetSize % $CallLimit
+        }
 
         if ($CreatedDateBefore) {$CreatedDateBefore2 = ([int64]((Get-Date -Date $CreatedDateBefore)-(get-date "1/1/1970")).TotalMilliseconds)}
         if ($CreatedDateAfter) {$CreatedDateAfter2 = ([int64]((Get-Date -Date $CreatedDateAfter)-(get-date "1/1/1970")).TotalMilliseconds)}
         if ($ModifiedDateBefore) {$ModifiedDateBefore2 = ([int64]((Get-Date -Date $ModifiedDateBefore)-(get-date "1/1/1970")).TotalMilliseconds)}
         if ($ModifiedDateAfter) {$ModifiedDateAfter2 = ([int64]((Get-Date -Date $ModifiedDateAfter)-(get-date "1/1/1970")).TotalMilliseconds)}
+
     }
     process
     {
@@ -358,14 +364,15 @@ function Get-MCASFile {
             if ($ModifiedDateBefore)   {$filterSet += @{'modifiedDate'=             @{'lte'=$ModifiedDateBefore2}}}
             if ($ModifiedDateAfter)    {$filterSet += @{'modifiedDate'=             @{'gte'=$ModifiedDateAfter2}}}
 
-            #endregion ----------------------------FILTERING----------------------------
 
+            #endregion ----------------------------FILTERING----------------------------
+            $hasNext = 'True'
             $collection = @()
             $i = $Skip
-            if ($ResultSetSize -gt 100){
+            if (!$ResultSetSize){
             do{
 
-            $body = @{'skip'=$i;'limit'=100} # Base request body
+            $body = @{'skip'=$i;'limit'=$CallLimit} # Base request body
             # Get the matching items and handle errors
             try {
                 $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/files/" -Body $body -Method Post -FilterSet $filterSet -Raw
@@ -375,6 +382,64 @@ function Get-MCASFile {
             }
 
             $response = $response.Content
+
+
+            # Attempt the JSON conversion. If it fails due to property name collisions to to case insensitivity on Windows, attempt to resolve it by renaming the properties.
+            try {
+                $response = $response | ConvertFrom-Json
+            }
+            catch {
+                Write-Verbose "One or more property name collisions were detected in the response. An attempt will be made to resolve this by renaming any offending properties."
+                $response = $response.Replace('"Created":','"Created_2":')
+                $response = $response.Replace('"ftags":','"ftags_2":')
+                try {
+                    $response = $response | ConvertFrom-Json # Try the JSON conversion again, now that we hopefully fixed the property collisions
+                }
+                catch {
+                    throw $_
+                }
+                Write-Verbose "Any property name collisions appear to have been resolved."
+            }
+
+            $hasNext = $response.hasNext
+            Write-Verbose "Has Next: $hasNext"
+
+            $response = $response.data
+
+            try {
+                Write-Verbose "Adding alias property to results, if appropriate"
+                $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
+            }
+            catch {}
+
+            $collection += $response
+            if ($PeriodicWriteToFile){
+                Write-Verbose "Writing response output to $PeriodicWriteToFile"
+                $collection | ConvertTo-Json -depth 10 | Out-File $PeriodicWriteToFile
+            }
+            $i+= $CallLimit
+
+        }
+        while($hasNext -eq 'True')
+    }
+
+
+
+
+            if ($ResultSetSize){
+            do{
+
+            $body = @{'skip'=$i;'limit'=$CallLimit} # Base request body
+            # Get the matching items and handle errors
+            try {
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/files/" -Body $body -Method Post -FilterSet $filterSet -Raw
+            }
+            catch {
+                throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+            }
+
+            $response = $response.Content
+
 
             # Attempt the JSON conversion. If it fails due to property name collisions to to case insensitivity on Windows, attempt to resolve it by renaming the properties.
             try {
@@ -406,12 +471,11 @@ function Get-MCASFile {
                 Write-Verbose "Writing response output to $PeriodicWriteToFile"
                 $collection | ConvertTo-Json -depth 10 | Out-File $PeriodicWriteToFile
             }
-            $i+= 100
+            $i+= $CallLimit
 
         }
         while($i -lt $ResultSetSize + $skip - $ResultSetSizeSecondaryChunks)
     }
-
 
 
         if ($ResultSetSizeSecondaryChunks -gt 0){
@@ -458,50 +522,6 @@ function Get-MCASFile {
 
         }
 
-        else{
-
-            # Get the matching items and handle errors
-            try {
-                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/files/" -Body $body -Method Post -FilterSet $filterSet -Raw
-            }
-            catch {
-                throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
-            }
-
-            $response = $response.Content
-
-            # Attempt the JSON conversion. If it fails due to property name collisions to to case insensitivity on Windows, attempt to resolve it by renaming the properties.
-            try {
-                $response = $response | ConvertFrom-Json
-            }
-            catch {
-                Write-Verbose "One or more property name collisions were detected in the response. An attempt will be made to resolve this by renaming any offending properties."
-                $response = $response.Replace('"Created":','"Created_2":')
-                $response = $response.Replace('"ftags":','"ftags_2":')
-                try {
-                    $response = $response | ConvertFrom-Json # Try the JSON conversion again, now that we hopefully fixed the property collisions
-                }
-                catch {
-                    throw $_
-                }
-                Write-Verbose "Any property name collisions appear to have been resolved."
-            }
-
-            $response = $response.data
-
-            try {
-                Write-Verbose "Adding alias property to results, if appropriate"
-                $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
-            }
-            catch {}
-
-            $collection += $response
-
-            if ($PeriodicWriteToFile){
-                Write-Verbose "Writing response output to $PeriodicWriteToFile"
-                $collection | ConvertTo-Json -depth 10 | Out-File $PeriodicWriteToFile
-            }
-             }
 
 $collection
         }
