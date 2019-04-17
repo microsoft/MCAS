@@ -49,6 +49,7 @@ enum device_type {
     CISCO_IRONPORT_WSA_II = 206         # CiscoIronPort WSA II
     CISCO_SCAN_SAFE = 124               # Cisco ScanSafe
     CLAVISTER = 164                     # Clavister NGFW (Syslog)
+    CUSTOM_PARSER = 167                 # Custom log format
     FORCEPOINT = 202                    # Forcepoint Web Security Cloud
     FORTIGATE = 108                     # Fortinet Fortigate
     FORTIOS = 204                       # FortiOS
