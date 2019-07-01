@@ -48,7 +48,6 @@ enum device_type {
     CISCO_IRONPORT_PROXY = 106          # CiscoIronPort WSA
     CISCO_SCAN_SAFE = 124               # Cisco ScanSafe
     CLAVISTER = 164                     # Clavister NGFW (Syslog)
-    CUSTOM_PARSER = 167                 # Custom Parser
     FORCEPOINT = 202                    # Forcepoint Web Security Cloud
     FORTIGATE = 108                     # Fortinet Fortigate
     GENERIC_CEF = 179                   # Generic CEF log
@@ -293,6 +292,7 @@ $ExportedCommands = @(
     'Get-MCASStream',
     'Get-MCASSubnetCollection',
     'Get-MCASUserGroup',
+    'Get-MCASOAuthApps',
     'Import-MCASCredential',
     'Install-MCASSiemAgent',
     'New-MCASDiscoveryDataSource',
