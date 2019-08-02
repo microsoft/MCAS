@@ -5,7 +5,7 @@
     $temp = @()
 
     ForEach ($filter in $FilterSet) {
-        $temp += ((($filter | ConvertTo-Json -Depth 2 -Compress).TrimEnd('}')).TrimStart('{'))
+        $temp += ((($filter | ConvertTo-Json -Depth 4 -Compress).TrimEnd('}')).TrimStart('{'))
         }
     $rawJsonFilter = ('{'+($temp -join '},')+'}}')
     Write-Verbose "JSON filter string is $rawJsonFilter"

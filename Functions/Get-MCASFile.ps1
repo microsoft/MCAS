@@ -371,7 +371,7 @@ function Get-MCASFile {
             $i = $Skip
             if (!$ResultSetSize){
             do{
-
+            Write-Verbose "Running loop A. No resultsetsize."
             $body = @{'skip'=$i;'limit'=$CallLimit} # Base request body
             # Get the matching items and handle errors
             try {
@@ -428,8 +428,8 @@ function Get-MCASFile {
 
             if ($ResultSetSize){
             do{
-
-            $body = @{'skip'=$i;'limit'=$CallLimit} # Base request body
+                Write-Verbose "Running loop B. Resultsetsize set."
+            $body = @{'skip'=$i;'limit'=$ResultSetSize} # Base request body
             # Get the matching items and handle errors
             try {
                 $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/files/" -Body $body -Method Post -FilterSet $filterSet -Raw
@@ -473,12 +473,15 @@ function Get-MCASFile {
             }
             $i+= $CallLimit
 
+            $body = @{'skip'=$i;'limit'=$CallLimit}
+
         }
         while($i -lt $ResultSetSize + $skip - $ResultSetSizeSecondaryChunks)
     }
 
 
         if ($ResultSetSizeSecondaryChunks -gt 0){
+            Write-Verbose "Running loop C. Secondarychunks."
             $body = @{'skip'=($ResultSetSize - $ResultSetSizeSecondaryChunks);'limit'=$ResultSetSizeSecondaryChunks}
             try {
                 $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/files/" -Body $body -Method Post -FilterSet $filterSet -Raw
