@@ -30,7 +30,7 @@
 .FUNCTIONALITY
    Get-MCASActivity is intended to function as a query mechanism for obtaining activity information from Cloud App Security.
 #>
-function Get-MCASActivityPreview {
+function Get-MCASActivity {
     [CmdletBinding()]
     param
     (
