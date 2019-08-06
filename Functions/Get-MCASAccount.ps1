@@ -227,7 +227,7 @@ function Get-MCASAccount {
             # Simple filters
             if ($Internal)   {$filterSet += @{'affiliation'=   @{'eq'=$false}}}
             if ($External)   {$filterSet += @{'affiliation'=   @{'eq'=$true}}}
-            if ($UserName)   {$filterSet += @{'user.username'= @{'eq'=$UserName}}}
+            if ($UserName)   {$filterSet += @{'entity'=        @{'eq'=$UserName}}}
             if ($AppId)      {$filterSet += @{'service'=       @{'eq'=$AppId}}}
             if ($AppIdNot)   {$filterSet += @{'service'=       @{'neq'=$AppIdNot}}}
             if ($UserDomain) {$filterSet += @{'domain'=        @{'eq'=$UserDomain}}}

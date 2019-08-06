@@ -85,7 +85,7 @@
         Write-Verbose "A request using the Get HTTP method cannot have a message body."
     }
     else {
-        $jsonBody = $Body | ConvertTo-Json -Compress -Depth 2
+        $jsonBody = $Body | ConvertTo-Json -Compress -Depth 4
         Write-Verbose "Base request body is $jsonBody"
 
         if ($FilterSet) {
