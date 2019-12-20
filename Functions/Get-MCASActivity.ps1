@@ -378,7 +378,7 @@ function Get-MCASActivity {
             }
             if ($AppIdNot) { $filterSet += @{'service' = @{'neq' = $AppIdNot } }
             }
-            if ($Source) { $filterSet += @{'source' = @{'eq' = @("t:$Source") } }
+            if ($Source) { $filterSet += @{'source' = @{'eq' = @($Source) } }
             }
             if ($EventTypeName) { $filterSet += @{'activity.eventType' = @{'eq' = $EventTypeName } }
             }

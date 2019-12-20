@@ -51,6 +51,10 @@
         # Specifies use Invoke-WebRequest instead of Invoke-RestMethod, enabling the caller to get the raw response from the MCAS API without any JSON conversion
         [switch]$Raw
     )
+    #Ensure TLS 1.2 is used.
+    if([Net.ServicePointManager]::SecurityProtocol -notmatch 'Tls12'){
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    }
 
     if ($Raw) {
         $cmd = 'Invoke-WebRequest'
@@ -123,6 +127,12 @@
                 $retryCall = $true
                 Write-Verbose "Sleeping for $RetryInterval seconds"
                 Start-Sleep -Seconds $RetryInterval
+            }
+            ElseIf ($_ -match 'throttled') {
+                Write-Warning "Too many requests. Usually the throttle time for this call is 1 minute. Next request will resume in 1 minute..."
+                $retryCall = $true
+                Write-Verbose "Sleeping for 60 seconds"
+                Start-Sleep -Seconds 60
             }
             ElseIf ($_ -like 'The remote server returned an error: (504)') {
                 Write-Warning "504 - Gateway Timeout. The call will be retried in $RetryInterval second(s)..."
