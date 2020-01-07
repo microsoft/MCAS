@@ -59,9 +59,9 @@ function Get-MCASAccount {
     param
     (
         # Fetches an account object by its unique identifier.
-        [Parameter(ParameterSetName='Fetch', Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
+        [Parameter(ParameterSetName='List', Mandatory=$false, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
         [ValidateNotNullOrEmpty()]
-        [ValidatePattern({^[A-Fa-f0-9]{24}$})]
+        #[ValidatePattern({^[A-Fa-f0-9]{24}$})]
         [alias("_id")]
         [string]$Identity,
 
@@ -101,10 +101,38 @@ function Get-MCASAccount {
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [switch]$Internal,
 
-        # Limits the results to items related to the specified user names, such as 'alice@contoso.com','bob@contoso.com'.
+        # [Deprecated] This parameter has been deprecated in the most recent API version. If functionality is reintroduced I will update this cmdlet to support it.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [string[]]$UserName,
+        
+        <# Will uncomment once we verify investigation priority filters working correctly.
+        # Investigation Priority is Set
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateSet($true,$false)]
+        [string]$InvestigationPriorityIsSet,       
+
+        # Limits results to entities where Investigation Priority Score is greater than a specific value
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateRange(0,999)]
+        [int]$InvestigationPriorityGreaterThan = -1,    
+
+        # Limits results to entities where Investigation Priority Score is less than a specific value
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateRange(0,1001)]
+        [string]$InvestigationPriorityLessThan = 1001,    
+        #>
+
+        # Limits the results to items related to the specified user names, such as 'alice@contoso.com','bob@contoso.com'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [switch]$IsAdmin,
+
+        # Limits the results to items related to the specified user names, such as 'alice@contoso.com','bob@contoso.com'.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [ValidateSet('User','Account')]
+        [string]$Type,
 
         # Limits the results to items related to the specified service IDs, such as 11161,11770 (for Office 365 and Google Apps, respectively).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
@@ -135,7 +163,10 @@ function Get-MCASAccount {
         [ValidateNotNullOrEmpty()]
         [string[]]$UserDomain
     )
-    begin {}
+    begin {
+        if ($Type -eq 'Account'){[array]$Type = 1}
+        if ($Type -eq 'User'){[array]$Type = 2}
+    }
     process
     {
         # Fetch no longer works on the /accounts/ endpoint, so the code below was commented
@@ -146,7 +177,11 @@ function Get-MCASAccount {
             <#
             try {
                 # Fetch the item by its id
-                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/accounts/$Identity/" -Method Get -Raw
+                $filterSet = @() # Filter set array
+                $filterSet += @{'entity'=@{'eq'=([int[]]($AppName | ForEach-Object {$_ -as [int]}))}}
+                $filterSet = 
+
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/entities/" -Method Post -Raw
             }
             catch {
                 throw "Error calling MCAS API. The exception was: $_"
@@ -227,16 +262,53 @@ function Get-MCASAccount {
             # Simple filters
             if ($Internal)   {$filterSet += @{'affiliation'=   @{'eq'=$false}}}
             if ($External)   {$filterSet += @{'affiliation'=   @{'eq'=$true}}}
-            if ($UserName)   {$filterSet += @{'entity'=        @{'eq'=$UserName}}}
+            #if ($UserName)   {$filterSet += @{'entity'=        @{'eq'=$UserName}}}         # No longer a usable filter.
             if ($AppId)      {$filterSet += @{'service'=       @{'eq'=$AppId}}}
             if ($AppIdNot)   {$filterSet += @{'service'=       @{'neq'=$AppIdNot}}}
             if ($UserDomain) {$filterSet += @{'domain'=        @{'eq'=$UserDomain}}}
+
+            if ($IsAdmin) {$filterSet += @{'isAdmin'=        @{'eq'=$true}}}
+
+            <#
+            Investigation priority filters do not appear to be working correctly at the moment. Will uncomment once we varify filters working correctly.
+            if ($InvestigationPriorityIsSet -or $InvestigationPriorityGreaterThan -or $InvestigationPriorityLessThan){
+                $scoreset = @{
+                    score = @{
+                    }
+                }
+
+                if($InvestigationPriorityIsSet -eq $true){$scoreset.score.isset = $true}
+                if($InvestigationPriorityIsSet -eq $false){$scoreset.score.isset = $false}
+                if($InvestigationPriorityGreaterThan){$scoreset.score.gt = $InvestigationPriorityGreaterThan}
+                if($InvestigationPriorityLessThan){$scoreset.score.lt = $InvestigationPriorityLessThan}
+                
+                $filterSet += $scoreset
+            }
+            #>
+            
+
+
+            if ($Type) {$filterSet += @{'type'=        @{'eq'= $Type}}}
+
+            if ($Identity)   {
+                $filterSet += @{
+                    'entity'=@{
+                        'eq'=@(
+                            @{
+                                id = $Identity 
+                                saas = 11161
+                                inst = 0
+                            }
+                        )
+                    }
+                }
+            }
 
             #endregion ----------------------------FILTERING----------------------------
 
             # Get the matching items and handle errors
             try {
-                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/entities/" -Body $body -Method Post -FilterSet $filterSet -Raw
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/v1/entities/" -Body $body -Method Post -FilterSet $filterSet -Raw
             }
             catch {
                 throw "Error calling MCAS API. The exception was: $_"
