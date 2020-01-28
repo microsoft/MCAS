@@ -73,8 +73,8 @@ function Get-MCASCredential {
         }
 
         # Validate the tenant URI provided
-        if (!($CASCredential.GetNetworkCredential().username.EndsWith('.portal.cloudappsecurity.com'))) {
-            throw "Invalid tenant uri specified as the username of the credential. Format should be <tenantname>.<tenantregion>.portal.cloudappsecurity.com. For example, contoso.us.portal.cloudappsecurity.com or tailspintoys.eu.portal.cloudappsecurity.com."
+        if (!($CASCredential.GetNetworkCredential().username -match '.portal\.cloudappsecurity\.(com|us|eu|gov|uk|edu|co\.uk)$')) {
+            throw "Invalid tenant uri specified as the username of the credential. Format should be <domain>.[<tenantregion>].portal.cloudappsecurity.com. For example, contoso.us.portal.cloudappsecurity.com or tailspintoys.eu.portal.cloudappsecurity.com."
         }
         
         # Validate the token string format (does not validate the token is valid for authN/authZ)
