@@ -267,6 +267,7 @@ Resolve-Path -Path $mypath\Functions\*.ps1 | ForEach-Object -Process {
 # Cmdlets to export (must be exported as functions, not cmdlets) - This array format can be copied directly to the module manifest as the 'FunctionsToExport' value
 $ExportedCommands = @(
     'Add-MCASAdminAccess',
+    'Connect-MCAS',
     'ConvertFrom-MCASTimestamp',
     'Export-MCASBlockScript',
     'Export-MCASCredential',

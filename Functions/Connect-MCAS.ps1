@@ -1,4 +1,23 @@
-<##>
+<#
+.Synopsis
+   Authenticates to MCAS and initializes 
+.DESCRIPTION
+   Get-MCASAppId gets the unique identifier integer value that represents an app in MCAS.
+
+.EXAMPLE
+    PS C:\> Connect-MCAS
+
+.FUNCTIONALITY
+   Connect-MCAS returns nothing
+#>
+function Connect-MCAS {
+    [CmdletBinding()]
+    param()
+
+    #$msalHelper = New-Object
+}
+
+
 <#
 function Get-AdalAuthZHeader
 {
@@ -31,7 +50,7 @@ function Get-AdalAuthZHeader
     
     $headerParams
 }
-#>
+
 
 function Invoke-AdalAuthN
 {
@@ -197,19 +216,20 @@ $headerParams = @{'Authorization'="$($authResult.AccessTokenType) $($authResult.
 
 
 
-<#
+
 $cache = [Microsoft.IdentityModel.Clients.ActiveDirectory.TokenCache]::DefaultShared
 $token = $cache.ReadItems()
 
 if ($token.IsMultipleResourceRefreshToken) {
     $mrrt = $token.RefreshToken
 }
-#>
+
 
 
 #$response = Invoke-RestMethod -UseBasicParsing -Headers $headerParams -Uri "https://graph.microsoft.com/v1.0/users/"  -Method Get
 #$response = Invoke-RestMethod -UseBasicParsing -Method Post -Headers $headerParams -Uri ("https://manage.office.com/api/v1.0/{0}/activity/feed/subscriptions/start?contentType=Audit.General" -f ($authResult.TenantId)) -ContentType 'application/json' -Verbose
 
+#>
 
 
 
@@ -248,8 +268,7 @@ if ($token.IsMultipleResourceRefreshToken) {
 
 
 
-
-
+<#
 
 
 #$url = "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=createdDateTime%20ge%202018-08-08T04:00:00Z%20and%20createdDateTime%20le%202018-08-15T17:05:57.161Z&`$top=1000"
@@ -460,7 +479,7 @@ Do {
 
 
 
-
+<#
 
 # from https://adamtheautomator.com/microsoft-graph-api-powershell/
 
