@@ -9,6 +9,12 @@ GENERAL CODING STANDARDS TO BE FOLLOWED IN THIS MODULE:
     https://msdn.microsoft.com/en-us/library/dd878270%28v=vs.85%29.aspx?f=255&MSPPError=-2147217396
 
 #>
+
+
+#----------------------------Configs-------------------------------
+$appManifestFile = 'jpoeppel-PS-test-public-client.json'  # Config file for MSAL-based authentication to Azure Active Directory
+
+
 #----------------------------Constants-----------------------------
 $MCAS_TOKEN_VALIDATION_PATTERN = '^[0-9a-zA-Z=]{64,192}$'
 
@@ -255,10 +261,10 @@ $GovernanceStatus = @{
 # KUDOS to the chocolatey project for the basis of this code
 
 # get the path of where the module is saved (if module is at c:\myscripts\module.psm1, then c:\myscripts\)
-$mypath = (Split-Path -Parent -Path $MyInvocation.MyCommand.Definition)
+$ModulePath = (Split-Path -Parent -Path $MyInvocation.MyCommand.Definition)
 
 # find and load all the ps1 files in the Functions subfolder
-Resolve-Path -Path $mypath\Functions\*.ps1 | ForEach-Object -Process {
+Resolve-Path -Path $ModulePath\Functions\*.ps1 | ForEach-Object -Process {
     . $_.ProviderPath
 }
 

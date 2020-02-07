@@ -14,7 +14,68 @@ function Connect-MCAS {
     [CmdletBinding()]
     param()
 
-    #$msalHelper = New-Object
+    $displayName = 'jpoeppel-PS-test-public-client'
+    $clientId = '7c5c030a-983f-4832-93df-b5a316971c20' # Client ID registered as public client
+    #$tenantId = 'eb81c4c9-2546-43f2-8c43-9c2295af4b88'
+    #$objectId = 'e2c6fd06-ca45-4fae-ac87-74bac46d38b5'
+    #$redirectUri = "urn:ietf:wg:oauth:2.0:oob"
+
+    # Need error handling
+    #$appManifestJson = Get-Content -Raw -Path (Resolve-Path "$ModulePath/config/$appManifestFile") | ConvertFrom-Json
+    
+    #$displayName = $appManifestJson.name
+    #$clientId = $appManifestJson.appId
+    #$tenantId = 'eb81c4c9-2546-43f2-8c43-9c2295af4b88'
+    #$objectId = 'e2c6fd06-ca45-4fae-ac87-74bac46d38b5'
+    #$redirectUri = "urn:ietf:wg:oauth:2.0:oob"
+
+
+    $msalHelperCode = @"
+    using System;
+    using System.Diagnostics;
+    using System.IO;
+    using System.Runtime.InteropServices;
+    using System.Security;
+    using Microsoft.Identity.Client;
+    
+    public static IPublicClientApplication PublicClientApp;
+    PublicClientApplicationBuilder.Create('7c5c030a-983f-4832-93df-b5a316971c20')
+                    .WithAuthority(AzureCloudInstance.AzurePublic, Tenant)
+                    .Build();
+"@
+
+    $msalLibrary = Resolve-Path "$ModulePath/nugets/microsoft.identity.client.4.8.1/lib/netcoreapp2.1/Microsoft.Identity.Client.dll"
+    
+    Write-Verbose "Attempting to load $msalLibrary"
+    Try{
+        #[System.Reflection.Assembly]::LoadFrom($msalLibrary) | out-null 
+        
+        
+        Add-Type -AssemblyName $msalLibrary
+        #Add-Type -TypeDefinition $msalHelperCode -Language CSharp -IgnoreWarnings
+        #Add-Type -ReferencedAssemblies $reqAssem -TypeDefinition $source -Language CSharp -IgnoreWarnings
+    }
+    Catch {
+        throw "An error occurred attempting to load Microsoft Authentication Library (MSAL). The error was $_"
+    }
+
+    
+
+
+
+    $publicClient = [Microsoft.Identity.Client.IPublicClientApplication]
+    #$builder = [Microsoft.Identity.Client.PublicClientApplicationBuilder]::Create($clientId)
+    #$publicClient.Create($clientId).WithAuthority('AzureCloudInstance.AzurePublic','Tenant').Build()
+
+
+    $scopes = @()
+    $scopes += 'https://microsoft.onmicrosoft.com/873153a1-b75b-46d9-8a18-ccaaa0785781/user_impersonation' # Permission to 'Access Microsoft Cloud App Security'
+    $scopes += 'https://graph.microsoft.com/User.Read'                                                     # Permission to 'Sign in and read user profile'
+
+
+    #::AquireTokenInteractive($scopes)
+
+
 }
 
 
