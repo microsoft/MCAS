@@ -26,20 +26,21 @@ function Connect-MCAS {
     # Need error handling
     #$appManifestJson = Get-Content -Raw -Path (Resolve-Path "$ModulePath/config/$appManifestFile") | ConvertFrom-Json
     
-    $displayName = $appManifestJson.name
-    $clientId = $appManifestJson.appId
-    
+    #$displayName = $appManifestJson.name
+    #$clientId = $appManifestJson.appId
+    #Write-Information $appManifestJson
 
     $scopes = @()
     #$scopes += 'https://microsoft.onmicrosoft.com/873153a1-b75b-46d9-8a18-ccaaa0785781/user_impersonation' # Permission to 'Access Microsoft Cloud App Security'
     #$scopes += 'https://graph.microsoft.com/User.Read'                                                     # Permission to 'Sign in and read user profile'
 
-    #$scopes += 'https://microsoft.onmicrosoft.com/873153a1-b75b-46d9-8a18-ccaaa0785781//user_impersonation' # Permission to 'Access Microsoft Cloud App Security'
+    $scopes += 'https://microsoft.onmicrosoft.com/873153a1-b75b-46d9-8a18-ccaaa0785781//user_impersonation' # Permission to 'Access Microsoft Cloud App Security'
     $scopes += 'https://graph.microsoft.com//User.Read'                                                     # Permission to 'Sign in and read user profile'
 
 
-    Write-Verbose "Initializing MSAL public client interface"
+    Write-Verbose "Initializing MSAL public client app"
     try {
+        $msalPublicClient = New-MsalClientApplication -ClientId $clientId
     }
     catch {
         throw "An error occurred occurred initializing MSAL public client interface. The error was $_"
@@ -48,13 +49,19 @@ function Connect-MCAS {
     
     Write-Verbose "Attempting to acquire a token"
     try {
+          Get-MsalToken -ClientId $clientId -Scopes $scopes  `
     }
     catch {
         throw "An error occurred attempting to acquire a token. The error was $_"
     }   
 
-
-
+    <#
+    Clear-MsalCache
+    Get-MsalAccount
+    Get-MsalClientApplication
+    Get-MsalToken
+    New-MsalClientApplication
+    #>
 }
 
 
