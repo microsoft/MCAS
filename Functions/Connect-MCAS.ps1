@@ -14,21 +14,22 @@ function Connect-MCAS {
     [CmdletBinding()]
     param()
 
-
-    #$Authority = 'https://login.microsoftonline.com/common'
-    
     $displayName = 'jpoeppel-PS-test-public-client'
-    $clientId = '7c5c030a-983f-4832-93df-b5a316971c20' # Client ID registered as public client
-    #$tenantId = 'eb81c4c9-2546-43f2-8c43-9c2295af4b88'
-    #$objectId = 'e2c6fd06-ca45-4fae-ac87-74bac46d38b5'
-    #$redirectUri = "urn:ietf:wg:oauth:2.0:oob"
+    #$clientId = '7c5c030a-983f-4832-93df-b5a316971c20' # Client ID registered as public client in damdemo.ca directory (name = jpoeppel-PS-test-public-client)
+    $clientId = 'c4bd3cbe-226c-43fd-a9ef-07b829f1d167' # Client ID registered as public client in microsoft.com directory (name = jpoeppel-PS-test-public-client)
+    $redirectUri = 'urn:ietf:wg:oauth:2.0:oob'
 
-    # Need error handling
-    #$appManifestJson = Get-Content -Raw -Path (Resolve-Path "$ModulePath/config/$appManifestFile") | ConvertFrom-Json
     
+    Write-Verbose "Reading $appManifestFile"
+    Try {
+        $appManifestJson = Get-Content -Raw -Path (Resolve-Path "$ModulePath/config/$appManifestFile") | ConvertFrom-Json
+    }
+    Catch {
+        throw "An error occurred reading $appManifestFile. The error was $_"
+    }
+
     #$displayName = $appManifestJson.name
     #$clientId = $appManifestJson.appId
-    #Write-Information $appManifestJson
 
     $scopes = @()
     #$scopes += 'https://microsoft.onmicrosoft.com/873153a1-b75b-46d9-8a18-ccaaa0785781/user_impersonation' # Permission to 'Access Microsoft Cloud App Security'
@@ -43,13 +44,13 @@ function Connect-MCAS {
         $msalPublicClient = New-MsalClientApplication -ClientId $clientId
     }
     catch {
-        throw "An error occurred occurred initializing MSAL public client interface. The error was $_"
+        throw "An error occurred initializing MSAL public client interface. The error was $_"
     }   
 
     
     Write-Verbose "Attempting to acquire a token"
     try {
-          Get-MsalToken -ClientId $clientId -Scopes $scopes  `
+          Get-MsalToken -ClientId $clientId #-Scopes $scopes
     }
     catch {
         throw "An error occurred attempting to acquire a token. The error was $_"
