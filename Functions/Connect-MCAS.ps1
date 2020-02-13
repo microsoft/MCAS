@@ -15,11 +15,12 @@ function Connect-MCAS {
     param()
 
     $displayName = 'jpoeppel-PS-test-public-client'
-    #$clientId = '7c5c030a-983f-4832-93df-b5a316971c20' # Client ID registered as public client in damdemo.ca directory (name = jpoeppel-PS-test-public-client)
-    $clientId = 'c4bd3cbe-226c-43fd-a9ef-07b829f1d167' # Client ID registered as public client in microsoft.com directory (name = jpoeppel-PS-test-public-client)
-    $redirectUri = 'urn:ietf:wg:oauth:2.0:oob'
+    $clientId = '7c5c030a-983f-4832-93df-b5a316971c20' # Client ID registered as public client in damdemo.ca directory (name = jpoeppel-PS-test-public-client)
+    #$clientId = 'c4bd3cbe-226c-43fd-a9ef-07b829f1d167' # Client ID registered as public client in microsoft.com directory (name = jpoeppel-PS-test-public-client)
+    $redirectUri = 'http://localhost'
+    #$redirectUri = "msal{0}://auth" -f $clientId
+    $authority = 'https://login.microsoftonline.com/common/'
 
-    
     Write-Verbose "Reading $appManifestFile"
     Try {
         $appManifestJson = Get-Content -Raw -Path (Resolve-Path "$ModulePath/config/$appManifestFile") | ConvertFrom-Json
@@ -32,29 +33,31 @@ function Connect-MCAS {
     #$clientId = $appManifestJson.appId
 
     $scopes = @()
-    #$scopes += 'https://microsoft.onmicrosoft.com/873153a1-b75b-46d9-8a18-ccaaa0785781/user_impersonation' # Permission to 'Access Microsoft Cloud App Security'
-    #$scopes += 'https://graph.microsoft.com/User.Read'                                                     # Permission to 'Sign in and read user profile'
-
-    $scopes += 'https://microsoft.onmicrosoft.com/873153a1-b75b-46d9-8a18-ccaaa0785781//user_impersonation' # Permission to 'Access Microsoft Cloud App Security'
     $scopes += 'https://graph.microsoft.com//User.Read'                                                     # Permission to 'Sign in and read user profile'
-
+    #$scopes += 'https://microsoft.onmicrosoft.com/873153a1-b75b-46d9-8a18-ccaaa0785781/user_impersonation'  # Permission to 'Access Microsoft Cloud App Security'
+    
 
     Write-Verbose "Initializing MSAL public client app"
     try {
-        $msalPublicClient = New-MsalClientApplication -ClientId $clientId
+        $msalPublicClient = New-MsalClientApplication -ClientId $clientId -RedirectUri $redirectUri -Authority $authority
     }
     catch {
         throw "An error occurred initializing MSAL public client interface. The error was $_"
     }   
-
-    
+   
     Write-Verbose "Attempting to acquire a token"
     try {
-          Get-MsalToken -ClientId $clientId #-Scopes $scopes
+          $authResult = Get-MsalToken -ClientId $clientId -Scopes $scopes -RedirectUri $redirectUri #-Authority $authority 
     }
     catch {
         throw "An error occurred attempting to acquire a token. The error was $_"
     }   
+
+    #$authHeader = @{'Authorization'="$($authResult.AccessTokenType) $($authResult.AccessToken)"}
+
+    $authResult
+
+    #Invoke-WebRequest -Uri "https://graph.microsoft.com/v1.0/me"
 
     <#
     Clear-MsalCache
