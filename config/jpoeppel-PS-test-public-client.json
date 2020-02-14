@@ -36,6 +36,10 @@
 	"publisherDomain": "damdemo.ca",
 	"replyUrlsWithType": [
 		{
+			"url": "http://localhost",
+			"type": "InstalledClient"
+		},
+		{
 			"url": "msal7c5c030a-983f-4832-93df-b5a316971c20://auth",
 			"type": "InstalledClient"
 		}

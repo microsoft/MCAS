@@ -52,12 +52,19 @@ function Connect-MCAS {
     catch {
         throw "An error occurred attempting to acquire a token. The error was $_"
     }   
+  
+    $rawTtoken = $($authResult.AccessToken)
 
-    #$authHeader = @{'Authorization'="$($authResult.AccessTokenType) $($authResult.AccessToken)"}
+    $token = Decode-JWT $rawTtoken
 
-    $authResult
+    $tenantId = $token.claims.tid
+  
+    $authHeader = @{'Authorization'="Bearer $($authResult.AccessToken)"}
 
-    #Invoke-WebRequest -Uri "https://graph.microsoft.com/v1.0/me"
+    $me = Invoke-WebRequest -Uri "https://graph.microsoft.com/v1.0/me" -Method Get -ContentType 'application/json' -Headers $authHeader  #-Authentication Bearer -Token "$($authResult.AccessToken)" 
+    #Write-Verbose $($me.content)
+    
+    #$response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/alerts/" -Body $body -Method Post
 
     <#
     Clear-MsalCache
@@ -69,24 +76,7 @@ function Connect-MCAS {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <#
-
 
 ###################################
 #### DO NOT MODIFY BELOW LINES ####
@@ -162,6 +152,18 @@ $PostSplat = @{
     Body = $Body
     Uri = $Url
 }
+
+
+
+$GraphAppParams = @{
+    Name = 'PowerShell Module'
+    ClientCredential = $ClientCredential
+    RedirectUri = 'https://localhost/'
+    Tenant = 'bwya77.onmicrosoft.com'
+
+}
+
+$GraphApp = New-GraphApplication @GraphAppParams
 
 # Request the token!
 $Request = Invoke-RestMethod @PostSplat
