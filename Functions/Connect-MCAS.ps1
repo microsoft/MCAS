@@ -12,7 +12,23 @@
 #>
 function Connect-MCAS {
     [CmdletBinding()]
-    param()
+    param
+    (
+        # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]$McasFqdn = 'damdemo.us.portal.cloudappsecurity.com',
+
+        # Specifies the maximum number of results to retrieve when listing items matching the specified filter criteria.
+        [Parameter(Mandatory=$false)]
+        [ValidateRange(1,100)]
+        [int]$ResultSetSize = 100,
+
+        # Specifies the number of records, from the beginning of the result set, to skip.
+        [Parameter(Mandatory=$false)]
+        [ValidateScript({$_ -ge 0})]
+        [int]$Skip = 0
+    )
 
     $displayName = 'jpoeppel-PS-test-public-client'
     $clientId = '7c5c030a-983f-4832-93df-b5a316971c20' # Client ID registered as public client in damdemo.ca directory (name = jpoeppel-PS-test-public-client)
@@ -33,8 +49,9 @@ function Connect-MCAS {
     #$clientId = $appManifestJson.appId
 
     $scopes = @()
-    $scopes += 'https://graph.microsoft.com//User.Read'                                                     # Permission to 'Sign in and read user profile'
-    #$scopes += 'https://microsoft.onmicrosoft.com/873153a1-b75b-46d9-8a18-ccaaa0785781/user_impersonation'  # Permission to 'Access Microsoft Cloud App Security'
+    $scopes += 'https://graph.microsoft.com//User.Read'                                                      # Permission to 'Sign in and read user profile' --> Required to sign in
+    #$scopes += 'https://graph.microsoft.com//Organization.Read.All'                                          # Permission to 'Read organization information' --> Required to lookup tenant name
+    #$scopes += 'https://microsoft.onmicrosoft.com/873153a1-b75b-46d9-8a18-ccaaa0785781/user_impersonation'  # Permission to 'Access Microsoft Cloud App Security' --> Required to access the MCAS API endpoints
     
 
     Write-Verbose "Initializing MSAL public client app"
@@ -47,7 +64,7 @@ function Connect-MCAS {
    
     Write-Verbose "Attempting to acquire a token"
     try {
-          $authResult = Get-MsalToken -ClientId $clientId -Scopes $scopes -RedirectUri $redirectUri #-Authority $authority 
+          $authResult = Get-MsalToken -ClientId $clientId -RedirectUri $redirectUri # -Scopes $scopes -Authority $authority 
     }
     catch {
         throw "An error occurred attempting to acquire a token. The error was $_"
@@ -61,9 +78,26 @@ function Connect-MCAS {
   
     $authHeader = @{'Authorization'="Bearer $($authResult.AccessToken)"}
 
-    $me = Invoke-WebRequest -Uri "https://graph.microsoft.com/v1.0/me" -Method Get -ContentType 'application/json' -Headers $authHeader  #-Authentication Bearer -Token "$($authResult.AccessToken)" 
-    #Write-Verbose $($me.content)
+    ## ERROR HANDLING ##
+    $me = Invoke-WebRequest -Uri "https://graph.microsoft.com/v1.0/me" -Method Get -ContentType 'application/json' -Headers $authHeader
     
+    ## ERROR HANDLING ##
+    $org = Invoke-WebRequest -Uri "https://graph.microsoft.com/v1.0/organization" -Method Get -ContentType 'application/json' -Headers $authHeader
+
+    $apps = Invoke-WebRequest -Uri "https://graph.microsoft.com/v1.0/applications" -Method Get -ContentType 'application/json' -Headers $authHeader
+
+
+    $initialTenantDomain = (($org.Content | ConvertFrom-Json).value.verifiedDomains | Where-Object {$_.isInitial}).name
+
+    $prefix = $initialTenantDomain.Split('.')[0]
+
+    $portalUrl = "{0}.portal.cloudappsecurity.com" -f $prefix
+
+    $apps
+
+
+    #damdemo.us.portal.cloudappsecurity.com
+
     #$response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/alerts/" -Body $body -Method Post
 
     <#
