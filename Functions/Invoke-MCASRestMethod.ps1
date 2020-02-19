@@ -48,6 +48,9 @@
         # Specifies that a single item is to be fetched, skipping any processing for lists, such as checking result count totals
         #[switch]$Fetch,
 
+        # Specifies that a single item is to be fetched, skipping any processing for lists, such as checking result count totals
+        [switch]$UseBearerInAuthHeader,      
+
         # Specifies use Invoke-WebRequest instead of Invoke-RestMethod, enabling the caller to get the raw response from the MCAS API without any JSON conversion
         [switch]$Raw
     )
@@ -77,8 +80,15 @@
     #MK - Commenting out this line for security reasons. Not sure I like having the raw token in the verbose output.
     #Write-Verbose "OAuth token is $token"
 
-    $headers = 'Authorization = "Token {0}"' -f $token | ForEach-Object {
-        "@{$_}"
+    if ($UseBearerInAuthHeader) {
+        $headers = 'Authorization = "Bearer {0}"' -f $token | ForEach-Object {
+            "@{$_}"
+        }
+    }
+    else {
+        $headers = 'Authorization = "Token {0}"' -f $token | ForEach-Object {
+            "@{$_}"
+        }
     }
     Write-Verbose "Request headers are $headers"
 
