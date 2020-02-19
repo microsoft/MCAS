@@ -16,8 +16,7 @@ $appManifestFile = 'jpoeppel-PS-test-public-client.json'  # Config file for MSAL
 
 
 #----------------------------Constants-----------------------------
-$MCAS_TOKEN_VALIDATION_PATTERN = '^[0-9a-zA-Z=]{64,192}$'
-
+$MCAS_TOKEN_VALIDATION_PATTERN = '^[0-9a-zA-Z-_=.+]{64,}$'
 
 #----------------------------Enum Types----------------------------
 enum mcas_app {
