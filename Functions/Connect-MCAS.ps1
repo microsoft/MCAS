@@ -42,11 +42,15 @@ function Connect-MCAS {
     #$displayName = $appManifestJson.name
     #$clientId = $appManifestJson.appId
 
-    $scopes = @()
-    #$scopes += 'https://graph.microsoft.com//User.Read'                                                      # Permission to 'Sign in and read user profile' --> Required to sign in
-    #$scopes += 'https://graph.microsoft.com//Organization.Read.All'                                          # Permission to 'Read organization information' --> Required to lookup tenant name
-    $scopes += 'https://microsoft.onmicrosoft.com/873153a1-b75b-46d9-8a18-ccaaa0785781/user_impersonation'  # Permission to 'Access Microsoft Cloud App Security' --> Required to access the MCAS API endpoints
+    $msGraphScopes = @()
+    $msGraphScopes += 'https://graph.microsoft.com//User.Read'               # Permission to 'Sign in and read user profile' --> Required to sign in
+    $msGraphScopes += 'https://graph.microsoft.com//Organization.Read.All'   # Permission to 'Read organization information' --> Required to lookup tenant name 
     
+    $mcasScopes = @()
+    $mcasScopes += 'openid'
+    $mcasScopes += 'https://microsoft.onmicrosoft.com/873153a1-b75b-46d9-8a18-ccaaa0785781/user_impersonation'   # Permission to 'Access Microsoft Cloud App Security' --> Required to access the MCAS API endpoints
+
+
     Write-Verbose "Initializing MSAL public client app"
     try {
         $msalPublicClient = New-MsalClientApplication -ClientId $clientId -RedirectUri $redirectUri -Authority $authority
@@ -57,7 +61,7 @@ function Connect-MCAS {
    
     Write-Verbose "Attempting to acquire a token"
     try {
-          $authResult = Get-MsalToken -ClientId $clientId -RedirectUri $redirectUri -Scopes $scopes #-Authority $authority 
+          $authResult = Get-MsalToken -ClientId $clientId -RedirectUri $redirectUri -Scopes $mcasScopes #-Authority $authority 
     }
     catch {
         throw "An error occurred attempting to acquire a token. The error was $_"
@@ -66,8 +70,9 @@ function Connect-MCAS {
     $rawToken = $($authResult.AccessToken)
 
     $token = Decode-JWT $rawToken
+    Write-Information $token
     Write-Verbose $token.claims
-    #$tenantId = $token.claims.tid
+    $tenantId = $token.claims.tid
   
     $authHeader = @{'Authorization'="Bearer $($authResult.AccessToken)"}
 
@@ -88,7 +93,7 @@ function Connect-MCAS {
             throw "An error occurred attempting to retrieve organization information from Microsoft Graph API. The error was $_"
         }
         
-        # Build the tenant URI from 
+        # Build the tenant URI from tenant domain list
         $initialTenantDomain = (($org.Content | ConvertFrom-Json).value.verifiedDomains | Where-Object {$_.isInitial}).name
         $prefix = $initialTenantDomain.Split('.')[0]
         $region = 'us'
@@ -107,27 +112,67 @@ function Connect-MCAS {
         throw "Invalid tenant uri specified as the username of the credential. Format should be <tenantname>.<tenantregion>.portal.cloudappsecurity.com. For example, contoso.us.portal.cloudappsecurity.com or tailspintoys.eu.portal.cloudappsecurity.com."
     }
 
+<#
     # Post to the MCAS OAuth2 endpoint (since MCAS contains its own token service)
-    $mcasOAuth2Endpoint = "https://portal.cloudappsecurity.com/oauth2/login?client_id=$clientId&scope=user_impersonation&grant_type=client_credentials"   
-    
-    $Body = @{
+    #$uri = "https://portal.cloudappsecurity.com/oauth2/login?client_id=$clientId&scope=user_impersonation&grant_type=client_credentials"   
+    #$uri = "https://portal.cloudappsecurity.com/oauth2/authorize?response_type=id_token%20token&scope=openid&client_id=$clientId"
+    # from response js: var oauthUrl = 'https://login.microsoftonline.com/common/oauth2/authorize?response_type=id_token+token&scope=openid&response_mode=form_post&client_id=05a65629-4c1b-48c1-a78b-804c4abdd4af&redirect_uri=https%3A%2F%2Fportal.cloudappsecurity.com%2Foauth2%2Flogin'
+
+        $Body = @{
         client_id = $clientId
         scope = $scopes
         grant_type = 'client_credentials'
-    }   
-    $authHeader = @{'Authorization'="Bearer $rawToken)"}
 
-    # Splat the parameters for Invoke-Restmethod for cleaner code
-    $PostSplat = @{
-        ContentType = 'application/json'
-        Method = 'POSt'
-        Uri = $mcasOAuth2Endpoint
-        Headers = $authHeader
+        response_type='id_token%20token'
+        redirect_uri='http%3A%2F%2Flocalhost'
     }
+#>
+
+
+    # Request an authorization code
+    $body = @{
+        client_id = $clientId
+        scope = $mcasScopes
+    }   
+    
+    $uri = "https://login.microsoftonline.com/$tenantId/oauth2/v2.0/authorize?client_id=$clientId&response_type=code&redirect_uri=http%3A%2F%2Flocalhost&response_mode=query&scope=openid%20https%3A%2F%2Fmicrosoft.onmicrosoft.com%2F873153a1-b75b-46d9-8a18-ccaaa0785781%2Fuser_impersonation&state=1592653589"
+    
+    $PostSplat = @{
+        ContentType = 'application/x-www-form-urlencoded'
+        Method = 'POST'
+        Uri = $uri
+        Headers = $authHeader
+        Body = $body
+    }
+
     
     $result = Invoke-WebRequest @PostSplat
-    
+
     $result
+
+
+
+
+
+
+
+
+
+
+    # Request a bearer (access) token using the authorization code
+
+
+
+
+
+
+    # Call API with access token 
+
+
+
+
+
+
 
     # If -PassThru is specified, write the credential object to the pipeline (the global variable will also be exported to the calling session with Export-ModuleMember)
     if ($PassThru) {
