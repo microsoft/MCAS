@@ -14,12 +14,12 @@ function Connect-MCAS {
     [CmdletBinding()]
     param
     (
-        # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
+        # Specifies the portal URL of your CAS tenant, for example 'contoso.portal.cloudappsecurity.com'.
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [string]$TenantUri = 'damdemo.us.portal.cloudappsecurity.com',
 
-        # Specifies that the credential should be returned into the pipeline for further processing.
+        # Specifies that the credential object should also be returned into the pipeline for further processing.
         [Parameter(Mandatory=$false)]
         [switch]$PassThru
     )
@@ -47,7 +47,6 @@ function Connect-MCAS {
     #$scopes += 'https://graph.microsoft.com//Organization.Read.All'                                          # Permission to 'Read organization information' --> Required to lookup tenant name
     $scopes += 'https://microsoft.onmicrosoft.com/873153a1-b75b-46d9-8a18-ccaaa0785781/user_impersonation'  # Permission to 'Access Microsoft Cloud App Security' --> Required to access the MCAS API endpoints
     
-
     Write-Verbose "Initializing MSAL public client app"
     try {
         $msalPublicClient = New-MsalClientApplication -ClientId $clientId -RedirectUri $redirectUri -Authority $authority
@@ -103,133 +102,35 @@ function Connect-MCAS {
 
     [System.Management.Automation.PSCredential]$Global:CASCredential = New-Object System.Management.Automation.PSCredential ($TenantUri, $mcasOAuthToken)
 
-    #Remove-Variable mcasOAuthToken
-    #Remove-Variable 
-
     # Validate the tenant URI provided
     if (!($CASCredential.GetNetworkCredential().username.EndsWith('.portal.cloudappsecurity.com'))) {
         throw "Invalid tenant uri specified as the username of the credential. Format should be <tenantname>.<tenantregion>.portal.cloudappsecurity.com. For example, contoso.us.portal.cloudappsecurity.com or tailspintoys.eu.portal.cloudappsecurity.com."
     }
 
+    # Post to the MCAS OAuth2 endpoint (since MCAS contains its own token service)
+    $mcasOAuth2Endpoint = "https://portal.cloudappsecurity.com/oauth2/login?client_id=$clientId&scope=user_impersonation&grant_type=client_credentials"   
+    
+    $Body = @{
+        client_id = $clientId
+        scope = $scopes
+        grant_type = 'client_credentials'
+    }   
+    $authHeader = @{'Authorization'="Bearer $rawToken)"}
 
-
-
-
-
-    $token
-
-
-
+    # Splat the parameters for Invoke-Restmethod for cleaner code
+    $PostSplat = @{
+        ContentType = 'application/json'
+        Method = 'POSt'
+        Uri = $mcasOAuth2Endpoint
+        Headers = $authHeader
+    }
+    
+    $result = Invoke-WebRequest @PostSplat
+    
+    $result
 
     # If -PassThru is specified, write the credential object to the pipeline (the global variable will also be exported to the calling session with Export-ModuleMember)
     if ($PassThru) {
         $CASCredential
     }
-
-    #damdemo.us.portal.cloudappsecurity.com
-
-    #$response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/alerts/" -Body $body -Method Post
-
-    <#
-    Clear-MsalCache
-    Get-MsalAccount
-    Get-MsalClientApplication
-    Get-MsalToken
-    New-MsalClientApplication
-    #>
 }
-
-
-<#
-
-###################################
-#### DO NOT MODIFY BELOW LINES ####
-###################################
-Function Expand-Collections {
-    [cmdletbinding()]
-    Param (
-        [parameter(ValueFromPipeline)]
-        [psobject]$MSGraphObject
-    )
-    Begin {
-        $IsSchemaObtained = $False
-    }
-    Process {
-        If (!$IsSchemaObtained) {
-            $OutputOrder = $MSGraphObject.psobject.properties.name
-            $IsSchemaObtained = $True
-        }
-
-        $MSGraphObject | ForEach-Object {
-            $singleGraphObject = $_
-            $ExpandedObject = New-Object -TypeName PSObject
-
-            $OutputOrder | ForEach-Object {
-                Add-Member -InputObject $ExpandedObject -MemberType NoteProperty -Name $_ -Value $(($singleGraphObject.$($_) | Out-String).Trim())
-            }
-            $ExpandedObject
-        }
-    }
-    End {}
-}
-
-Function Get-Headers {
-    param( $token )
-
-    Return @{
-        "Authorization" = ("Bearer {0}" -f $token);
-        "Content-Type" = "application/json";
-    }
-}
-
-
-
-
-
-# from https://adamtheautomator.com/microsoft-graph-api-powershell/
-
-#
-# Define AppId, secret and scope, your tenant name and endpoint URL
-$AppId = '2d10909e-0396-49f2-ba2f-854b77c1e45b'
-$AppSecret = 'abcdefghijklmnopqrstuv12345'
-$Scope = "https://graph.microsoft.com/.default"
-$TenantName = "contoso.onmicrosoft.com"
-
-$Url = "https://login.microsoftonline.com/$TenantName/oauth2/v2.0/token"
-
-# Add System.Web for urlencode
-Add-Type -AssemblyName System.Web
-
-# Create body
-$Body = @{
-    client_id = $AppId
-	client_secret = $AppSecret
-	scope = $Scope
-	grant_type = 'client_credentials'
-}
-
-# Splat the parameters for Invoke-Restmethod for cleaner code
-$PostSplat = @{
-    ContentType = 'application/x-www-form-urlencoded'
-    Method = 'POST'
-    # Create string by joining bodylist with '&'
-    Body = $Body
-    Uri = $Url
-}
-
-
-
-$GraphAppParams = @{
-    Name = 'PowerShell Module'
-    ClientCredential = $ClientCredential
-    RedirectUri = 'https://localhost/'
-    Tenant = 'bwya77.onmicrosoft.com'
-
-}
-
-$GraphApp = New-GraphApplication @GraphAppParams
-
-# Request the token!
-$Request = Invoke-RestMethod @PostSplat
-
-#>
