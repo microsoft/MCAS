@@ -17,7 +17,7 @@ function Connect-MCAS {
         # Specifies the CAS credential object containing the 64-character hexadecimal OAuth token used for authentication and authorization to the CAS tenant.
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [string]$PortalUrl = 'damdemo.us.portal.cloudappsecurity.com',
+        [string]$TenantUri = 'damdemo.us.portal.cloudappsecurity.com',
 
         # Specifies that the credential should be returned into the pipeline for further processing.
         [Parameter(Mandatory=$false)]
@@ -58,7 +58,7 @@ function Connect-MCAS {
    
     Write-Verbose "Attempting to acquire a token"
     try {
-          $authResult = Get-MsalToken -ClientId $clientId -RedirectUri $redirectUri # -Scopes $scopes -Authority $authority 
+          $authResult = Get-MsalToken -ClientId $clientId -RedirectUri $redirectUri -Scopes $scopes #-Authority $authority 
     }
     catch {
         throw "An error occurred attempting to acquire a token. The error was $_"
@@ -93,15 +93,15 @@ function Connect-MCAS {
         $initialTenantDomain = (($org.Content | ConvertFrom-Json).value.verifiedDomains | Where-Object {$_.isInitial}).name
         $prefix = $initialTenantDomain.Split('.')[0]
         $region = 'us'
-        $portalUrl = "{0}.{1}.portal.cloudappsecurity.com" -f $prefix,$region
+        $TenantUri = "{0}.{1}.portal.cloudappsecurity.com" -f $prefix,$region
     }
 
-    Write-Verbose "Portal URL is $portalUrl"
+    Write-Verbose "Tenant URI is $TenantUri"
     
     Write-Verbose "Token is $rawToken"
     $mcasOAuthToken = ConvertTo-SecureString $rawToken -AsPlainText -Force
 
-    [System.Management.Automation.PSCredential]$Global:CASCredential = New-Object System.Management.Automation.PSCredential ($portalUrl, $mcasOAuthToken)
+    [System.Management.Automation.PSCredential]$Global:CASCredential = New-Object System.Management.Automation.PSCredential ($TenantUri, $mcasOAuthToken)
 
     #Remove-Variable mcasOAuthToken
     #Remove-Variable 
@@ -110,6 +110,16 @@ function Connect-MCAS {
     if (!($CASCredential.GetNetworkCredential().username.EndsWith('.portal.cloudappsecurity.com'))) {
         throw "Invalid tenant uri specified as the username of the credential. Format should be <tenantname>.<tenantregion>.portal.cloudappsecurity.com. For example, contoso.us.portal.cloudappsecurity.com or tailspintoys.eu.portal.cloudappsecurity.com."
     }
+
+
+
+
+
+
+    $token
+
+
+
 
     # If -PassThru is specified, write the credential object to the pipeline (the global variable will also be exported to the calling session with Export-ModuleMember)
     if ($PassThru) {
