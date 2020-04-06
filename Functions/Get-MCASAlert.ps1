@@ -213,7 +213,7 @@ function Get-MCASAlert {
 
             # Get the matching items and handle errors
             try {
-                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/alerts/" -Body $body -Method Post -FilterSet $filterSet -UseBearerInAuthHeader
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/alerts/" -Body $body -Method Post -FilterSet $filterSet #-UseBearerInAuthHeader
             }
             catch {
                 throw "Error calling MCAS API. The exception was: $_"
