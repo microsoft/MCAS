@@ -48,7 +48,7 @@
         # Specifies that a single item is to be fetched, skipping any processing for lists, such as checking result count totals
         #[switch]$Fetch,
 
-        # Specifies that a single item is to be fetched, skipping any processing for lists, such as checking result count totals
+        # Specifies that the 'bearer' header be used for authenticating the request (default is 'Token')
         [switch]$UseBearerInAuthHeader,      
 
         # Specifies use Invoke-WebRequest instead of Invoke-RestMethod, enabling the caller to get the raw response from the MCAS API without any JSON conversion
@@ -81,7 +81,7 @@
     #Write-Verbose "OAuth token is $token"
 
     if ($UseBearerInAuthHeader) {
-        $headers = 'Authorization = "Bearer {0}"' -f $token | ForEach-Object {
+        $headers = 'Authorization = "bearer {0}"' -f $token | ForEach-Object {
             "@{$_}"
         }
     }

@@ -295,6 +295,7 @@ $ExportedCommands = @(
     'Get-MCASLogCollector',
     'Get-MCASPolicy',
     'Get-MCASPortalSettings',
+    'Get-MCASRegionalUrl',
     'Get-MCASSiemAgent',
     'Get-MCASStream',
     'Get-MCASSubnetCollection',
