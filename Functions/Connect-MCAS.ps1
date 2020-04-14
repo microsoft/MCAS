@@ -101,8 +101,9 @@ function Connect-MCAS {
     #[System.Management.Automation.PSCredential]$Global:CASCredential = New-Object System.Management.Automation.PSCredential ($TenantUri, $mcasOAuthToken)
 
     #$TenantUri
-    $authHeader
-
+    #$authHeader
+    $rawToken
+    
     # If -PassThru is specified, write the credential object to the pipeline (the global variable will also be exported to the calling session with Export-ModuleMember)
     if ($PassThru) {
         $CASCredential
