@@ -283,7 +283,7 @@ function Get-MCASActivity {
         if ($PSCmdlet.ParameterSetName -eq 'Fetch') {
             try {
                 # Fetch the item by its id
-                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities_kusto/$Identity/" -Method Get
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities/$Identity/" -Method Get
             }
             catch {
                 throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
@@ -465,7 +465,7 @@ function Get-MCASActivity {
             Write-Verbose "Running loop A."
 
             #This first call gets us the total number of matches.
-            $response = (Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities_kusto/" -Body $body -Method Post -FilterSet $filterSet -Raw) 
+            $response = (Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities/" -Body $body -Method Post -FilterSet $filterSet -Raw) 
 
             try {
                 $response = $response | ConvertFrom-Json
@@ -500,7 +500,7 @@ function Get-MCASActivity {
                 $body = @{'skip' = $i; 'limit' = $returnedrecords } # Base request body
 
                 try {
-                    $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities_kusto/" -Body $body -Method Post -FilterSet $filterSet -Raw
+                    $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities/" -Body $body -Method Post -FilterSet $filterSet -Raw
                 }
                 catch {
                     throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
@@ -563,7 +563,7 @@ function Get-MCASActivity {
 
 
                 try {
-                    $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities_kusto/" -Body $body -Method Post -FilterSet $filterSet -Raw
+                    $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities/" -Body $body -Method Post -FilterSet $filterSet -Raw
                 }
                 catch {
                     throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
@@ -612,7 +612,7 @@ function Get-MCASActivity {
                 $body = @{'skip'=($ResultSetSize - $ResultSetSizeSecondaryChunks);'limit'=$ResultSetSizeSecondaryChunks}
 
                try {
-                    $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities_kusto/" -Body $body -Method Post -FilterSet $filterSet -Raw
+                    $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities/" -Body $body -Method Post -FilterSet $filterSet -Raw
                 }
                 catch {
                     throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
@@ -673,7 +673,7 @@ function Get-MCASActivity {
                 $body = @{'skip' = $i; 'limit' = 100 } # Base request body
 
                 try {
-                    $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities_kusto/" -Body $body -Method Post -FilterSet $filterSet -Raw
+                    $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities/" -Body $body -Method Post -FilterSet $filterSet -Raw
                 }
                 catch {
                     throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
@@ -721,7 +721,7 @@ function Get-MCASActivity {
                 $body = @{'skip' = ($ResultSetSize - $ResultSetSizeSecondaryChunks); 'limit' = $ResultSetSizeSecondaryChunks }
 
                 try {
-                    $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities_kusto/" -Body $body -Method Post -FilterSet $filterSet -Raw
+                    $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities/" -Body $body -Method Post -FilterSet $filterSet -Raw
                 }
                 catch {
                     throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
@@ -776,7 +776,7 @@ function Get-MCASActivity {
             Write-Verbose "Running loop E. This will make a single call."
             # Get the matching items and handle errors
             try {
-                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities_kusto/" -Body $body -Method Post -FilterSet $filterSet -Raw
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/activities/" -Body $body -Method Post -FilterSet $filterSet -Raw
             }
             catch {
                 throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
