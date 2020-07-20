@@ -107,7 +107,7 @@ function Get-MCASDiscoveredApp {
 
         # Limits the results to apps with the specified tag(s).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateSet('Sanctioned','Unsanctioned')]
+        [ValidateSet('Sanctioned','Unsanctioned','None')]
         [ValidateNotNullOrEmpty()]
         [string[]]$Tag
     )

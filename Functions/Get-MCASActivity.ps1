@@ -292,13 +292,19 @@ function Get-MCASActivity {
             try {
                 Write-Verbose "Adding alias property to results, if appropriate"
                 $Response = $Response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
+                #Fix collisions
+                $response = $response.Replace('"Level":', '"Level_2":')
+                $response = $response.Replace('"EventName":', '"EventName_2":')
             }
             catch { }
 
 
             # Attempt the JSON conversion. If it fails due to property name collisions to to case insensitivity on Windows, attempt to resolve it by renaming the properties.
             try {
-                $response = $response | ConvertFrom-Json
+                Write-Verbose "Checking for property collision. Converting response to PSObject"
+                #$response = $response | ConvertFrom-Json #this may not work anymore.
+                #$response = $response.Replace('"Level":', '"Level_2":')
+                #$response = $response.Replace('"EventName":', '"EventName_2":')
             }
             catch {
                 Write-Verbose "One or more property name collisions were detected in the response. An attempt will be made to resolve this by renaming any offending properties."
@@ -461,7 +467,7 @@ function Get-MCASActivity {
 
         #if no resultsetsize is specified - get all matching records up to 5000 using skip/limit method and stopping when all matches are returned. This uses hasnext
 
-        if (!$ResultSetSize) {
+        if (!$ResultSetSize -and $PSCmdlet.ParameterSetName -ne 'Fetch') {
             Write-Verbose "Running loop A."
 
             #This first call gets us the total number of matches.

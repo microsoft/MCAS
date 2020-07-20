@@ -169,57 +169,11 @@ function Get-MCASAccount {
     }
     process
     {
-        # Fetch no longer works on the /accounts/ endpoint, so the code below was commented
-
-        # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
-        if ($PSCmdlet.ParameterSetName -eq 'Fetch')
-        {
-            <#
-            try {
-                # Fetch the item by its id
-                $filterSet = @() # Filter set array
-                $filterSet += @{'entity'=@{'eq'=([int[]]($AppName | ForEach-Object {$_ -as [int]}))}}
-                $filterSet = 
-
-                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/entities/" -Method Post -Raw
-            }
-            catch {
-                throw "Error calling MCAS API. The exception was: $_"
-            }
-
-            $response = $response.content
-
-            # Attempt the JSON conversion. If it fails due to property name collisions to to case insensitivity on Windows, attempt to resolve it by renaming the properties.
-            try {
-                $response = $response | ConvertFrom-Json
-            }
-            catch {
-                Write-Verbose "One or more property name collisions were detected in the response. An attempt will be made to resolve this by renaming any offending properties."
-                $response = $response.Replace('"Id":','"Id_int":')
-                try {
-                    $response = $response | ConvertFrom-Json # Try the JSON conversion again, now that we hopefully fixed the property collisions
-                }
-                catch {
-                    throw $_
-                }
-                Write-Verbose "Any property name collisions appear to have been resolved."
-            }
-
-            $response = $response.data
-
-            try {
-                Write-Verbose "Adding alias property to results, if appropriate"
-                $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
-            }
-            catch {}
-
-            $response
-            #>
-        }
+      
     }
     end
     {
-        if ($PSCmdlet.ParameterSetName -eq  'List') # Only run remainder of this end block if not in fetch mode
+        if ($PSCmdlet.ParameterSetName -eq  'List' -or $null -eq $PSCmdlet.ParameterSetName) # Only run remainder of this end block if not in fetch mode
         {
             # List mode logic only needs to happen once, so it goes in the 'End' block for efficiency
 
@@ -336,7 +290,7 @@ function Get-MCASAccount {
 
             try {
                 Write-Verbose "Adding alias property to results, if appropriate"
-                $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
+                $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value 'id' -PassThru
             }
             catch {}
 
