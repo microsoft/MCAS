@@ -4,10 +4,19 @@ function Get-MCASOAuthAppUser {
         Get-MCASOAuthApps
     .DESCRIPTION
         Get-MCASOAuthApps retrives OAuth Apps that were granted permission 
+
     .EXAMPLE
     
-        Get-MCASOAuthAppUser
+    Get-MCASOAuthApp | ForEach-Object { Get-MCASOAuthAppUser -OAuthAppID $_._id }
+
+    This will return a listing of all users for the specified applications on the pipeline
     
+    .EXAMPLE
+
+    Get-MCASOAuthApp | ForEach-Object { Get-MCASOAuthAppUser -OAuthAppID $_._id } | Export-Csv -path C:\Temp\NotFirstPartyAppUsers.csv
+
+    Exports a listing of all OAuthAppUsers to a CSV
+
     .PARAMETER Credential
         Specifies the credential object containing tenant as username (e.g.
         'contoso.us.portal.cloudappsecurity.com') and the 64-character hexadecimal Oauth token as the password.
