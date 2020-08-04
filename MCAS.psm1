@@ -281,6 +281,7 @@ $ExportedCommands = @(
     'Get-MCASConfiguration',
     'Get-MCASCredential',
     'Get-MCASDiscoveredApp',
+    'Get-MCASDiscoveredAppUser'
     'Get-MCASDiscoveryDataSource',
     'Get-MCASDiscoverySampleLog',
     'Get-MCASFile',
@@ -293,6 +294,8 @@ $ExportedCommands = @(
     'Get-MCASStream',
     'Get-MCASSubnetCollection',
     'Get-MCASUserGroup',
+    'Get-MCASOauthApp'
+    'Get-MCASOauthAppUser',
     'Import-MCASCredential',
     'Install-MCASSiemAgent',
     'New-MCASDiscoveryDataSource',
