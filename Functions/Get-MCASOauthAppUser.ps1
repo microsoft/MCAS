@@ -38,13 +38,24 @@ function Get-MCASOAuthAppUser {
             Mandatory = $true,
             ValueFromPipeline = $true
         )]
-        [string[]]$OAuthAppID
+        [string[]]$OAuthAppID,
+
+        # Specifies the maximum number of results to retrieve when listing items matching the specified filter criteria. Set to 100 by default.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateRange(1,1000)]
+        [ValidateNotNullOrEmpty()]
+        [int]$ResultSetSize = 100,
+
+        # Specifies the number of records, from the beginning of the result set, to skip. Set to 0 by default.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateScript({$_ -gt -1})]
+        [int]$Skip = 0
     )
     Begin{}
     Process{
         foreach ($App in $OAuthAppID) {
             try {
-                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/v1/app_permissions/$OauthAppID/users/" -Method Get
+                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/v1/app_permissions/$OauthAppID/users/?skip=$Skip&limit=$ResultSetSize" -Method Get
                 $AppName = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/v1/app_permissions/$OauthAppID/" -Method Get
                 foreach ($user in $response.data){
                     $obj = [PSCustomObject]@{
