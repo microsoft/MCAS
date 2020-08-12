@@ -42,7 +42,7 @@ function Get-MCASOAuthAppUser {
 
         # Specifies the maximum number of results to retrieve when listing items matching the specified filter criteria. Set to 100 by default.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateRange(1,1000)]
+        [ValidateRange(1,30000)]
         [ValidateNotNullOrEmpty()]
         [int]$ResultSetSize = 100,
 
