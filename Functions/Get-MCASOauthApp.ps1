@@ -1,5 +1,3 @@
-
-
 function Get-MCASOAuthApp {
     <#
     .Synopsis
@@ -49,30 +47,32 @@ function Get-MCASOAuthApp {
         [ValidateScript({$_ -gt -1})]
         [int]$Skip = 0,
 
+        [int]$App = 11161,
+
         [switch]$All
     )
 
-    Begin{
-        function IterateOAuthData {
-            param (
-                $Data
-            )
-            $oauthapps = $response.data | Where-Object {$_.isinternal -eq $false}
-            foreach ($app in $oauthapps) {
-                $app
-            }
-        }
-    }
+    Begin{}
     Process{
+            #Build JSON Body for Post Method
+            $body = '{"skip":<Skip>,"limit":<Limit>,"filters":{"app":{"eq":<App>}},"sortField":"userCount","sortDirection":"desc","performAsyncTotal":true}' -replace "<Skip>",$skip
+            $body = $body -replace "<Limit>",$ResultSetSize
+            $body = $body -replace "<App>",$App
+            $body = $body | ConvertFrom-Json
+
                     try {
-                        $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/v1/app_permissions/?skip=$Skip&limit=$ResultSetSize" -Method Post
-                        IterateOAuthData -Data $response
+                        $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/v1/app_permissions/" -Body $body -Method Post
+                        $response.data
                         if (($PSBoundParameters.ContainsKey('All')) -and ($response.hasNext -eq $true)){
                             $Skip = $Skip + 100
+                            $body.skip = $Skip
                             while ($response.hasNext -eq $true) {
-                                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/v1/app_permissions/?skip=$Skip&limit=$ResultSetSize" -Method Post
-                                IterateOAuthData -Data $response
-                                $skip = $skip + 100
+                                Write-Verbose "Has next value:$($response.hasNext)"
+                                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/v1/app_permissions/" -Body $body -Method Post
+                                Write-Verbose "Has next value:$($response.hasNext)"
+                                $response.data
+                                $Skip = $Skip + 100
+                                $body.skip = $Skip
                             }
                         }
                     }
@@ -80,4 +80,3 @@ function Get-MCASOAuthApp {
     }
     End{}
 }
-    
