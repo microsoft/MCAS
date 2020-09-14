@@ -40,7 +40,7 @@ function Get-MCASOAuthApp {
 
         # Specifies the maximum number of results to retrieve when listing items matching the specified filter criteria. Set to 100 by default.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateRange(1,30000)]
+        [ValidateRange(1,100)]
         [ValidateNotNullOrEmpty()]
         [int]$ResultSetSize = 100,
 
@@ -53,10 +53,21 @@ function Get-MCASOAuthApp {
     Begin{}
     Process{
                     try {
-                        $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/v1/app_permissions/?skip=$Skip&limit=$ResultSetSize" -Method Get
+                        $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/v1/app_permissions/?skip=$Skip&limit=$ResultSetSize" -Method Post
                         $oauthapps = $response.data | Where-Object {$_.isinternal -eq $false}
                         foreach ($app in $oauthapps) {
                             $app
+                        }
+                        if ($response.hasNext -eq $true){
+                            $Skip = $Skip + 100
+                            while ($response.hasNext -eq $true) {
+                                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/v1/app_permissions/?skip=$Skip&limit=$ResultSetSize" -Method Post -OutVariable tempResponse
+                                $oauthapps = $response.data | Where-Object {$_.isinternal -eq $false}
+                                foreach ($app in $oauthapps) {
+                                    $app
+                                }
+                                $skip = $skip + 100
+                            }
                         }
                     }
                     catch { throw "Error calling MCAS API. The exception was: $_" }
