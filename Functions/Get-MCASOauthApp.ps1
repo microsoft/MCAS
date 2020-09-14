@@ -47,25 +47,31 @@ function Get-MCASOAuthApp {
         # Specifies the number of records, from the beginning of the result set, to skip. Set to 0 by default.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateScript({$_ -gt -1})]
-        [int]$Skip = 0
+        [int]$Skip = 0,
+
+        [switch]$All
     )
 
-    Begin{}
+    Begin{
+        function IterateOAuthData {
+            param (
+                $Data
+            )
+            $oauthapps = $response.data | Where-Object {$_.isinternal -eq $false}
+            foreach ($app in $oauthapps) {
+                $app
+            }
+        }
+    }
     Process{
                     try {
                         $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/v1/app_permissions/?skip=$Skip&limit=$ResultSetSize" -Method Post
-                        $oauthapps = $response.data | Where-Object {$_.isinternal -eq $false}
-                        foreach ($app in $oauthapps) {
-                            $app
-                        }
-                        if ($response.hasNext -eq $true){
+                        IterateOAuthData -Data $response
+                        if (($PSBoundParameters.ContainsKey('All')) -and ($response.hasNext -eq $true)){
                             $Skip = $Skip + 100
                             while ($response.hasNext -eq $true) {
-                                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/v1/app_permissions/?skip=$Skip&limit=$ResultSetSize" -Method Post -OutVariable tempResponse
-                                $oauthapps = $response.data | Where-Object {$_.isinternal -eq $false}
-                                foreach ($app in $oauthapps) {
-                                    $app
-                                }
+                                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/v1/app_permissions/?skip=$Skip&limit=$ResultSetSize" -Method Post
+                                IterateOAuthData -Data $response
                                 $skip = $skip + 100
                             }
                         }
