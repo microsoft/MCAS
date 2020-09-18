@@ -266,7 +266,27 @@ function Get-MCASActivity {
         [Parameter(ParameterSetName = 'List', Mandatory = $false)]
         [ValidateNotNullOrEmpty()]
         [validateset('Native_client', 'Outdated_browser', 'Outdated_operating_system', 'Robot')]
-        [string[]]$UserAgentTagNot
+        [string[]]$UserAgentTagNot,
+
+        # Limits the results to activities performed by users part of the specified groups.
+        [Parameter(ParameterSetName = 'List', Mandatory = $false)]
+        [ValidateNotNullOrEmpty()]
+        [string[]]$UserGroup,    
+
+        # Limits the results to activities performed by users not part of the specified groups.
+        [Parameter(ParameterSetName = 'List', Mandatory = $false)]
+        [ValidateNotNullOrEmpty()]
+        [string[]]$UserGroupNot,
+
+        # Limits the results to activities performed by users who are part of any imported group.
+        [Parameter(ParameterSetName = 'List', Mandatory = $false)]
+        [ValidateNotNullOrEmpty()]
+        [switch]$UserGroupPresent, 
+
+        # Limits the results to activities performed by users who are not part of any imported group.
+        [Parameter(ParameterSetName = 'List', Mandatory = $false)]
+        [ValidateNotNullOrEmpty()]
+        [switch]$UserGroupNotPresent
     )
     begin {
         if ($ResultSetSize -gt 100) {
@@ -397,6 +417,14 @@ function Get-MCASActivity {
             if ($CountryCodePresent) { $filterSet += @{'location.country' = @{'isset' = $true } }
             }
             if ($CountryCodeNotPresent) { $filterSet += @{'location.country' = @{'isnotset' = $true } }
+            }
+            if ($UserGroup) { $filterSet += @{'user.tags' = @{'eq' = $UserGroup } }
+            }
+            if ($UserGroupNot) { $filterSet += @{'user.tags' = @{'neq' = $UserGroupNot } }
+            }
+            if ($UserGroupPresent) { $filterSet += @{'user.tags' = @{'isset' = $true } }
+            }
+            if ($UserGroupNotPresent) { $filterSet += @{'user.tags' = @{'isnotset' = $true } }
             }
             if ($CountryCode) { $filterSet += @{'location.country' = @{'eq' = $CountryCode } }
             }
