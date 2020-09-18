@@ -418,14 +418,48 @@ function Get-MCASActivity {
             }
             if ($CountryCodeNotPresent) { $filterSet += @{'location.country' = @{'isnotset' = $true } }
             }
-            if ($UserGroup) { $filterSet += @{'user.tags' = @{'eq' = $UserGroup } }
+
+
+            if ($UserGroupNot -or $UserGroupNot -or $UserGroupNotPresent -or $UserGroupPresent){ 
+                $filterSet += @{'user.tags' = @{} 
+                }
+                $UserTags = "user.tags"
             }
-            if ($UserGroupNot) { $filterSet += @{'user.tags' = @{'neq' = $UserGroupNot } }
-            }
-            if ($UserGroupPresent) { $filterSet += @{'user.tags' = @{'isset' = $true } }
-            }
-            if ($UserGroupNotPresent) { $filterSet += @{'user.tags' = @{'isnotset' = $true } }
-            }
+     
+            if ($UserGroup) { 
+
+                $UserGroupArray = @(
+                    @{
+                        role = 1
+                        adv = $true
+                    }
+                    $UserGroup
+                )
+
+                $filterSet.($UserTags).add('eq', $UserGroupArray) 
+            } 
+            
+
+            if ($UserGroupNot) { 
+
+                $UserGroupNotArray = @(
+                    @{
+                        role = 1
+                        adv = $true
+                    }
+                    $UserGroupNot
+                )
+
+                $filterSet.($UserTags).add('neq', $UserGroupNotArray) 
+            } 
+            
+            
+            if ($UserGroupPresent) { $filterSet.($UserTags).add('isset', $true)}
+            
+            if ($UserGroupNotPresent) { $filterSet.($UserTags) += @{'isnotset' = $true } }
+            
+
+
             if ($CountryCode) { $filterSet += @{'location.country' = @{'eq' = $CountryCode } }
             }
             if ($CountryCodeNot) { $filterSet += @{'location.country' = @{'neq' = $CountryCodeNot } }
