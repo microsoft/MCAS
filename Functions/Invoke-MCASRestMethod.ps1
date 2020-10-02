@@ -134,8 +134,8 @@
                 Write-Verbose "Sleeping for 60 seconds"
                 Start-Sleep -Seconds 60
             }
-            ElseIf ($_ -like 'The remote server returned an error: (504)') {
-                Write-Warning "504 - Gateway Timeout. The call will be retried in $RetryInterval second(s)..."
+            ElseIf ($_ -like '504' -or $_ -like '502') {
+                Write-Warning "502 or 504 error encountered. The call will be retried in $RetryInterval second(s)..."
                 $retryCall = $true
                 Write-Verbose "Sleeping for $RetryInterval seconds"
                 Start-Sleep -Seconds $RetryInterval
