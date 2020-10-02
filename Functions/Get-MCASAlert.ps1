@@ -57,7 +57,7 @@ function Get-MCASAlert {
 
         # Specifies the maximum number of results to retrieve when listing items matching the specified filter criteria.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
-        [ValidateRange(1,100)]
+        [ValidateRange(1,1000000000)]
         [int]$ResultSetSize = 100,
 
         # Specifies the number of records, from the beginning of the result set, to skip.
@@ -65,6 +65,9 @@ function Get-MCASAlert {
         [ValidateScript({$_ -gt -1})]
         [int]$Skip = 0,
 
+        # Periodically writes the activities returned in JSON format to a specified file. Useful for large queries. (Example: -PeriodicWriteToFile "C:\path\to\file.txt")
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [string]$PeriodicWriteToFile,
 
         ##### FILTER PARAMS #####
 
@@ -132,6 +135,15 @@ function Get-MCASAlert {
         [switch]$Unread
     )
     begin {
+        #below lines are used to find the max amount of records that can be returned from a single API call. 
+
+        $CallLimit = (Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/alerts/" -Method Post).max
+        Write-Verbose "Call Limit: $CallLimit"
+
+        #calculating if we need to do a final call for the remaining records.
+        if ($ResultSetSize -and $ResultSetSize -gt $CallLimit){
+            $ResultSetSizeSecondaryChunks = $ResultSetSize % $CallLimit
+        }
     }
     process {
         # Fetch mode should happen once for each item from the pipeline, so it goes in the 'Process' block
@@ -210,24 +222,70 @@ function Get-MCASAlert {
             if ($Unread)     {$filterSet += @{'read'=           @{'eq'=$false}}}
 
             #endregion ----------------------------FILTERING----------------------------
+            $hasNext = 'True'
+            $collection = @()
+            $i = $Skip
+            if ($ResultSetSize -gt $CallLimit)
+                {
+                    $limit = $CallLimit
+                }
+            else
+                {
+                    $limit = $ResultSetSize
+                }
+           
+            if ($ResultSetSize){
+            
+                do{
+                    Write-Verbose "Running loop B. Resultsetsize set."
+                $body = @{'skip'=$i;'limit'=$limit} # Base request body
+                $bodyjson = $body | ConvertTo-Json
+                Write-Verbose "Request body is $bodyjson"
+                # Get the matching items and handle errors
+                try {
+                    $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/alerts/" -Body $body -Method Post -FilterSet $filterSet
+                
+                }
+                catch {
+                    throw $_  #Exception handling is in Invoke-MCASRestMethod, so here we just want to throw it back up the call stack, with no additional logic
+                }
+                
+               
+<#
+                $response = $response.data
 
-            # Get the matching items and handle errors
-            try {
-                $response = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/alerts/" -Body $body -Method Post -FilterSet $filterSet
+                
+              
+                try {
+                    Write-Verbose "Adding alias property to results, if appropriate"
+                    $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
+                }
+                catch {}
+                #>
+                
+     
+
+                $collection += $response.data
+
+             
+              
+                if ($PeriodicWriteToFile){
+                    Write-Verbose "Writing response output to $PeriodicWriteToFile"
+                    $collection | ConvertTo-Json -depth 10 | Out-File $PeriodicWriteToFile
+                }
+               
+                $i+= $CallLimit
+    
+                    
+               $body = @{'skip'=$i;'limit'=$limit}
+               
+               
             }
-            catch {
-                throw "Error calling MCAS API. The exception was: $_"
+            while($i -lt $ResultSetSize + $skip - $ResultSetSizeSecondaryChunks)
+
             }
-
-            $response = $response.data
-
-            try {
-                Write-Verbose "Adding alias property to results, if appropriate"
-                $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value '_id' -PassThru
-            }
-            catch {}
-
-            $response
+ 
+            $collection
         }
     }
 }
