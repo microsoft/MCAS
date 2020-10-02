@@ -400,32 +400,60 @@ function Get-MCASActivity {
             # Simple filters
             if ($UserName) { $filterSet += @{'user.username' = @{'eq' = $UserName } }
             }
-            if ($AppId) { $filterSet += @{'service' = @{'eq' = $AppId } }
+
+    # AppId
+            if ($AppId -or $AppIdNot){ 
+                $filterSet += @{'service' = @{} 
+                }
+                $FilterName = "service"
             }
-            if ($AppIdNot) { $filterSet += @{'service' = @{'neq' = $AppIdNot } }
+            # AppId
+            if ($AppId) { $filterSet.($FilterName).add('eq', $AppId ) }
+            # AppIdNot
+            if ($AppIdNot) { $filterSet.($FilterName).add('neq', $AppIdNot ) }
+
+    
+    # Source
+            if ($Source){ 
+                $filterSet += @{'source' = @{} 
+                }
+                $FilterName = "source"
             }
-            if ($Source) { $filterSet += @{'source' = @{'eq' = @($Source) } }
-            }
-            if ($EventTypeName) { $filterSet += @{'activity.eventType' = @{'eq' = $EventTypeName } }
-            }
-            if ($EventTypeNameNot) { $filterSet += @{'activity.eventType' = @{'neq' = $EventTypeNameNot } }
-            }
-            if ($ActionTypeName) { $filterSet += @{'activity.actionType' = @{'eq' = $ActionTypeName } }
-            }
-            if ($ActionTypeNameNot) { $filterSet += @{'activity.actionType' = @{'neq' = $ActionTypeNameNot } }
-            }
-            if ($CountryCodePresent) { $filterSet += @{'location.country' = @{'isset' = $true } }
-            }
-            if ($CountryCodeNotPresent) { $filterSet += @{'location.country' = @{'isnotset' = $true } }
-            }
+            # EventTypeName
+            if ($Source) { $filterSet.($FilterName).add('eq', $Source ) }
 
 
+    # EventTypeName / EventTypeNameNot
+            if ($EventTypeName -or $EventTypeNameNot){ 
+                $filterSet += @{'activity.eventType' = @{} 
+                }
+                $FilterName = "activity.eventType"
+            }
+            # EventTypeName
+            if ($EventTypeName) { $filterSet.($FilterName).add('eq', $EventTypeName ) }
+            # EventTypeNameNot
+            if ($EventTypeNameNot) { $filterSet.($FilterName).add('neq', $EventTypeNameNot ) }
+
+
+    # ActionTypeName / ActionTypeNameNot
+            if ($ActionTypeName -or $ActionTypeNameNot){ 
+                $filterSet += @{'activity.actionType' = @{} 
+                }
+                $FilterName = "activity.actionType"
+            }
+            # ActionTypeName
+            if ($ActionTypeName) { $filterSet.($FilterName).add('eq', $ActionTypeName ) }
+            # ActionTypeNameNot
+            if ($ActionTypeNameNot) { $filterSet.($FilterName).add('neq', $ActionTypeNameNot ) }
+
+    
+    # UserGroup / UserGroupNot / UserGroupPresent / UserGroupNotPresent
             if ($UserGroupNot -or $UserGroupNot -or $UserGroupNotPresent -or $UserGroupPresent){ 
                 $filterSet += @{'user.tags' = @{} 
                 }
-                $UserTags = "user.tags"
+                $FilterName = "user.tags"
             }
-     
+            # UserGroup
             if ($UserGroup) { 
 
                 $UserGroupArray = @(
@@ -436,10 +464,9 @@ function Get-MCASActivity {
                     $UserGroup
                 )
 
-                $filterSet.($UserTags).add('eq', $UserGroupArray) 
+                $filterSet.($FilterName).add('eq', $UserGroupArray) 
             } 
-            
-
+            # UserGroupNot
             if ($UserGroupNot) { 
 
                 $UserGroupNotArray = @(
@@ -450,45 +477,133 @@ function Get-MCASActivity {
                     $UserGroupNot
                 )
 
-                $filterSet.($UserTags).add('neq', $UserGroupNotArray) 
+                $filterSet.($FilterName).add('neq', $UserGroupNotArray) 
             } 
-            
-            
-            if ($UserGroupPresent) { $filterSet.($UserTags).add('isset', $true)}
-            
-            if ($UserGroupNotPresent) { $filterSet.($UserTags) += @{'isnotset' = $true } }
+            # UserGroupPresent
+            if ($UserGroupPresent) { $filterSet.($FilterName).add('isset', $true)}
+            # UserGroupNotPresent
+            if ($UserGroupNotPresent) { $filterSet.($FilterName).add('isnotset', $true)}
             
 
 
-            if ($CountryCode) { $filterSet += @{'location.country' = @{'eq' = $CountryCode } }
+    # CountryCode / CountryCodeNot / CountryCodePresent / CountryCodeNotPresent
+            if ($CountryCode -or $CountryCodeNot){ 
+                $filterSet += @{'location.country' = @{} 
+                }
+                $FilterName = "location.country"
             }
-            if ($CountryCodeNot) { $filterSet += @{'location.country' = @{'neq' = $CountryCodeNot } }
+            # CountryCode
+            if ($CountryCode) { $filterSet.($FilterName).add('eq', $CountryCode ) }
+            # CountryCodeNot
+            if ($CountryCodeNot) { $filterSet.($FilterName).add('neq' , $CountryCodeNot ) }
+            # CountryCodePresent
+            if ($CountryCodePresent) { $filterSet.($FilterName).add('isset' , $true ) }
+            # CountryCodeNotPresent
+            if ($CountryCodeNotPresent) { $filterSet.($FilterName).add('isnotset' , $true ) }
+
+
+    # DeviceType / DeviceTypeNot
+            if ($DeviceType -or $DeviceTypeNot){ 
+                $filterSet += @{'device.type' = @{} 
+                }
+                $FilterName = "device.type"
             }
-            if ($DeviceType) { $filterSet += @{'device.type' = @{'eq' = $DeviceType.ToUpper() } }
-            } # CAS API expects upper case here
-            if ($DeviceTypeNot) { $filterSet += @{'device.type' = @{'neq' = $DeviceTypeNot.ToUpper() } }
-            } # CAS API expects upper case here
-            if ($UserAgentContains) { $filterSet += @{'userAgent.userAgent' = @{'contains' = $UserAgentContains } }
+            #DeviceType
+            if ($DeviceType) { $filterSet.($FilterName).add('eq', $DeviceType.ToUpper() ) }
+            #DeviceTypeNot
+            if ($DeviceTypeNot) { $filterSet.($FilterName).add('neq', $DeviceTypeNot.ToUpper() ) }
+            
+
+    # UserAgentContains / UserAgentNotContains
+            if ($UserAgentContains -or $UserAgentNotContains){ 
+                $filterSet += @{'userAgent.userAgent' = @{} 
+                }
+                $FilterName = "userAgent.userAgent"
             }
-            if ($UserAgentNotContains) { $filterSet += @{'userAgent.userAgent' = @{'ncontains' = $UserAgentNotContains } }
+            # UserAgentContains
+            if ($UserAgentContains) { $filterSet.($FilterName).add('contains', $UserAgentContains ) }
+            # UserAgentNotContains
+            if ($UserAgentNotContains) { $filterSet.($FilterName).add('ncontains', $UserAgentNotContains) }
+
+
+    # IpStartsWith / $IpDoesNotStartWith
+            if ($IpStartsWith -or $IpDoesNotStartWith){ 
+                $filterSet += @{'ip.address' = @{} 
+                }
+                $FilterName = "ip.address"
             }
-            if ($IpStartsWith) { $filterSet += @{'ip.address' = @{'startswith' = $IpStartsWith } }
+            #IpStartsWith
+            if ($IpStartsWith) { $filterSet.($FilterName).add('startswith', $IpStartsWith ) }
+            #IpDoesNotStartWith
+            if ($IpDoesNotStartWith) { $filterSet.($FilterName).add('doesnotstartwith', $IpDoesNotStartWith) }
+
+
+    # Text
+            if ($Text){ 
+                $filterSet += @{'text' = @{} 
+                }
+                $FilterName = "text"
             }
-            if ($IpDoesNotStartWith) { $filterSet += @{'ip.address' = @{'doesnotstartwith' = $IpDoesNotStartWith } }
+            # Text
+            if ($Text) { $filterSet.($FilterName).add('text', $Text ) }
+
+
+    # Impersonated / ImpersonatedNot
+            if ($Impersonated -or $ImpersonatedNot){ 
+                $filterSet += @{'activity.impersonated' = @{} 
+                }
+                $FilterName = "activity.impersonated"
             }
-            if ($Text) { $filterSet += @{'text' = @{'text' = $Text } }
+            #DeviceType
+            if ($Impersonated) { $filterSet.($FilterName).add('eq', $true ) }
+            #DeviceTypeNot
+            if ($ImpersonatedNot) { $filterSet.($FilterName).add('eq', $false ) }
+
+    
+    # FileId 
+            if ($FileID){ 
+                $filterSet += @{'fileSelector' = @{} 
+                }
+                $FilterName = "fileSelector"
             }
+            # FileId
+            if ($FileID) { $filterSet.($FilterName).add('eq', $FileID ) }
+      
+
+    # FileLabel 
+            if ($FileLabel){ 
+                $filterSet += @{'fileLabels' = @{} 
+                }
+                $FilterName = "fileLabels"
+            }
+            # FileLabel
+            if ($FileLabel) { $filterSet.($FilterName).add('eq', $FileLabel ) }
+
+
+    # PolicyId
+            if ($PolicyId){ 
+                $filterSet += @{'policy' = @{} 
+                }
+                $FilterName = "policy"
+            }
+            # PolicyId
+            if ($PolicyId) { $filterSet.($FilterName).add('eq', $PolicyId ) }
+
+
+    # AdminEvents / NonAdminEvents
+            if ($AdminEvents -or $NonAdminEvents){ 
+                $filterSet += @{'activity.type' = @{} 
+                }
+                $FilterName = "activity.type"
+            }
+            # AdminEvents
+            if ($AdminEvents) { $filterSet.($FilterName).add('eq', $true ) }
+            # NonAdminEvents
+            if ($NonAdminEvents) { $filterSet.($FilterName).add('eq', $false ) }            
+
+
+    # DaysAgo / DateBefore / DateAfter
             if ($DaysAgo) { $filterSet += @{'date' = @{'gte_ndays' = $DaysAgo } }
-            }
-            if ($Impersonated) { $filterSet += @{'activity.impersonated' = @{'eq' = $true } }
-            }
-            if ($ImpersonatedNot) { $filterSet += @{'activity.impersonated' = @{'eq' = $false } }
-            }
-            if ($FileID) { $filterSet += @{'fileSelector' = @{'eq' = $FileID } }
-            }
-            if ($FileLabel) { $filterSet += @{'fileLabels' = @{'eq' = $FileLabel } }
-            }
-            if ($PolicyId) { $filterSet += @{'policy' = @{'eq' = $PolicyId } }
             }
             if ($DateBefore -and (-not $DateAfter)) { $filterSet += @{'date' = @{'lte' = $DateBefore2 } }
             }
@@ -512,12 +627,6 @@ function Get-MCASActivity {
                         'lte'       = $DateBefore2
                     }
                 }
-            }
-
-            # boolean filters
-            if ($AdminEvents) { $filterSet += @{'activity.type' = @{'eq' = $true } }
-            }
-            if ($NonAdminEvents) { $filterSet += @{'activity.type' = @{'eq' = $false } }
             }
 
             #endregion ----------------------------FILTERING----------------------------
