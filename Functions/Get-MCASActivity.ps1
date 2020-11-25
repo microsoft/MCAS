@@ -448,7 +448,7 @@ function Get-MCASActivity {
 
     
     # UserGroup / UserGroupNot / UserGroupPresent / UserGroupNotPresent
-            if ($UserGroupNot -or $UserGroupNot -or $UserGroupNotPresent -or $UserGroupPresent){ 
+            if ($UserGroup -or $UserGroupNot -or $UserGroupNotPresent -or $UserGroupPresent){ 
                 $filterSet += @{'user.tags' = @{} 
                 }
                 $FilterName = "user.tags"
