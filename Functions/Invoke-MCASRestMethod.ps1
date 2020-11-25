@@ -80,7 +80,10 @@
     $headers = 'Authorization = "Token {0}"' -f $token | ForEach-Object {
         "@{$_}"
     }
-    Write-Verbose "Request headers are $headers"
+
+    $verboseHeaders = $headers -replace 'Authorization = "Token .{9}', 'Authorization = "Token XXXXXXXXX'
+
+    Write-Verbose "Request headers are $verboseHeaders"
 
     # Construct base MCAS call before processing -Body and -FilterSet
     $mcasCall = '{0} -Uri ''https://{1}{2}'' -Method {3} -Headers {4} -ContentType {5} -UseBasicParsing' -f $cmd, $tenant, $Path, $Method, $headers, $ContentType

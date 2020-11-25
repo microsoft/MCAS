@@ -45,6 +45,7 @@ We use the [SemVer](http://semver.org/) scheme for versioning.
 
 * **Mike Kassis** - *Co-Lead Dev* - [Github](https://github.com/Javanite), [LinkedIn](https://www.linkedin.com/in/mrkassis)
 * **Jared Poeppelman** - *Co-Lead Dev* - [Github](https://github.com/powershellshock), [LinkedIn](https://www.linkedin.com/in/jaredpoeppelman/)
+* **Dan Edwards** - *Dev* - [Github](https://github.com/dan-edwards), [LinkedIn](https://www.linkedin.com/in/daniel-edwards-a54892101/)
 * **Anisha Gupta** - *Test design* - [LinkedIn](https://linkedin.com)
 
 See also the list of [contributors](https://github.com/Microsoft/MCAS/graphs/contributors) who participated in this project.
