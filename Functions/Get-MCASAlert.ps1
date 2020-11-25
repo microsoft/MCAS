@@ -208,7 +208,7 @@ function Get-MCASAlert {
             if ($AppName)          {$filterSet += @{'entity.service'=   @{'eq'=([int[]]($AppName | ForEach-Object {$_ -as [int]}))}}}
             if ($AppNameNot)       {$filterSet += @{'entity.service'=   @{'neq'=([int[]]($AppNameNot | ForEach-Object {$_ -as [int]}))}}}
             if ($Severity)         {$filterSet += @{'severity'=         @{'eq'=([int[]]($Severity | ForEach-Object {$_ -as [int]}))}}}
-            if ($ResolutionStatus) {$filterSet += @{'resolutionStatus'= @{'eq'=([int[]]($ResolutionStatus | ForEach-Object {$_ -as [int]}))}}}
+            if ($ResolutionStatus -in ('Dismissed','Open','Resolved')) {$filterSet += @{'resolutionStatus'= @{'eq'=([int[]]($ResolutionStatus | ForEach-Object {$_ -as [int]}))}}}
 
             # Simple filters
             if ($UserName)   {$filterSet += @{'entity.user'=    @{'eq'=$UserName}}}
