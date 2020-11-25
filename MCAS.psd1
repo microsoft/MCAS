@@ -12,7 +12,7 @@
     RootModule = 'MCAS.psm1'
     
     # Version number of this module.
-    ModuleVersion = '3.3.7'
+    ModuleVersion = '3.3.8'
     
     # Supported PSEditions
     # CompatiblePSEditions = @()
