@@ -105,6 +105,26 @@ function Get-MCASDiscoveredApp {
         [ValidateNotNullOrEmpty()]
         [int]$TimeFrame=90,
 
+        # Limits the results based on user count.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [int]$UsersLessThan,
+
+        # Limits the results based on user count.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [int]$UsersGreaterThan,
+
+        # Limits the results based on user count.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [int]$RiskScoreMin = 0,
+
+        # Limits the results based on user count.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [int]$RiskScoreMax = 10,
+       
         # Limits the results to apps with the specified tag(s).
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateSet('Sanctioned','Unsanctioned','None')]
@@ -164,7 +184,29 @@ function Get-MCASDiscoveredApp {
 
     $filterSet = @() # Filter set array
 
-    if ($Tag) {$filterSet += @{'tag'=    @{'eq'=$Tag}}} # Not working
+    #if ($Tag) {$filterSet += @{'tag'=    @{'eq'=$Tag}}} # Not working
+
+    # UsersLessThan / UsersGreaterThan
+        if ($UsersLessThan -or $UsersGreaterThan){ 
+            $filterSet += @{'users' = @{} 
+            }
+            $FilterName = "users"
+        }
+        # UsersLessThan
+        if ($UsersLessThan) { $filterSet.($FilterName).add('lt', $UsersLessThan ) }
+        # UsersGreaterThan
+        if ($UsersGreaterThan) { $filterSet.($FilterName).add('gt' , $UsersGreaterThan ) }
+
+        
+    # RiskScoreMin / RiskScoreMax
+        if ($RiskScoreMin -or $RiskScoreMax){ 
+            $filterSet += @{'score' = @{} 
+            }
+            $FilterName = "score"
+        }
+        # RiskScoreRange
+        if ($RiskScoreMin -or $RiskScoreMax) { $filterSet.($FilterName).add('eq', @($RiskScoreMin, $RiskScoreMax) ) }     # UsersGreaterThan
+
 
     #endregion ----------------------------FILTERING----------------------------
 
