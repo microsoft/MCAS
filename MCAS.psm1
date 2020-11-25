@@ -296,6 +296,7 @@ $ExportedCommands = @(
     'Import-MCASCredential',
     'Install-MCASSiemAgent',
     'New-MCASDiscoveryDataSource',
+    'New-MCASGroupImport',
     'New-MCASSiemAgentToken',
     'New-MCASSubnetCollection',
     'Remove-MCASAdminAccess',
