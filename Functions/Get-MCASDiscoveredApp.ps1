@@ -59,6 +59,11 @@ function Get-MCASDiscoveredApp {
         [ValidateNotNullOrEmpty()]
         [int]$ResultSetSize = 100,
 
+        # Specifies the maximum number of results to retrieve when listing items matching the specified filter criteria. Set to 100 by default.
+        [Parameter(ParameterSetName='List', Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [Switch]$All,
+
         # Specifies the number of records, from the beginning of the result set, to skip. Set to 0 by default.
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateScript({$_ -gt -1})]
@@ -209,22 +214,33 @@ function Get-MCASDiscoveredApp {
 
 
     #endregion ----------------------------FILTERING----------------------------
+    region ----------------------------PARSING----------------------------
+    function Get-Response($restResponse){
+        try {
+            Write-Verbose "Adding alias property to results, if appropriate" #but why
+            $parsedresponse = $restResponse | Add-Member -MemberType AliasProperty -Name Identity -Value 'appId' -PassThru
+        }
+        catch {}
+        $parsedresponse
+    }
+    #endregion ----------------------------PARSING----------------------------
 
     try {
-        #$response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/discovery/" -Method Post -Body $body #-FilterSet $filterSet
-        $response = Invoke-MCASRestMethod -Credential $Credential -Path "/cas/api/v1/discovery/discovered_apps/" -Method Post -Body $body -FilterSet $filterSet
+        if ($All){
+            $body.limit = 100
+            do{
+                $rawresponse = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/discovery/discovered_apps/" -Method Post -Body $body -FilterSet $filterSet
+                $response += $rawresponse.data
+                $body.skip += 100
+            } while ($response.count % 100 -eq 0)
+        }
+        else{
+            $rawresponse = Invoke-MCASRestMethod -Credential $Credential -Path "/api/v1/discovery/discovered_apps/" -Method Post -Body $body -FilterSet $filterSet
+            $response = $rawresponse.data
+        }
     }
     catch {
         throw "Error calling MCAS API. The exception was: $_"
     }
-
-    $response = $response.data
-
-    try {
-        Write-Verbose "Adding alias property to results, if appropriate"
-        $response = $response | Add-Member -MemberType AliasProperty -Name Identity -Value 'appId' -PassThru
-    }
-    catch {}
-
     $response
 }
