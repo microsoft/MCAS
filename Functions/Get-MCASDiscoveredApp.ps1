@@ -17,6 +17,20 @@
     Retrieves the first 5 app names sorted alphabetically.
 
 .EXAMPLE
+    PS C:\> Get-MCASDiscoveredApp -All -StreamId $streamid | select name
+
+    name
+    ----
+    1ShoppingCart
+    ABC News
+    ACTIVE
+    AIM
+    AT&T
+    ...
+
+    Retrieves all app names
+
+.EXAMPLE
     PS C:\> Get-MCASDiscoveredApp -StreamId $streamid -Category SECURITY | select name,@{N='Total (MB)';E={"{0:N2}" -f ($_.trafficTotalBytes/1MB)}}
 
     name                   Total (MB)
@@ -59,7 +73,7 @@ function Get-MCASDiscoveredApp {
         [ValidateNotNullOrEmpty()]
         [int]$ResultSetSize = 100,
 
-        # Specifies the maximum number of results to retrieve when listing items matching the specified filter criteria. Set to 100 by default.
+        # Specifies to retrieve all apps that match filters
         [Parameter(ParameterSetName='List', Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [Switch]$All,
