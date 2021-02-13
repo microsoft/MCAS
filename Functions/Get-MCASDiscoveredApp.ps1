@@ -214,16 +214,6 @@ function Get-MCASDiscoveredApp {
 
 
     #endregion ----------------------------FILTERING----------------------------
-    region ----------------------------PARSING----------------------------
-    function Get-Response($restResponse){
-        try {
-            Write-Verbose "Adding alias property to results, if appropriate" #but why
-            $parsedresponse = $restResponse | Add-Member -MemberType AliasProperty -Name Identity -Value 'appId' -PassThru
-        }
-        catch {}
-        $parsedresponse
-    }
-    #endregion ----------------------------PARSING----------------------------
 
     try {
         if ($All){
