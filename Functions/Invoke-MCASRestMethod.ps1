@@ -1,11 +1,11 @@
 ﻿function Invoke-MCASRestMethod {
     [CmdletBinding()]
     param (
-        # Specifies the credential object containing tenant as username (e.g. 'contoso.us.portal.cloudappsecurity.com') and the 64-character hexadecimal Oauth token as the password.
+        # Specifies the credential object containing tenant as username (e.g. 'contoso.us.portal.cloudappsecurity.com' for Commercial) and the 64-character hexadecimal Oauth token as the password.
         [Parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         [ValidateScript( {
-                ($_.GetNetworkCredential().username).EndsWith('.portal.cloudappsecurity.com')
+                ($_.GetNetworkCredential().username).EndsWith('.portal.cloudappsecurity.com') -or ($_.GetNetworkCredential().username).EndsWith('.portal.cloudappsecurity.us')
             })]
         [ValidateScript( {
                 $_.GetNetworkCredential().Password -match ($MCAS_TOKEN_VALIDATION_PATTERN)
